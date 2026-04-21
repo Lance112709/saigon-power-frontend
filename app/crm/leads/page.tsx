@@ -71,7 +71,7 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
 
   const validate = () => {
     const e: Record<string, string> = {};
-    const required: (keyof typeof EMPTY_LEAD)[] = ["first_name", "last_name", "address", "city", "state", "zip", "phone"];
+    const required: (keyof typeof EMPTY_LEAD)[] = ["first_name", "last_name", "address", "city", "state", "zip", "phone", "email"];
     for (const f of required) if (!form[f].trim()) e[f] = "Required";
     if (form.phone && !/^[\d\s\-\(\)\+\.]{10,}$/.test(form.phone)) e.phone = "Invalid format";
     if (form.phone2 && !/^[\d\s\-\(\)\+\.]{10,}$/.test(form.phone2)) e.phone2 = "Invalid format";
@@ -149,8 +149,8 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormInput label="Email" placeholder="john@email.com" type="email"
-              value={form.email} onChange={v => set("email", v)} />
+            <FormInput label="Email" required placeholder="john@email.com" type="email"
+              value={form.email} onChange={v => set("email", v)} error={errors.email} />
             <FormInput label="Email 2" placeholder="alt@email.com" type="email"
               value={form.email2} onChange={v => set("email2", v)} />
           </div>
