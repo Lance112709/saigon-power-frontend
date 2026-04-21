@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut,
+  Shield, LogOut, UserCheck,
 } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
@@ -27,7 +27,8 @@ const links: NavItem[] = [
 ];
 
 const crmLinks: NavItem[] = [
-  { href: "/crm/leads", label: "Leads & Customers", icon: UserPlus, perm: "view_all_leads" },
+  { href: "/crm/leads", label: "Leads", icon: UserPlus, perm: "view_all_leads" },
+  { href: "/crm/converted", label: "Customers", icon: UserCheck, perm: "view_all_leads" },
   { href: "/proposals", label: "Proposals", icon: FileSignature, perm: "view_proposals" },
   { href: "/crm/agents", label: "Sales Agents", icon: UserCog, roles: ["admin", "manager"] },
   { href: "/crm/customers", label: "Imported Customers", icon: Users, perm: "view_all_customers" },
@@ -59,7 +60,7 @@ export default function Sidebar() {
   };
 
   const NavLink = ({ href, label, icon: Icon }: NavItem) => {
-    const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+    const active = pathname === href || (href !== "/" && href !== "/crm/leads" && href !== "/crm/converted" && pathname.startsWith(href)) || (href === "/crm/leads" && (pathname === "/crm/leads" || pathname.startsWith("/crm/leads/"))) || (href === "/crm/converted" && pathname === "/crm/converted");
     return (
       <Link href={href} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
         active ? "bg-green-600 text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white"
