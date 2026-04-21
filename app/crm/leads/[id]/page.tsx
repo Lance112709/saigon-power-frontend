@@ -816,8 +816,8 @@ export default function LeadDetailPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {["Supplier", "Plan", "ESI ID", "Rate", "Adder", "Term", "Start", "End", "Agent", "Status", ""].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  {["Supplier", "Plan", "ESI ID", "Rate", "Adder", "Term", "Start", "End", "Agent", "Status", ""].map((h, i) => (
+                    <th key={h || `col-${i}`} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>

@@ -291,8 +291,8 @@ export default function DealDetailPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {["Title", "Type", "Due", "Priority", "Status", ""].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+                {["Title", "Type", "Due", "Priority", "Status", ""].map((h, i) => (
+                  <th key={h || `col-${i}`} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
