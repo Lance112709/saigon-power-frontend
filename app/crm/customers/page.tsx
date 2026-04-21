@@ -25,7 +25,7 @@ function StatCard({ title, value, sub, icon: Icon, valueColor = "text-[#0F1D5E]"
 export default function CrmCustomersPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "manager";
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");

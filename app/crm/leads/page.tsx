@@ -296,7 +296,7 @@ function CustomersTable({ customers, onRowClick, isAdmin, onDelete }: {
 export default function LeadsPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "manager";
   const [tab, setTab] = useState<"leads" | "customers">("leads");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
