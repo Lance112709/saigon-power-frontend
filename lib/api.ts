@@ -193,4 +193,6 @@ export const api = {
   getAiReports: () => request("/api/v1/ai-agent/reports"),
   getDealsByAgent: (mode: "day" | "month", monthsBack?: number) =>
     request(`/api/v1/ai-agent/deals-by-agent?mode=${mode}&months_back=${monthsBack ?? 6}`),
+  getAgentLeaderboard: () => request("/api/v1/ai-agent/leaderboard"),
+  getPipeline: () => request("/api/v1/ai-agent/pipeline"),
 };
