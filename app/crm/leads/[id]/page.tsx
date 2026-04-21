@@ -666,6 +666,13 @@ export default function LeadDetailPage() {
   };
 
   const saveLeadInfo = async () => {
+    const required = ["first_name", "last_name", "phone", "email", "address", "city", "state", "zip"] as const;
+    for (const f of required) {
+      if (!String(leadForm[f] ?? "").trim()) {
+        alert(`${f.replace("_", " ")} is required`);
+        return;
+      }
+    }
     setSavingLead(true);
     try {
       await api.updateLead(id, leadForm);
