@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useAuth, Role } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, RefreshCw, Shield, Copy, Check } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Shield, Copy, Check, Hash } from "lucide-react";
 
 const ROLES: Role[] = ["admin", "manager", "csr", "sales_agent"];
 const ROLE_LABEL: Record<Role, string> = {
@@ -143,10 +143,13 @@ export default function UsersPage() {
           </h1>
           <p className="text-slate-500 text-sm mt-1">Manage team access and role permissions</p>
         </div>
-        <button onClick={() => setShowCreate(v => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#0F1D5E] text-white text-sm font-semibold rounded-xl hover:bg-[#0F1D5E]/90 transition-colors">
-          <Plus className="w-4 h-4" /> New User
-        </button>
+        <div className="flex gap-3">
+          <BackfillButton />
+          <button onClick={() => setShowCreate(v => !v)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#0F1D5E] text-white text-sm font-semibold rounded-xl hover:bg-[#0F1D5E]/90 transition-colors">
+            <Plus className="w-4 h-4" /> New User
+          </button>
+        </div>
       </div>
 
       {/* Temp password reveal */}
@@ -357,5 +360,37 @@ export default function UsersPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function BackfillButton() {
+  const [status, setStatus] = useState<"idle"|"loading"|"done"|"error">("idle");
+  const [assigned, setAssigned] = useState(0);
+
+  const run = async () => {
+    if (!confirm("Assign SGP-2026xxxxxx IDs to all existing converted customers who don't have one yet?")) return;
+    setStatus("loading");
+    try {
+      const res = await api.backfillSgpIds();
+      setAssigned(res.assigned);
+      setStatus("done");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  return (
+    <button onClick={run} disabled={status === "loading"}
+      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-colors disabled:opacity-50 ${
+        status === "done"  ? "bg-green-50 border-green-200 text-green-700" :
+        status === "error" ? "bg-red-50 border-red-200 text-red-700" :
+        "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+      }`}>
+      <Hash className="w-4 h-4" />
+      {status === "loading" ? "Assigning..." :
+       status === "done"    ? `Done — ${assigned} assigned` :
+       status === "error"   ? "Error — try again" :
+       "Assign Customer IDs"}
+    </button>
   );
 }

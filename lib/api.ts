@@ -131,6 +131,7 @@ export const api = {
     return request(`/api/v1/leads/customers${q}`);
   },
   deleteLead: (id: string) => request(`/api/v1/leads/${id}`, { method: "DELETE" }),
+  backfillSgpIds: () => request("/api/v1/leads/backfill-sgp-ids", { method: "POST" }),
   getDroppedDeals: (params?: Record<string, string>) => {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/leads/dropped-deals${q}`);
