@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Search, UserPlus, ChevronRight, X, AlertCircle } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { Search, UserPlus, ChevronRight, X, AlertCircle, Trash2 } from "lucide-react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const inputCls =
@@ -46,8 +47,8 @@ function LeadBadge({ status }: { status: string }) {
 
 // ── Add Lead Modal ─────────────────────────────────────────────────────────────
 const EMPTY_LEAD = {
-  first_name: "", last_name: "", address: "", city: "",
-  state: "TX", zip: "", phone: "", email: "",
+  first_name: "", last_name: "", business_name: "", address: "", city: "",
+  state: "TX", zip: "", phone: "", phone2: "", email: "", email2: "",
 };
 
 const US_STATES = [
@@ -73,6 +74,7 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
     const required: (keyof typeof EMPTY_LEAD)[] = ["first_name", "last_name", "address", "city", "state", "zip", "phone"];
     for (const f of required) if (!form[f].trim()) e[f] = "Required";
     if (form.phone && !/^[\d\s\-\(\)\+\.]{10,}$/.test(form.phone)) e.phone = "Invalid format";
+    if (form.phone2 && !/^[\d\s\-\(\)\+\.]{10,}$/.test(form.phone2)) e.phone2 = "Invalid format";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -114,6 +116,9 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
               value={form.last_name} onChange={v => set("last_name", v)} error={errors.last_name} />
           </div>
 
+          <FormInput label="Business Name" placeholder="Acme Corp (optional)"
+            value={form.business_name} onChange={v => set("business_name", v)} />
+
           <FormInput label="Address" required placeholder="123 Main St"
             value={form.address} onChange={v => set("address", v)} error={errors.address} />
 
@@ -139,8 +144,15 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
           <div className="grid grid-cols-2 gap-4">
             <FormInput label="Phone" required placeholder="(555) 555-5555" type="tel"
               value={form.phone} onChange={v => set("phone", v)} error={errors.phone} />
+            <FormInput label="Phone 2" placeholder="(555) 555-5555" type="tel"
+              value={form.phone2} onChange={v => set("phone2", v)} error={errors.phone2} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <FormInput label="Email" placeholder="john@email.com" type="email"
               value={form.email} onChange={v => set("email", v)} />
+            <FormInput label="Email 2" placeholder="alt@email.com" type="email"
+              value={form.email2} onChange={v => set("email2", v)} />
           </div>
         </div>
 
@@ -162,7 +174,10 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
 }
 
 // ── Leads Table ────────────────────────────────────────────────────────────────
-function LeadsTable({ leads, onRowClick }: { leads: any[]; onRowClick: (id: string) => void }) {
+function LeadsTable({ leads, onRowClick, isAdmin, onDelete }: {
+  leads: any[]; onRowClick: (id: string) => void;
+  isAdmin?: boolean; onDelete?: (id: string) => void;
+}) {
   if (leads.length === 0) {
     return <div className="p-12 text-center text-slate-400 text-sm">No leads found.</div>;
   }
@@ -194,7 +209,19 @@ function LeadsTable({ leads, onRowClick }: { leads: any[]; onRowClick: (id: stri
             <td className="px-5 py-3.5 text-slate-400 text-xs whitespace-nowrap">
               {l.created_at ? new Date(l.created_at).toLocaleDateString() : "—"}
             </td>
-            <td className="px-5 py-3.5 text-slate-300"><ChevronRight className="w-4 h-4" /></td>
+            <td className="px-5 py-3.5">
+              {isAdmin ? (
+                <button
+                  onClick={e => { e.stopPropagation(); onDelete?.(l.id); }}
+                  className="text-slate-300 hover:text-red-500 transition-colors"
+                  title="Delete lead"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-300" />
+              )}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -203,7 +230,10 @@ function LeadsTable({ leads, onRowClick }: { leads: any[]; onRowClick: (id: stri
 }
 
 // ── Customers Table ────────────────────────────────────────────────────────────
-function CustomersTable({ customers, onRowClick }: { customers: any[]; onRowClick: (id: string) => void }) {
+function CustomersTable({ customers, onRowClick, isAdmin, onDelete }: {
+  customers: any[]; onRowClick: (id: string) => void;
+  isAdmin?: boolean; onDelete?: (id: string) => void;
+}) {
   if (customers.length === 0) {
     return (
       <div className="p-12 text-center text-slate-400 text-sm">
@@ -242,7 +272,19 @@ function CustomersTable({ customers, onRowClick }: { customers: any[]; onRowClic
             <td className="px-5 py-3.5 text-slate-400 text-xs whitespace-nowrap">
               {c.customer_since ? new Date(c.customer_since).toLocaleDateString() : "—"}
             </td>
-            <td className="px-5 py-3.5 text-slate-300"><ChevronRight className="w-4 h-4" /></td>
+            <td className="px-5 py-3.5">
+              {isAdmin ? (
+                <button
+                  onClick={e => { e.stopPropagation(); onDelete?.(c.lead_id); }}
+                  className="text-slate-300 hover:text-red-500 transition-colors"
+                  title="Delete lead"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-300" />
+              )}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -253,6 +295,8 @@ function CustomersTable({ customers, onRowClick }: { customers: any[]; onRowClic
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function LeadsPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [tab, setTab] = useState<"leads" | "customers">("leads");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -295,6 +339,15 @@ export default function LeadsPage() {
       deal_count: 0,
       active_deal_count: 0,
     }, ...prev]);
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    if (!confirm("Delete this lead and all their deals? This cannot be undone.")) return;
+    try {
+      await api.deleteLead(id);
+      setLeads(prev => prev.filter(l => l.id !== id));
+      setCustomers(prev => prev.filter(c => c.lead_id !== id));
+    } catch {}
   };
 
   const selectCls = "border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 text-slate-700";
@@ -359,9 +412,9 @@ export default function LeadsPage() {
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-sm">Loading...</div>
         ) : tab === "leads" ? (
-          <LeadsTable leads={leads} onRowClick={id => router.push(`/crm/leads/${id}`)} />
+          <LeadsTable leads={leads} onRowClick={id => router.push(`/crm/leads/${id}`)} isAdmin={isAdmin} onDelete={handleDeleteLead} />
         ) : (
-          <CustomersTable customers={customers} onRowClick={id => router.push(`/crm/leads/${id}`)} />
+          <CustomersTable customers={customers} onRowClick={id => router.push(`/crm/leads/${id}`)} isAdmin={isAdmin} onDelete={handleDeleteLead} />
         )}
 
         {!loading && (

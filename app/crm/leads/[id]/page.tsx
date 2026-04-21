@@ -607,7 +607,9 @@ export default function LeadDetailPage() {
   const startEditLead = () => {
     setLeadForm({
       first_name: lead.first_name, last_name: lead.last_name,
-      phone: lead.phone, email: lead.email ?? "",
+      business_name: lead.business_name ?? "",
+      phone: lead.phone, phone2: lead.phone2 ?? "",
+      email: lead.email ?? "", email2: lead.email2 ?? "",
       address: lead.address, city: lead.city, state: lead.state, zip: lead.zip,
     });
     setEditingLead(true);
@@ -742,8 +744,18 @@ export default function LeadDetailPage() {
           {/* Contact + Address */}
           {!editingLead && (
             <div className="flex items-center gap-8 text-sm text-slate-600 flex-wrap">
-              {lead.phone && <div className="flex items-center gap-2"><IconBox icon={Phone} />{lead.phone}</div>}
-              {lead.email && <div className="flex items-center gap-2"><IconBox icon={Mail} /><span className="break-all">{lead.email}</span></div>}
+              {lead.phone && (
+                <div className="flex items-center gap-2">
+                  <IconBox icon={Phone} />
+                  <span>{lead.phone}{lead.phone2 ? ` · ${lead.phone2}` : ""}</span>
+                </div>
+              )}
+              {lead.email && (
+                <div className="flex items-center gap-2">
+                  <IconBox icon={Mail} />
+                  <span className="break-all">{lead.email}{lead.email2 ? ` · ${lead.email2}` : ""}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <IconBox icon={MapPin} />
                 <span>{lead.address}, {lead.city}, {lead.state} {lead.zip}</span>
@@ -774,8 +786,13 @@ export default function LeadDetailPage() {
             <div className="grid grid-cols-6 gap-3">
               <div className="col-span-2"><label className="text-xs text-slate-500">First Name</label><input className={inputCls} value={leadForm.first_name} onChange={e => setLeadForm((f: any) => ({ ...f, first_name: e.target.value }))} /></div>
               <div className="col-span-2"><label className="text-xs text-slate-500">Last Name</label><input className={inputCls} value={leadForm.last_name} onChange={e => setLeadForm((f: any) => ({ ...f, last_name: e.target.value }))} /></div>
+              <div className="col-span-2"><label className="text-xs text-slate-500">Business Name</label><input className={inputCls} placeholder="Optional" value={leadForm.business_name} onChange={e => setLeadForm((f: any) => ({ ...f, business_name: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
               <div><label className="text-xs text-slate-500">Phone</label><input className={inputCls} value={leadForm.phone} onChange={e => setLeadForm((f: any) => ({ ...f, phone: e.target.value }))} /></div>
+              <div><label className="text-xs text-slate-500">Phone 2</label><input className={inputCls} placeholder="Optional" value={leadForm.phone2} onChange={e => setLeadForm((f: any) => ({ ...f, phone2: e.target.value }))} /></div>
               <div><label className="text-xs text-slate-500">Email</label><input className={inputCls} value={leadForm.email} onChange={e => setLeadForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
+              <div><label className="text-xs text-slate-500">Email 2</label><input className={inputCls} placeholder="Optional" value={leadForm.email2} onChange={e => setLeadForm((f: any) => ({ ...f, email2: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-6 gap-3">
               <div className="col-span-2"><label className="text-xs text-slate-500">Address</label><input className={inputCls} value={leadForm.address} onChange={e => setLeadForm((f: any) => ({ ...f, address: e.target.value }))} /></div>

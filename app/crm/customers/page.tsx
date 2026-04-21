@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Search, Users, FileCheck, TrendingUp, ChevronRight } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { Search, Users, FileCheck, TrendingUp, ChevronRight, Trash2 } from "lucide-react";
 
 function StatCard({ title, value, sub, icon: Icon, valueColor = "text-[#0F1D5E]" }: {
   title: string; value: string; sub?: string; icon: any; valueColor?: string;
@@ -23,6 +24,8 @@ function StatCard({ title, value, sub, icon: Icon, valueColor = "text-[#0F1D5E]"
 
 export default function CrmCustomersPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -53,6 +56,14 @@ export default function CrmCustomersPage() {
   }, [search, provider, dealStatus]);
 
   useEffect(() => { loadCustomers(0); }, [loadCustomers]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this customer and all their deals? This cannot be undone.")) return;
+    try {
+      await api.deleteCrmCustomer(id);
+      setCustomers(prev => prev.filter(c => c.id !== id));
+    } catch {}
+  };
 
   const selectClass = "border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 text-slate-700";
 
@@ -107,7 +118,7 @@ export default function CrmCustomersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {["Name", "Email", "Phone", "City", "Active / Total Deals", ""].map((h, i) => (
+                  {["Name", "Email", "Phone", "City", "Active / Total Deals", "", ...(isAdmin ? [""] : [])].map((h, i) => (
                     <th key={i} className={`px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider ${i === 4 ? "text-center" : ""}`}>
                       {h}
                     </th>
@@ -132,6 +143,17 @@ export default function CrmCustomersPage() {
                     <td className="px-5 py-3.5 text-slate-300">
                       <ChevronRight className="w-4 h-4" />
                     </td>
+                    {isAdmin && (
+                      <td className="px-5 py-3.5">
+                        <button
+                          onClick={e => { e.stopPropagation(); handleDelete(c.id); }}
+                          className="text-slate-300 hover:text-red-500 transition-colors"
+                          title="Delete customer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

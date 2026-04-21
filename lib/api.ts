@@ -130,6 +130,8 @@ export const api = {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/leads/customers${q}`);
   },
+  deleteLead: (id: string) => request(`/api/v1/leads/${id}`, { method: "DELETE" }),
+  deleteCrmCustomer: (id: string) => request(`/api/v1/crm/customers/${id}`, { method: "DELETE" }),
 
   // Tasks
   getTaskStats: () => request("/api/v1/tasks/stats"),
