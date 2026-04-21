@@ -318,7 +318,7 @@ export default function UsersPage() {
                           const isAdmin = role === "admin";
                           const granted = isAdmin ? true : (matrix[role]?.[key] ?? false);
                           const isSaving = saving === `${role}:${key}`;
-                          const locked = isAdmin || (adminLocked && role === "admin");
+                          const locked = isAdmin || adminLocked;
 
                           return (
                             <td key={role} className="px-4 py-3 text-center">
