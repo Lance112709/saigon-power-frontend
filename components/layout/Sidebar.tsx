@@ -76,7 +76,6 @@ export default function Sidebar() {
     <aside className="w-60 min-h-screen bg-gray-900 text-white flex flex-col shrink-0">
       <div className="p-5 border-b border-gray-700">
         <h1 className="text-lg font-bold text-green-400">Saigon Power</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Commission Tracker</p>
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
