@@ -39,7 +39,7 @@ export default function ProposalsPage() {
 
   const load = async () => {
     setLoading(true);
-    const params = tab !== "all" ? { status: tab } : {};
+    const params: Record<string, string> = tab !== "all" ? { status: tab } : {};
     const data = await api.getProposals(params).catch(() => []);
     setProposals(data);
     setLoading(false);
