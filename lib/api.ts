@@ -182,4 +182,13 @@ export const api = {
     request(`/api/v1/reconciliation/run?billing_month=${billing_month}${supplier_id ? `&supplier_id=${supplier_id}` : ""}`, { method: "POST" }),
   resolveItem: (id: string, notes: string) =>
     request(`/api/v1/reconciliation/items/${id}?resolution_notes=${encodeURIComponent(notes)}&is_resolved=true`, { method: "PATCH" }),
+
+  // AI Operations Agent (admin only)
+  getAiDashboard: () => request("/api/v1/ai-agent/dashboard"),
+  runAiScan: () => request("/api/v1/ai-agent/scan", { method: "POST" }),
+  getAiAlerts: () => request("/api/v1/ai-agent/alerts"),
+  resolveAiAlert: (id: string) => request(`/api/v1/ai-agent/alerts/${id}/resolve`, { method: "PATCH" }),
+  triggerDailyReport: () => request("/api/v1/ai-agent/reports/daily", { method: "POST" }),
+  triggerMonthlyReport: () => request("/api/v1/ai-agent/reports/monthly", { method: "POST" }),
+  getAiReports: () => request("/api/v1/ai-agent/reports"),
 };
