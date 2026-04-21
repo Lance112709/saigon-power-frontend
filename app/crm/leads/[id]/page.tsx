@@ -829,7 +829,12 @@ export default function LeadDetailPage() {
                 <LeadBadge status={lead.status} />
               </div>
               {lead.status === "converted" && (
-                <p className="text-xs text-emerald-600 mt-0.5">Converted customer · appears in Customers tab</p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <p className="text-xs text-emerald-600">Converted customer · appears in Customers tab</p>
+                  {lead.sgp_customer_id && (
+                    <span className="font-mono text-xs font-semibold text-[#0F1D5E] bg-[#EEF1FA] px-2 py-0.5 rounded-lg">{lead.sgp_customer_id}</span>
+                  )}
+                </div>
               )}
             </div>
           </div>
