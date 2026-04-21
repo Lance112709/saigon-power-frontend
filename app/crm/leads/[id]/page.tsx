@@ -794,12 +794,12 @@ export default function LeadDetailPage() {
           <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
             <div className="grid grid-cols-6 gap-3">
               <div className="col-span-2">
-                <label className="text-xs text-slate-500">First Name *</label>
+                <label className="text-xs text-slate-500">First Name <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.first_name ? "border-red-400" : ""}`} value={leadForm.first_name} onChange={e => { setLeadForm((f: any) => ({ ...f, first_name: e.target.value })); setLeadFormErrors(v => ({ ...v, first_name: "" })); }} />
                 {leadFormErrors.first_name && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
               <div className="col-span-2">
-                <label className="text-xs text-slate-500">Last Name *</label>
+                <label className="text-xs text-slate-500">Last Name <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.last_name ? "border-red-400" : ""}`} value={leadForm.last_name} onChange={e => { setLeadForm((f: any) => ({ ...f, last_name: e.target.value })); setLeadFormErrors(v => ({ ...v, last_name: "" })); }} />
                 {leadFormErrors.last_name && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
@@ -810,7 +810,7 @@ export default function LeadDetailPage() {
             </div>
             <div className="grid grid-cols-4 gap-3">
               <div>
-                <label className="text-xs text-slate-500">Phone *</label>
+                <label className="text-xs text-slate-500">Phone <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.phone ? "border-red-400" : ""}`} value={leadForm.phone} onChange={e => { setLeadForm((f: any) => ({ ...f, phone: e.target.value })); setLeadFormErrors(v => ({ ...v, phone: "" })); }} />
                 {leadFormErrors.phone && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
@@ -819,7 +819,7 @@ export default function LeadDetailPage() {
                 <input className={inputCls} placeholder="Optional" value={leadForm.phone2} onChange={e => setLeadForm((f: any) => ({ ...f, phone2: e.target.value }))} />
               </div>
               <div>
-                <label className="text-xs text-slate-500">Email *</label>
+                <label className="text-xs text-slate-500">Email <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.email ? "border-red-400" : ""}`} value={leadForm.email} onChange={e => { setLeadForm((f: any) => ({ ...f, email: e.target.value })); setLeadFormErrors(v => ({ ...v, email: "" })); }} />
                 {leadFormErrors.email && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
@@ -830,22 +830,22 @@ export default function LeadDetailPage() {
             </div>
             <div className="grid grid-cols-6 gap-3">
               <div className="col-span-2">
-                <label className="text-xs text-slate-500">Address *</label>
+                <label className="text-xs text-slate-500">Address <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.address ? "border-red-400" : ""}`} value={leadForm.address} onChange={e => { setLeadForm((f: any) => ({ ...f, address: e.target.value })); setLeadFormErrors(v => ({ ...v, address: "" })); }} />
                 {leadFormErrors.address && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
               <div className="col-span-2">
-                <label className="text-xs text-slate-500">City *</label>
+                <label className="text-xs text-slate-500">City <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.city ? "border-red-400" : ""}`} value={leadForm.city} onChange={e => { setLeadForm((f: any) => ({ ...f, city: e.target.value })); setLeadFormErrors(v => ({ ...v, city: "" })); }} />
                 {leadFormErrors.city && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
               <div>
-                <label className="text-xs text-slate-500">State *</label>
+                <label className="text-xs text-slate-500">State <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.state ? "border-red-400" : ""}`} value={leadForm.state} onChange={e => { setLeadForm((f: any) => ({ ...f, state: e.target.value })); setLeadFormErrors(v => ({ ...v, state: "" })); }} />
                 {leadFormErrors.state && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
               <div>
-                <label className="text-xs text-slate-500">Zip *</label>
+                <label className="text-xs text-slate-500">Zip <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.zip ? "border-red-400" : ""}`} value={leadForm.zip} onChange={e => { setLeadForm((f: any) => ({ ...f, zip: e.target.value })); setLeadFormErrors(v => ({ ...v, zip: "" })); }} />
                 {leadFormErrors.zip && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
