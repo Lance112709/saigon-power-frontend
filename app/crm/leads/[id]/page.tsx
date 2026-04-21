@@ -555,6 +555,7 @@ export default function LeadDetailPage() {
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
   const [editingLead, setEditingLead] = useState(false);
   const [leadForm, setLeadForm] = useState<any>({});
+  const [leadFormErrors, setLeadFormErrors] = useState<Record<string, string>>({});
   const [savingLead, setSavingLead] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
@@ -605,6 +606,7 @@ export default function LeadDetailPage() {
   };
 
   const startEditLead = () => {
+    setLeadFormErrors({});
     setLeadForm({
       first_name: lead.first_name, last_name: lead.last_name,
       business_name: lead.business_name ?? "",
@@ -666,13 +668,13 @@ export default function LeadDetailPage() {
   };
 
   const saveLeadInfo = async () => {
-    const required = ["first_name", "last_name", "phone", "email", "address", "city", "state", "zip"] as const;
+    const required = ["first_name", "last_name", "phone", "email", "address", "city", "state", "zip"];
+    const errs: Record<string, string> = {};
     for (const f of required) {
-      if (!String(leadForm[f] ?? "").trim()) {
-        alert(`${f.replace("_", " ")} is required`);
-        return;
-      }
+      if (!String(leadForm[f] ?? "").trim()) errs[f] = "Required";
     }
+    setLeadFormErrors(errs);
+    if (Object.keys(errs).length > 0) return;
     setSavingLead(true);
     try {
       await api.updateLead(id, leadForm);
@@ -791,21 +793,62 @@ export default function LeadDetailPage() {
         {editingLead && (
           <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
             <div className="grid grid-cols-6 gap-3">
-              <div className="col-span-2"><label className="text-xs text-slate-500">First Name</label><input className={inputCls} value={leadForm.first_name} onChange={e => setLeadForm((f: any) => ({ ...f, first_name: e.target.value }))} /></div>
-              <div className="col-span-2"><label className="text-xs text-slate-500">Last Name</label><input className={inputCls} value={leadForm.last_name} onChange={e => setLeadForm((f: any) => ({ ...f, last_name: e.target.value }))} /></div>
-              <div className="col-span-2"><label className="text-xs text-slate-500">Business Name</label><input className={inputCls} placeholder="Optional" value={leadForm.business_name} onChange={e => setLeadForm((f: any) => ({ ...f, business_name: e.target.value }))} /></div>
+              <div className="col-span-2">
+                <label className="text-xs text-slate-500">First Name *</label>
+                <input className={`${inputCls} ${leadFormErrors.first_name ? "border-red-400" : ""}`} value={leadForm.first_name} onChange={e => { setLeadForm((f: any) => ({ ...f, first_name: e.target.value })); setLeadFormErrors(v => ({ ...v, first_name: "" })); }} />
+                {leadFormErrors.first_name && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-slate-500">Last Name *</label>
+                <input className={`${inputCls} ${leadFormErrors.last_name ? "border-red-400" : ""}`} value={leadForm.last_name} onChange={e => { setLeadForm((f: any) => ({ ...f, last_name: e.target.value })); setLeadFormErrors(v => ({ ...v, last_name: "" })); }} />
+                {leadFormErrors.last_name && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-slate-500">Business Name</label>
+                <input className={inputCls} placeholder="Optional" value={leadForm.business_name} onChange={e => setLeadForm((f: any) => ({ ...f, business_name: e.target.value }))} />
+              </div>
             </div>
             <div className="grid grid-cols-4 gap-3">
-              <div><label className="text-xs text-slate-500">Phone</label><input className={inputCls} value={leadForm.phone} onChange={e => setLeadForm((f: any) => ({ ...f, phone: e.target.value }))} /></div>
-              <div><label className="text-xs text-slate-500">Phone 2</label><input className={inputCls} placeholder="Optional" value={leadForm.phone2} onChange={e => setLeadForm((f: any) => ({ ...f, phone2: e.target.value }))} /></div>
-              <div><label className="text-xs text-slate-500">Email</label><input className={inputCls} value={leadForm.email} onChange={e => setLeadForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
-              <div><label className="text-xs text-slate-500">Email 2</label><input className={inputCls} placeholder="Optional" value={leadForm.email2} onChange={e => setLeadForm((f: any) => ({ ...f, email2: e.target.value }))} /></div>
+              <div>
+                <label className="text-xs text-slate-500">Phone *</label>
+                <input className={`${inputCls} ${leadFormErrors.phone ? "border-red-400" : ""}`} value={leadForm.phone} onChange={e => { setLeadForm((f: any) => ({ ...f, phone: e.target.value })); setLeadFormErrors(v => ({ ...v, phone: "" })); }} />
+                {leadFormErrors.phone && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Phone 2</label>
+                <input className={inputCls} placeholder="Optional" value={leadForm.phone2} onChange={e => setLeadForm((f: any) => ({ ...f, phone2: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Email *</label>
+                <input className={`${inputCls} ${leadFormErrors.email ? "border-red-400" : ""}`} value={leadForm.email} onChange={e => { setLeadForm((f: any) => ({ ...f, email: e.target.value })); setLeadFormErrors(v => ({ ...v, email: "" })); }} />
+                {leadFormErrors.email && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Email 2</label>
+                <input className={inputCls} placeholder="Optional" value={leadForm.email2} onChange={e => setLeadForm((f: any) => ({ ...f, email2: e.target.value }))} />
+              </div>
             </div>
             <div className="grid grid-cols-6 gap-3">
-              <div className="col-span-2"><label className="text-xs text-slate-500">Address</label><input className={inputCls} value={leadForm.address} onChange={e => setLeadForm((f: any) => ({ ...f, address: e.target.value }))} /></div>
-              <div className="col-span-2"><label className="text-xs text-slate-500">City</label><input className={inputCls} value={leadForm.city} onChange={e => setLeadForm((f: any) => ({ ...f, city: e.target.value }))} /></div>
-              <div><label className="text-xs text-slate-500">State</label><input className={inputCls} value={leadForm.state} onChange={e => setLeadForm((f: any) => ({ ...f, state: e.target.value }))} /></div>
-              <div><label className="text-xs text-slate-500">Zip</label><input className={inputCls} value={leadForm.zip} onChange={e => setLeadForm((f: any) => ({ ...f, zip: e.target.value }))} /></div>
+              <div className="col-span-2">
+                <label className="text-xs text-slate-500">Address *</label>
+                <input className={`${inputCls} ${leadFormErrors.address ? "border-red-400" : ""}`} value={leadForm.address} onChange={e => { setLeadForm((f: any) => ({ ...f, address: e.target.value })); setLeadFormErrors(v => ({ ...v, address: "" })); }} />
+                {leadFormErrors.address && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-slate-500">City *</label>
+                <input className={`${inputCls} ${leadFormErrors.city ? "border-red-400" : ""}`} value={leadForm.city} onChange={e => { setLeadForm((f: any) => ({ ...f, city: e.target.value })); setLeadFormErrors(v => ({ ...v, city: "" })); }} />
+                {leadFormErrors.city && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">State *</label>
+                <input className={`${inputCls} ${leadFormErrors.state ? "border-red-400" : ""}`} value={leadForm.state} onChange={e => { setLeadForm((f: any) => ({ ...f, state: e.target.value })); setLeadFormErrors(v => ({ ...v, state: "" })); }} />
+                {leadFormErrors.state && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Zip *</label>
+                <input className={`${inputCls} ${leadFormErrors.zip ? "border-red-400" : ""}`} value={leadForm.zip} onChange={e => { setLeadForm((f: any) => ({ ...f, zip: e.target.value })); setLeadFormErrors(v => ({ ...v, zip: "" })); }} />
+                {leadFormErrors.zip && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
             </div>
             <div className="flex gap-2 pt-1">
               <button onClick={saveLeadInfo} disabled={savingLead}
