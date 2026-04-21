@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut, UserCheck, Bot,
+  Shield, LogOut, UserCheck, Bot, XCircle,
 } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
@@ -32,7 +32,8 @@ const crmLinks: NavItem[] = [
   { href: "/proposals", label: "Proposals", icon: FileSignature, perm: "view_proposals" },
   { href: "/crm/agents", label: "Sales Agents", icon: UserCog, roles: ["admin", "manager"] },
   { href: "/crm/customers", label: "Imported Customers", icon: Users, perm: "view_all_customers" },
-  { href: "/crm/deals", label: "All Deals", icon: FileText, perm: "view_all_deals" },
+  { href: "/crm/deals",   label: "All Deals",      icon: FileText,  perm: "view_all_deals" },
+  { href: "/crm/dropped", label: "Dropped Deals",  icon: XCircle,   perm: "view_all_deals" },
 ];
 
 const roleBadge: Record<Role, string> = {
