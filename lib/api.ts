@@ -191,4 +191,6 @@ export const api = {
   triggerDailyReport: () => request("/api/v1/ai-agent/reports/daily", { method: "POST" }),
   triggerMonthlyReport: () => request("/api/v1/ai-agent/reports/monthly", { method: "POST" }),
   getAiReports: () => request("/api/v1/ai-agent/reports"),
+  getDealsByAgent: (mode: "day" | "month", monthsBack?: number) =>
+    request(`/api/v1/ai-agent/deals-by-agent?mode=${mode}&months_back=${monthsBack ?? 6}`),
 };

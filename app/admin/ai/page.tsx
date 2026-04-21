@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import {
-  Bot, RefreshCw, AlertTriangle, CheckCircle2, Info,
+  Bot, RefreshCw, AlertTriangle, CheckCircle2,
   TrendingUp, Users, FileText, Zap, BarChart3, ChevronRight,
 } from "lucide-react";
 
@@ -47,8 +47,11 @@ export default function AiOperationsPage() {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [resolving, setResolving] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "alerts" | "reports">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "alerts" | "reports" | "performance">("overview");
   const [reports, setReports] = useState<any[]>([]);
+  const [dealsMode, setDealsMode] = useState<"month" | "day">("month");
+  const [dealsData, setDealsData] = useState<any>(null);
+  const [dealsLoading, setDealsLoading] = useState(false);
 
   useEffect(() => {
     if (user && user.role !== "admin") router.push("/dashboard");
@@ -93,9 +96,25 @@ export default function AiOperationsPage() {
     setReports(r);
   };
 
-  const handleTabChange = (tab: "overview" | "alerts" | "reports") => {
+  const loadDeals = useCallback(async (mode: "month" | "day") => {
+    setDealsLoading(true);
+    try {
+      const d = await api.getDealsByAgent(mode, 6);
+      setDealsData(d);
+    } finally {
+      setDealsLoading(false);
+    }
+  }, []);
+
+  const handleTabChange = (tab: "overview" | "alerts" | "reports" | "performance") => {
     setActiveTab(tab);
     if (tab === "reports") loadReports();
+    if (tab === "performance") loadDeals(dealsMode);
+  };
+
+  const handleModeChange = (mode: "month" | "day") => {
+    setDealsMode(mode);
+    loadDeals(mode);
   };
 
   if (loading) {
@@ -202,18 +221,23 @@ export default function AiOperationsPage() {
 
       {/* Tabs: Alerts / Reports */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="flex border-b border-gray-100">
-          {(["overview", "alerts", "reports"] as const).map(tab => (
+        <div className="flex border-b border-gray-100 overflow-x-auto">
+          {([
+            { key: "overview",     label: "Overview" },
+            { key: "performance",  label: "Agent Performance" },
+            { key: "alerts",       label: `Alerts (${totalAlerts})` },
+            { key: "reports",      label: "Reports" },
+          ] as const).map(tab => (
             <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className={`px-5 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab
+              key={tab.key}
+              onClick={() => handleTabChange(tab.key)}
+              className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab.key
                   ? "border-b-2 border-[#0F1D5E] text-[#0F1D5E]"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {tab === "overview" ? "Overview" : tab === "alerts" ? `Alerts (${totalAlerts})` : "Reports"}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -221,8 +245,17 @@ export default function AiOperationsPage() {
         <div className="p-5">
           {activeTab === "overview" && (
             <div className="text-sm text-gray-500">
-              Select the <strong>Alerts</strong> tab to review and resolve open issues, or <strong>Reports</strong> to view historical reports.
+              Select <strong>Agent Performance</strong> to see deals closed per agent, <strong>Alerts</strong> to resolve issues, or <strong>Reports</strong> for history.
             </div>
+          )}
+
+          {activeTab === "performance" && (
+            <DealsByAgent
+              data={dealsData}
+              mode={dealsMode}
+              loading={dealsLoading}
+              onModeChange={handleModeChange}
+            />
           )}
 
           {activeTab === "alerts" && (
@@ -329,6 +362,134 @@ function AlertsList({ critical, warnings, info, onResolve, resolving }: {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+const AGENT_COLORS = [
+  "bg-[#0F1D5E]", "bg-green-600", "bg-purple-600", "bg-amber-500",
+  "bg-rose-500", "bg-cyan-600", "bg-indigo-500", "bg-orange-500",
+];
+
+function DealsByAgent({ data, mode, loading, onModeChange }: {
+  data: any; mode: "month" | "day"; loading: boolean;
+  onModeChange: (m: "month" | "day") => void;
+}) {
+  if (loading) return <div className="py-8 text-center text-sm text-gray-400">Loading performance data...</div>;
+  if (!data) return <div className="py-8 text-center text-sm text-gray-400">No data yet.</div>;
+
+  const { agents, rows, agent_totals } = data;
+  if (!rows || rows.length === 0) return <div className="py-8 text-center text-sm text-gray-400">No closed deals in the selected period.</div>;
+
+  const maxTotal = Math.max(...rows.map((r: any) => r.total), 1);
+
+  return (
+    <div className="space-y-5">
+      {/* Controls */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-gray-600">View by:</span>
+        <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+          {(["month", "day"] as const).map(m => (
+            <button key={m} onClick={() => onModeChange(m)}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                mode === m ? "bg-[#0F1D5E] text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}>
+              {m === "month" ? "Monthly" : "Daily"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Agent totals summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {agents.map((agent: string, i: number) => (
+          <div key={agent} className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className={`w-2 h-2 rounded-full mb-2 inline-block mr-2 ${AGENT_COLORS[i % AGENT_COLORS.length]}`} />
+            <p className="text-lg font-bold text-gray-900">{agent_totals[agent]}</p>
+            <p className="text-xs text-gray-500 truncate" title={agent}>{agent}</p>
+            <p className="text-xs text-gray-400">deals closed</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Bar chart — stacked bars per period */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 overflow-x-auto">
+        <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-[#0F1D5E]" />
+          Deals Closed by Period
+        </h3>
+        <div className="flex items-end gap-2 min-w-0" style={{ minHeight: 160 }}>
+          {rows.map((row: any) => (
+            <div key={row.period} className="flex flex-col items-center gap-1 flex-1 min-w-[40px]">
+              <span className="text-xs font-semibold text-gray-700">{row.total || ""}</span>
+              <div className="w-full flex flex-col-reverse rounded overflow-hidden" style={{ height: `${Math.max((row.total / maxTotal) * 140, row.total > 0 ? 8 : 0)}px` }}>
+                {agents.map((agent: string, i: number) => {
+                  const count = row[agent] || 0;
+                  if (count === 0) return null;
+                  return (
+                    <div
+                      key={agent}
+                      title={`${agent}: ${count}`}
+                      className={`w-full ${AGENT_COLORS[i % AGENT_COLORS.length]}`}
+                      style={{ height: `${(count / row.total) * 100}%`, minHeight: count > 0 ? 4 : 0 }}
+                    />
+                  );
+                })}
+              </div>
+              <span className="text-xs text-gray-400 text-center leading-tight">
+                {mode === "month" ? row.period.slice(0, 7) : row.period.slice(5)}
+              </span>
+            </div>
+          ))}
+        </div>
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-100">
+          {agents.map((agent: string, i: number) => (
+            <div key={agent} className="flex items-center gap-1.5 text-xs text-gray-600">
+              <div className={`w-3 h-3 rounded-sm ${AGENT_COLORS[i % AGENT_COLORS.length]}`} />
+              {agent}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Detail table */}
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-100">
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
+              {agents.map((a: string) => (
+                <th key={a} className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase truncate max-w-[100px]">{a}</th>
+              ))}
+              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...rows].reverse().map((row: any, i: number) => (
+              <tr key={row.period} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                <td className="px-4 py-3 font-medium text-gray-700">{row.period}</td>
+                {agents.map((a: string) => (
+                  <td key={a} className="px-3 py-3 text-center text-gray-700">
+                    {row[a] > 0 ? <span className="font-semibold">{row[a]}</span> : <span className="text-gray-300">—</span>}
+                  </td>
+                ))}
+                <td className="px-4 py-3 text-center font-bold text-[#0F1D5E]">{row.total}</td>
+              </tr>
+            ))}
+            {/* Totals row */}
+            <tr className="bg-gray-100 border-t border-gray-200">
+              <td className="px-4 py-3 font-bold text-gray-700">Total</td>
+              {agents.map((a: string) => (
+                <td key={a} className="px-3 py-3 text-center font-bold text-gray-700">{agent_totals[a]}</td>
+              ))}
+              <td className="px-4 py-3 text-center font-bold text-[#0F1D5E]">
+                {agents.reduce((s: number, a: string) => s + agent_totals[a], 0)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
