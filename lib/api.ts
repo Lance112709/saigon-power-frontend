@@ -195,4 +195,5 @@ export const api = {
     request(`/api/v1/ai-agent/deals-by-agent?mode=${mode}&months_back=${monthsBack ?? 6}`),
   getAgentLeaderboard: () => request("/api/v1/ai-agent/leaderboard"),
   getPipeline: () => request("/api/v1/ai-agent/pipeline"),
+  getReconciliationGap: () => request("/api/v1/ai-agent/reconciliation-gap"),
 };

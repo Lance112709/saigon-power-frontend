@@ -38,7 +38,7 @@ const AGENT_HEX = ["#0F1D5E","#16a34a","#9333ea","#f59e0b","#f43f5e","#0891b2","
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "leaderboard" | "pipeline" | "performance" | "alerts" | "reports";
+type Tab = "overview" | "leaderboard" | "pipeline" | "performance" | "recon" | "alerts" | "reports";
 
 export default function AiOperationsPage() {
   const { user } = useAuth();
@@ -61,6 +61,8 @@ export default function AiOperationsPage() {
   const [dealsLoading, setDealsLoading] = useState(false);
 
   const [reports,      setReports]      = useState<any[]>([]);
+  const [recon,        setRecon]        = useState<any>(null);
+  const [reconLoading, setReconLoading] = useState(false);
 
   useEffect(() => {
     if (user && user.role !== "admin") router.push("/dashboard");
@@ -92,12 +94,18 @@ export default function AiOperationsPage() {
     setReports(await api.getAiReports());
   }, []);
 
+  const loadRecon = useCallback(async () => {
+    setReconLoading(true);
+    try { setRecon(await api.getReconciliationGap()); } finally { setReconLoading(false); }
+  }, []);
+
   const handleTab = (tab: Tab) => {
     setActiveTab(tab);
     if (tab === "leaderboard" && leaderboard.length === 0) loadLeaderboard();
     if (tab === "pipeline"    && !pipeline)                loadPipeline();
     if (tab === "performance" && !dealsData)               loadDeals(dealsMode);
     if (tab === "reports"     && reports.length === 0)     loadReports();
+    if (tab === "recon"       && !recon)                   loadRecon();
   };
 
   const handleScan = async () => {
@@ -122,12 +130,13 @@ export default function AiOperationsPage() {
   const totalAlerts = (dashboard?.alerts.critical.length||0) + (dashboard?.alerts.warnings.length||0) + (dashboard?.alerts.info.length||0);
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: "overview",     label: "Overview"          },
-    { key: "leaderboard",  label: "Agent Leaderboard" },
-    { key: "pipeline",     label: "Pipeline & Revenue"},
-    { key: "performance",  label: "Deals by Agent"    },
+    { key: "overview",     label: "Overview"              },
+    { key: "leaderboard",  label: "Agent Leaderboard"     },
+    { key: "pipeline",     label: "Pipeline & Revenue"    },
+    { key: "performance",  label: "Deals by Agent"        },
+    { key: "recon",        label: "Reconciliation Gap"    },
     { key: "alerts",       label: `Alerts (${totalAlerts})` },
-    { key: "reports",      label: "Reports"           },
+    { key: "reports",      label: "Reports"               },
   ];
 
   return (
@@ -193,6 +202,9 @@ export default function AiOperationsPage() {
           {activeTab === "performance" && (
             <DealsByAgent data={dealsData} mode={dealsMode} loading={dealsLoading}
               onModeChange={m => { setDealsMode(m); loadDeals(m); }} />
+          )}
+          {activeTab === "recon" && (
+            <ReconciliationGapTab data={recon} loading={reconLoading} onRefresh={loadRecon} />
           )}
           {activeTab === "alerts" && (
             <AlertsList critical={dashboard?.alerts.critical||[]} warnings={dashboard?.alerts.warnings||[]}
@@ -630,6 +642,196 @@ function DealsByAgent({ data, mode, loading, onModeChange }: {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ── Reconciliation Gap Tab ────────────────────────────────────────────────────
+
+function ReconciliationGapTab({ data, loading, onRefresh }: { data: any; loading: boolean; onRefresh: () => void }) {
+  const [search,   setSearch]   = useState("");
+  const [filter,   setFilter]   = useState<"all"|"missing"|"complete">("all");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  if (loading) return <Spinner text="Analyzing payment gaps..." />;
+  if (!data) return (
+    <div className="text-center py-8">
+      <p className="text-sm text-gray-400 mb-3">Click to analyze billing gaps across all contracts.</p>
+      <button onClick={onRefresh} className="px-4 py-2 text-sm bg-[#0F1D5E] text-white rounded-xl hover:bg-[#1a2d7c] transition">
+        Run Analysis
+      </button>
+    </div>
+  );
+
+  const s = data.summary;
+  const deals: any[] = data.deals || [];
+
+  const filtered = deals.filter(d => {
+    if (filter === "missing"  && d.payments_missing === 0) return false;
+    if (filter === "complete" && d.payments_missing > 0)   return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (d.lead_name||"").toLowerCase().includes(q)
+          || (d.supplier||"").toLowerCase().includes(q)
+          || (d.sales_agent||"").toLowerCase().includes(q)
+          || (d.esiid||"").includes(q);
+    }
+    return true;
+  });
+
+  return (
+    <div className="space-y-5">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <BigStatCard icon={FileText}    color="blue"  label="Contracts Analyzed"   value={`${s.deals_analyzed}`}               sub="with ESIID + start date" />
+        <BigStatCard icon={CheckCircle2} color="green" label="Payments Received"   value={`${s.total_payments_received}`}       sub={`of ${s.total_payments_expected} expected`} />
+        <BigStatCard icon={AlertTriangle} color={s.total_payments_missing > 0 ? "red" : "green"} label="Missing Payments" value={`${s.total_payments_missing}`} sub={`${100 - s.pct_received}% gap rate`} />
+        <BigStatCard icon={DollarSign}  color={s.est_missing_commission > 0 ? "red" : "green"} label="Est. Missing Commission" value={`$${(s.est_missing_commission||0).toLocaleString(undefined,{maximumFractionDigits:0})}`} sub="based on rate × kWh × adder" />
+      </div>
+
+      {/* Progress bar */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-semibold text-gray-700">Overall Payment Receipt Rate</span>
+          <span className={`text-sm font-bold ${s.pct_received >= 90 ? "text-green-600" : s.pct_received >= 70 ? "text-amber-600" : "text-red-600"}`}>
+            {s.pct_received}%
+          </span>
+        </div>
+        <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${s.pct_received >= 90 ? "bg-green-500" : s.pct_received >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+            style={{ width: `${s.pct_received}%` }} />
+        </div>
+        <p className="text-xs text-gray-400 mt-2">{s.total_payments_received} received · {s.total_payments_missing} missing · {s.total_payments_expected} total expected</p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search customer, supplier, agent, ESIID..."
+          className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20" />
+        <div className="flex rounded-xl border border-gray-200 overflow-hidden shrink-0">
+          {([["all","All"],["missing","Has Gaps"],["complete","Complete"]] as const).map(([k,l]) => (
+            <button key={k} onClick={() => setFilter(k as any)}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${filter===k ? "bg-[#0F1D5E] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <button onClick={onRefresh} className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition shrink-0">
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh
+        </button>
+      </div>
+
+      {/* Deal rows */}
+      <div className="space-y-2">
+        {filtered.length === 0 && (
+          <p className="text-center py-6 text-sm text-gray-400">No contracts match this filter.</p>
+        )}
+        {filtered.map(deal => {
+          const isOpen = expanded === deal.deal_id;
+          const pct = deal.pct_received;
+          const barColor = pct === 100 ? "bg-green-500" : pct >= 75 ? "bg-amber-500" : "bg-red-500";
+          const borderColor = deal.payments_missing > 0 ? "border-red-200" : "border-green-200";
+          const bgColor = deal.payments_missing > 0 ? "bg-red-50/30" : "bg-green-50/30";
+
+          return (
+            <div key={deal.deal_id} className={`border ${borderColor} ${bgColor} rounded-2xl overflow-hidden`}>
+              {/* Header row */}
+              <button onClick={() => setExpanded(isOpen ? null : deal.deal_id)}
+                className="w-full flex items-center gap-4 p-4 text-left hover:bg-black/5 transition">
+                {/* Status icon */}
+                <div className="shrink-0">
+                  {deal.payments_missing === 0
+                    ? <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    : <AlertTriangle className="w-5 h-5 text-red-500" />}
+                </div>
+                {/* Name + supplier */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{deal.lead_name}</p>
+                  <p className="text-xs text-gray-500">{deal.supplier} · {deal.sales_agent}</p>
+                </div>
+                {/* Progress bar */}
+                <div className="w-32 shrink-0 hidden sm:block">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>{deal.payments_received}/{deal.payments_expected}</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+                {/* Missing badge */}
+                {deal.payments_missing > 0 && (
+                  <span className="shrink-0 px-2 py-1 rounded-xl text-xs font-bold bg-red-100 text-red-700">
+                    {deal.payments_missing} missing
+                  </span>
+                )}
+                {deal.payments_missing === 0 && (
+                  <span className="shrink-0 px-2 py-1 rounded-xl text-xs font-bold bg-green-100 text-green-700">
+                    Complete
+                  </span>
+                )}
+                <ChevronRight className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+              </button>
+
+              {/* Expanded detail */}
+              {isOpen && (
+                <div className="px-4 pb-4 border-t border-gray-100 space-y-4">
+                  {/* Meta row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3">
+                    <InfoBox label="ESIID"          value={deal.esiid || "—"} />
+                    <InfoBox label="Contract"       value={`${deal.start_date} → ${deal.end_date || "ongoing"}`} />
+                    <InfoBox label="Contract Length" value={`${deal.contract_months} month${deal.contract_months !== 1 ? "s" : ""}`} />
+                    <InfoBox label="Est. Missing $"  value={`$${(deal.est_missing_comm||0).toLocaleString(undefined,{maximumFractionDigits:0})}`} highlight={deal.est_missing_comm > 0} />
+                  </div>
+
+                  {/* Month grid */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Billing Periods</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {deal.expected_months.map((m: string) => {
+                        const paid   = deal.paid_months.includes(m);
+                        const future = m > new Date().toISOString().slice(0, 7);
+                        return (
+                          <span key={m} className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                            paid   ? "bg-green-100 text-green-700" :
+                            future ? "bg-gray-100 text-gray-400" :
+                                     "bg-red-100 text-red-700 font-bold"
+                          }`}>
+                            {m}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-200 inline-block" /> Paid</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-200 inline-block" /> Missing</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-gray-200 inline-block" /> Future</span>
+                    </div>
+                  </div>
+
+                  {/* Extra payments note */}
+                  {deal.extra_months && deal.extra_months.length > 0 && (
+                    <div className="p-3 bg-blue-50 rounded-xl text-xs text-blue-700">
+                      <strong>Extra payments received outside contract window:</strong>{" "}
+                      {deal.extra_months.join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function InfoBox({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="bg-white rounded-xl p-3 border border-gray-100">
+      <p className="text-xs text-gray-400">{label}</p>
+      <p className={`text-sm font-semibold mt-0.5 ${highlight ? "text-red-600" : "text-gray-800"}`}>{value}</p>
     </div>
   );
 }
