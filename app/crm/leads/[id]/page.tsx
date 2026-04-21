@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy } from "lucide-react";
+import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban } from "lucide-react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -537,6 +537,80 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
   );
 }
 
+// ── Terminate Modal ───────────────────────────────────────────────────────────
+function TerminateModal({ deal, leadId, onClose, onDone }: {
+  deal: any; leadId: string; onClose: () => void; onDone: () => void;
+}) {
+  const today = new Date().toISOString().split("T")[0];
+  const [date, setDate] = useState(today);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const confirm = async () => {
+    if (!date) { setError("Please select a termination date."); return; }
+    setSaving(true);
+    setError("");
+    try {
+      await api.updateLeadDeal(leadId, deal.id, { status: "Inactive", end_date: date });
+      onDone();
+    } catch (err: any) {
+      const raw = err?.message || "Failed to terminate deal";
+      const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
+      try { setError(JSON.parse(body)?.detail ?? body); } catch { setError(body); }
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Ban className="w-4 h-4 text-red-500" />
+            <h2 className="text-base font-bold text-slate-900">Terminate Deal</h2>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm">
+            <p className="font-semibold text-slate-700">{deal.supplier || "Unknown Supplier"}</p>
+            {deal.plan_name && <p className="text-slate-400 text-xs mt-0.5">{deal.plan_name}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Termination Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={e => { setDate(e.target.value); setError(""); }}
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-400/30 focus:border-red-400"
+            />
+          </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
+
+          <p className="text-xs text-slate-400">
+            The deal status will be set to <strong>Inactive</strong> and the end date updated.
+          </p>
+        </div>
+
+        <div className="flex gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+            Cancel
+          </button>
+          <button onClick={confirm} disabled={saving}
+            className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
+            {saving ? "Terminating..." : "Terminate Deal"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function LeadDetailPage() {
   const params = useParams();
@@ -553,6 +627,7 @@ export default function LeadDetailPage() {
   const [showDeal, setShowDeal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<any>(null);
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
+  const [terminatingDeal, setTerminatingDeal] = useState<any>(null);
   const [editingLead, setEditingLead] = useState(false);
   const [leadForm, setLeadForm] = useState<any>({});
   const [leadFormErrors, setLeadFormErrors] = useState<Record<string, string>>({});
@@ -717,6 +792,15 @@ export default function LeadDetailPage() {
 
       {showProposal && (
         <ProposalModal lead={lead} onClose={() => setShowProposal(false)} />
+      )}
+
+      {terminatingDeal && (
+        <TerminateModal
+          deal={terminatingDeal}
+          leadId={id}
+          onClose={() => setTerminatingDeal(null)}
+          onDone={async () => { setTerminatingDeal(null); await reload(); }}
+        />
       )}
 
       <div className="flex items-center justify-between">
@@ -903,6 +987,13 @@ export default function LeadDetailPage() {
                     <td className="px-4 py-3"><DealStatusBtn status={d.status} dealId={d.id} leadId={id} onUpdate={handleDealStatusUpdate} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        {d.status === "Active" && (
+                          <button onClick={() => setTerminatingDeal(d)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors whitespace-nowrap"
+                            title="Terminate deal">
+                            <Ban className="w-3 h-3" /> Terminate
+                          </button>
+                        )}
                         <button onClick={() => setEditingDeal(d)} className="text-slate-300 hover:text-[#0F1D5E] transition-colors" title="Edit"><Pencil className="w-3.5 h-3.5" /></button>
                         <button onClick={() => handleDeleteDeal(d.id)} disabled={deletingDealId === d.id} className="text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
