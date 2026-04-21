@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban } from "lucide-react";
+import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare } from "lucide-react";
+import SendSmsModal from "@/components/SendSmsModal";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -624,6 +625,7 @@ export default function LeadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showProposal, setShowProposal] = useState(false);
+  const [showSms, setShowSms] = useState(false);
   const [showDeal, setShowDeal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<any>(null);
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
@@ -795,6 +797,15 @@ export default function LeadDetailPage() {
         <ProposalModal lead={lead} onClose={() => setShowProposal(false)} />
       )}
 
+      {showSms && lead?.phone && (
+        <SendSmsModal
+          to={lead.phone}
+          contactName={lead.full_name}
+          leadId={id}
+          onClose={() => setShowSms(false)}
+        />
+      )}
+
       {terminatingDeal && (
         <TerminateModal
           deal={terminatingDeal}
@@ -808,12 +819,22 @@ export default function LeadDetailPage() {
         <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1D5E] transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Leads
         </button>
-        <button
-          onClick={() => setShowProposal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 transition-colors"
-        >
-          <FileSignature className="w-4 h-4" /> Generate Proposal
-        </button>
+        <div className="flex items-center gap-2">
+          {lead?.phone && (
+            <button
+              onClick={() => setShowSms(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
+            >
+              <MessageSquare className="w-4 h-4" /> Send SMS
+            </button>
+          )}
+          <button
+            onClick={() => setShowProposal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 transition-colors"
+          >
+            <FileSignature className="w-4 h-4" /> Generate Proposal
+          </button>
+        </div>
       </div>
 
       {/* ── Lead Info Card (horizontal) ── */}

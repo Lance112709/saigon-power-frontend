@@ -201,4 +201,19 @@ export const api = {
   getAgentLeaderboard: () => request("/api/v1/ai-agent/leaderboard"),
   getPipeline: () => request("/api/v1/ai-agent/pipeline"),
   getReconciliationGap: () => request("/api/v1/ai-agent/reconciliation-gap"),
+
+  // SMS
+  sendSms: (data: object) => request("/api/v1/sms/send", { method: "POST", body: JSON.stringify(data) }),
+  getSmsLogs: (params?: Record<string, string>) => {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/sms/logs${q}`);
+  },
+  getSmsTemplates: () => request("/api/v1/sms/templates"),
+  createSmsTemplate: (data: object) => request("/api/v1/sms/templates", { method: "POST", body: JSON.stringify(data) }),
+  updateSmsTemplate: (id: string, data: object) => request(`/api/v1/sms/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteSmsTemplate: (id: string) => request(`/api/v1/sms/templates/${id}`, { method: "DELETE" }),
+  toggleLeadSmsOptOut: (leadId: string, optOut: boolean) =>
+    request(`/api/v1/sms/opt-out/lead/${leadId}`, { method: "POST", body: JSON.stringify({ opt_out: optOut }) }),
+  toggleCustomerSmsOptOut: (customerId: string, optOut: boolean) =>
+    request(`/api/v1/sms/opt-out/customer/${customerId}`, { method: "POST", body: JSON.stringify({ opt_out: optOut }) }),
 };

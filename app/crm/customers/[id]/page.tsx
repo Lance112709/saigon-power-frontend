@@ -5,8 +5,9 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, User, MapPin, Phone, Mail, Calendar, Hash,
-  Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap,
+  Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare,
 } from "lucide-react";
+import SendSmsModal from "@/components/SendSmsModal";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 
@@ -176,6 +177,7 @@ export default function CustomerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAddDeal, setShowAddDeal] = useState(false);
+  const [showSms, setShowSms] = useState(false);
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -307,10 +309,29 @@ export default function CustomerProfilePage() {
         />
       )}
 
-      <button onClick={() => router.back()}
-        className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1D5E] transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to Customers
-      </button>
+      {showSms && customer?.phone && (
+        <SendSmsModal
+          to={customer.phone}
+          contactName={customer.full_name || customer.name || "Customer"}
+          customerId={id}
+          onClose={() => setShowSms(false)}
+        />
+      )}
+
+      <div className="flex items-center justify-between">
+        <button onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1D5E] transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Customers
+        </button>
+        {customer?.phone && (
+          <button
+            onClick={() => setShowSms(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" /> Send SMS
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-3 gap-5">
         {/* Left column */}
