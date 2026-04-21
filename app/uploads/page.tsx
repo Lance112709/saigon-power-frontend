@@ -1,0 +1,244 @@
+"use client";
+import { useState, useRef } from "react";
+import { api } from "@/lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Upload, CheckCircle, XCircle } from "lucide-react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+const statusColor: Record<string, string> = {
+  confirmed: "bg-green-100 text-green-800",
+  review: "bg-yellow-100 text-yellow-800",
+  failed: "bg-red-100 text-red-800",
+  pending: "bg-gray-100 text-gray-800",
+  parsing: "bg-blue-100 text-blue-800",
+};
+
+export default function UploadsPage() {
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [uploads, setUploads] = useState<any[]>([]);
+  const [loadingUploads, setLoadingUploads] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState<any>(null);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState("");
+  const [billingMonth, setBillingMonth] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const loadUploads = async () => {
+    setLoadingUploads(true);
+    const data = await api.getUploads();
+    setUploads(data);
+    setLoadingUploads(false);
+  };
+
+  const loadSuppliers = async () => {
+    const data = await api.getSuppliers();
+    setSuppliers(data);
+  };
+
+  const handleFile = async (file: File) => {
+    setUploading(true);
+    setError("");
+    setResult(null);
+    setConfirmed(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await api.uploadFile(fd);
+      if (res.detail) throw new Error(res.detail);
+      setResult(res);
+      loadUploads();
+      loadSuppliers();
+    } catch (e: any) {
+      setError(e.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!selectedSupplier) return alert("Please select a supplier first.");
+    if (!billingMonth) return alert("Please enter the billing month (e.g. 2026-03-01).");
+    setConfirming(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/uploads/${result.upload_batch_id}/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file_hash: result.file_hash,
+          supplier_id: selectedSupplier,
+          billing_month: billingMonth,
+          column_mapping: result.ai_mapping,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Confirm failed");
+      setConfirmed(data);
+      loadUploads();
+    } catch (e: any) {
+      setError(e.message || "Confirm failed");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Upload Commission Statements</h1>
+        <p className="text-gray-500 mt-1">Upload NRG Excel or CSV files — AI will map the columns automatically</p>
+      </div>
+
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => fileRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
+              dragging ? "border-green-500 bg-green-50" : "border-gray-300 hover:border-green-400 hover:bg-gray-50"
+            }`}
+          >
+            <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-600 font-medium">
+              {uploading ? "Processing..." : "Drag & drop your Excel or CSV file here"}
+            </p>
+            <p className="text-gray-400 text-sm mt-1">or click to browse</p>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+            />
+          </div>
+
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+              <XCircle className="w-5 h-5" /> {error}
+            </div>
+          )}
+
+          {confirmed && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 font-medium">
+              <CheckCircle className="w-5 h-5" />
+              Imported {confirmed.rows_imported} records successfully!
+              {confirmed.rows_skipped > 0 && <span className="text-gray-500 font-normal ml-2">({confirmed.rows_skipped} rows skipped)</span>}
+            </div>
+          )}
+
+          {result && !confirmed && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 text-green-700 font-medium mb-4">
+                <CheckCircle className="w-5 h-5" /> File parsed — {result.rows_parsed} rows found
+              </div>
+
+              <div className="text-sm text-gray-600 mb-2">
+                <strong>AI Column Mapping</strong> (confidence: {Math.round((result.ai_mapping?.confidence ?? 0) * 100)}%)
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                {Object.entries(result.ai_mapping?.mapping ?? {}).map(([field, col]) => (
+                  <div key={field} className="flex justify-between bg-white rounded p-2 border">
+                    <span className="text-gray-500 capitalize">{field.replace("_", " ")}</span>
+                    <span className={col ? "text-green-700 font-medium" : "text-red-400"}>
+                      {(col as string) || "Not found"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t pt-4 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Supplier</label>
+                  <select
+                    value={selectedSupplier}
+                    onChange={e => setSelectedSupplier(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Select supplier...</option>
+                    {suppliers.map((s: any) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Billing Month</label>
+                  <input
+                    type="date"
+                    value={billingMonth}
+                    onChange={e => setBillingMonth(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    placeholder="2026-03-01"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleConfirm}
+                disabled={confirming}
+                className="mt-4 w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50"
+              >
+                {confirming ? "Importing..." : `Confirm & Import ${result.rows_parsed} Records`}
+              </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Recent Uploads</CardTitle>
+          <button onClick={loadUploads} className="text-sm text-green-600 hover:underline">Refresh</button>
+        </CardHeader>
+        <CardContent>
+          {loadingUploads ? (
+            <p className="text-gray-500 text-sm">Loading...</p>
+          ) : uploads.length === 0 ? (
+            <p className="text-gray-500 text-sm">No uploads yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-gray-500">
+                  <th className="pb-2 font-medium">File</th>
+                  <th className="pb-2 font-medium">Supplier</th>
+                  <th className="pb-2 font-medium">Rows</th>
+                  <th className="pb-2 font-medium">Imported</th>
+                  <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {uploads.map((u: any) => (
+                  <tr key={u.id} className="border-b last:border-0">
+                    <td className="py-3 font-medium truncate max-w-xs">{u.original_filename}</td>
+                    <td className="py-3">{u.suppliers?.name ?? "—"}</td>
+                    <td className="py-3">{u.rows_parsed ?? "—"}</td>
+                    <td className="py-3">{u.rows_imported ?? "—"}</td>
+                    <td className="py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[u.status] ?? ""}`}>
+                        {u.status}
+                      </span>
+                    </td>
+                    <td className="py-3 text-gray-500">{new Date(u.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
