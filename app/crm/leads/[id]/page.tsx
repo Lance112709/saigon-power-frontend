@@ -688,6 +688,7 @@ export default function LeadDetailPage() {
       phone: lead.phone, phone2: lead.phone2 ?? "",
       email: lead.email ?? "", email2: lead.email2 ?? "",
       address: lead.address, city: lead.city, state: lead.state, zip: lead.zip,
+      referral_by: lead.referral_by ?? "",
     });
     setEditingLead(true);
   };
@@ -858,6 +859,11 @@ export default function LeadDetailPage() {
                 <IconBox icon={MapPin} />
                 <span>{lead.address}, {lead.city}, {lead.state} {lead.zip}</span>
               </div>
+              {lead.referral_by && (
+                <div className="flex items-center gap-2 text-slate-500">
+                  <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-lg">Referred by: <strong>{lead.referral_by}</strong></span>
+                </div>
+              )}
             </div>
           )}
 
@@ -937,6 +943,12 @@ export default function LeadDetailPage() {
                 <label className="text-xs text-slate-500">Zip <span className="text-red-500">*</span></label>
                 <input className={`${inputCls} ${leadFormErrors.zip ? "border-red-400" : ""}`} value={leadForm.zip} onChange={e => { setLeadForm((f: any) => ({ ...f, zip: e.target.value })); setLeadFormErrors(v => ({ ...v, zip: "" })); }} />
                 {leadFormErrors.zip && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-500">Referral By</label>
+                <input className={inputCls} placeholder="Optional — who referred this customer?" value={leadForm.referral_by} onChange={e => setLeadForm((f: any) => ({ ...f, referral_by: e.target.value }))} />
               </div>
             </div>
             <div className="flex gap-2 pt-1">
