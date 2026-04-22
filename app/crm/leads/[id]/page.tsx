@@ -318,7 +318,7 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
   const validate = () => {
     const e: Record<string, string> = {};
     const required: (keyof typeof EMPTY_DEAL)[] = [
-      "status", "supplier", "product_type", "deal_type", "service_order_type",
+      "status", "supplier", "product_type", "rate_type", "deal_type", "service_order_type",
       "contract_term", "rate", "adder", "est_kwh", "expected_close_date",
       "start_date", "end_date", "service_address", "service_city",
       "service_state", "service_zip", "esiid", "sales_agent",
@@ -414,7 +414,7 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
               <FormInput label="Plan Name" placeholder="e.g. Gexa Saver 12"
                 value={form.plan_name} onChange={v => setStr("plan_name", v)} />
 
-              <FormSelect label="Product Type" value={form.rate_type} onChange={v => setStr("rate_type", v)}>
+              <FormSelect label="Product Type *" error={errors.rate_type} value={form.rate_type} onChange={v => setStr("rate_type", v)}>
                 <option value="">— Select —</option>
                 <option value="Fixed Rate">Fixed Rate</option>
                 <option value="Month-Month">Month-Month</option>
