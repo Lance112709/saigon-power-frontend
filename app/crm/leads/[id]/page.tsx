@@ -883,9 +883,14 @@ export default function LeadDetailPage() {
                 <IconBox icon={MapPin} />
                 <span>{lead.address}, {lead.city}, {lead.state} {lead.zip}</span>
               </div>
-              {lead.referral_by && (
-                <div className="flex items-center gap-2 text-slate-500">
-                  <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-lg">Referred by: <strong>{lead.referral_by}</strong></span>
+              {(lead.referral_by || lead.sales_agent) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {lead.sales_agent && (
+                    <span className="text-xs bg-[#EEF1FA] text-[#0F1D5E] px-2 py-0.5 rounded-lg">Sales Agent: <strong>{lead.sales_agent}</strong></span>
+                  )}
+                  {lead.referral_by && (
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">Referred by: <strong>{lead.referral_by}</strong></span>
+                  )}
                 </div>
               )}
             </div>
