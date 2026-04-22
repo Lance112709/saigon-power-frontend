@@ -446,7 +446,7 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
               <FormInput label="Contract Rate ($/kWh) *" placeholder="0.109" type="number" error={errors.rate}
                 value={form.rate} onChange={v => setStr("rate", v)} />
 
-              <FormInput label="Adder / Commission ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
+              <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
                 value={form.adder} onChange={v => setStr("adder", v)} />
 
               <FormInput label="Estimated Usage (kWh/mo) *" placeholder="1200" type="number" error={errors.est_kwh}
