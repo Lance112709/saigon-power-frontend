@@ -247,7 +247,7 @@ const EMPTY_DEAL = {
   // Flags
   flag_tos: false, flag_toao: false, flag_deposit: false, flag_special_deal: false, flag_promo_10: false,
   // Contract
-  status: "Future", supplier: "", plan_name: "", product_type: "",
+  status: "Future", supplier: "", plan_name: "", product_type: "", rate_type: "",
   deal_type: "", service_order_type: "",
   contract_term: "", rate: "", adder: "", est_kwh: "",
   expected_close_date: "", start_date: "", end_date: "",
@@ -272,6 +272,7 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
     supplier: existing.supplier ?? "",
     plan_name: existing.plan_name ?? "",
     product_type: existing.product_type ?? "",
+    rate_type: existing.rate_type ?? "",
     deal_type: existing.deal_type ?? "",
     service_order_type: existing.service_order_type ?? "",
     contract_term: existing.contract_term ?? "",
@@ -412,6 +413,14 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
 
               <FormInput label="Plan Name" placeholder="e.g. Gexa Saver 12"
                 value={form.plan_name} onChange={v => setStr("plan_name", v)} />
+
+              <FormSelect label="Product Type" value={form.rate_type} onChange={v => setStr("rate_type", v)}>
+                <option value="">— Select —</option>
+                <option value="Fixed Rate">Fixed Rate</option>
+                <option value="Month-Month">Month-Month</option>
+                <option value="FreeNight & Weekend">FreeNight &amp; Weekend</option>
+                <option value="Solar Buy-Back">Solar Buy-Back</option>
+              </FormSelect>
 
               <FormSelect label="Meter Type *" error={errors.product_type} value={form.product_type} onChange={v => setStr("product_type", v)}>
                 <option value="">— Select —</option>
