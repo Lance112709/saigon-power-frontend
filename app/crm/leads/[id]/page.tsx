@@ -618,6 +618,7 @@ export default function LeadDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const canDeleteNotes = user?.role === "admin";
+  const canSeeFullAnxh = user?.role === "admin" || user?.role === "manager";
   const id = params.id as string;
 
   const [lead, setLead] = useState<any>(null);
@@ -896,7 +897,9 @@ export default function LeadDetailPage() {
                     <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">Ref: <strong>{lead.referral_by}</strong></span>
                   )}
                   {lead.anxh && (
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">ANXH: <strong>{lead.anxh}</strong></span>
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">
+                      ANXH: <strong>{canSeeFullAnxh ? lead.anxh : `••••${String(lead.anxh).slice(-4)}`}</strong>
+                    </span>
                   )}
                   {lead.dob && (
                     <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">DOB: <strong>{lead.dob}</strong></span>
@@ -1021,8 +1024,14 @@ export default function LeadDetailPage() {
             <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className="text-xs text-slate-500">ANXH <span className="text-red-500">*</span></label>
-                <input className={`${inputCls} ${leadFormErrors.anxh ? "border-red-400" : ""}`} value={leadForm.anxh} onChange={e => { setLeadForm((f: any) => ({ ...f, anxh: e.target.value })); setLeadFormErrors(v => ({ ...v, anxh: "" })); }} />
-                {leadFormErrors.anxh && <p className="text-xs text-red-500 mt-1">Required</p>}
+                {canSeeFullAnxh ? (
+                  <>
+                    <input className={`${inputCls} ${leadFormErrors.anxh ? "border-red-400" : ""}`} value={leadForm.anxh} onChange={e => { setLeadForm((f: any) => ({ ...f, anxh: e.target.value })); setLeadFormErrors(v => ({ ...v, anxh: "" })); }} />
+                    {leadFormErrors.anxh && <p className="text-xs text-red-500 mt-1">Required</p>}
+                  </>
+                ) : (
+                  <input className={`${inputCls} bg-slate-50 text-slate-400`} value={leadForm.anxh ? `••••${String(leadForm.anxh).slice(-4)}` : ""} readOnly />
+                )}
               </div>
               <div>
                 <label className="text-xs text-slate-500">DOB <span className="text-red-500">*</span></label>
