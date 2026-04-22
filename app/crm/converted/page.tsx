@@ -64,7 +64,7 @@ export default function ConvertedCustomersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {["Customer ID", "Business Name", "Customer", "Phone", "Address", "Active Deals", "Customer Since", ""].map(h => (
+                {["Customer ID", "Customer", "Business Name", "Phone", "Address", "Active Deals", "Customer Since", ""].map(h => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -78,12 +78,12 @@ export default function ConvertedCustomersPage() {
                       ? <span className="font-mono text-xs font-semibold text-[#0F1D5E] bg-[#EEF1FA] px-2 py-1 rounded-lg">{c.sgp_customer_id}</span>
                       : <span className="text-xs text-slate-300">—</span>}
                   </td>
-                  <td className="px-5 py-3.5 text-slate-600 text-sm">
-                    {c.business_name || <span className="text-slate-300">—</span>}
-                  </td>
                   <td className="px-5 py-3.5">
                     <div className="font-semibold text-[#0F1D5E]">{c.full_name}</div>
                     {c.email && <div className="text-xs text-slate-400 mt-0.5">{c.email}</div>}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600 text-sm">
+                    {c.business_name || <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-5 py-3.5 text-slate-500">{c.phone || "—"}</td>
                   <td className="px-5 py-3.5 text-slate-500 max-w-[200px] truncate">
