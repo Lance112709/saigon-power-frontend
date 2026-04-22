@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -53,6 +54,7 @@ const roleLabel: Record<Role, string> = {
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout, loading, can } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const canSee = (item: NavItem) => {
     if (!user) return false;
@@ -112,10 +114,26 @@ export default function Sidebar() {
                 {roleLabel[user.role]}
               </span>
             </div>
-            <button onClick={logout}
-              className="mt-2.5 flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors">
-              <LogOut className="w-3.5 h-3.5" /> Sign out
-            </button>
+            {confirmLogout ? (
+              <div className="mt-2.5 space-y-1.5">
+                <p className="text-xs text-gray-400">Sign out of CRM?</p>
+                <div className="flex gap-2">
+                  <button onClick={logout}
+                    className="flex-1 py-1 rounded-lg bg-red-500/20 text-red-300 text-xs font-semibold hover:bg-red-500/30 transition-colors">
+                    Yes
+                  </button>
+                  <button onClick={() => setConfirmLogout(false)}
+                    className="flex-1 py-1 rounded-lg bg-gray-700 text-gray-300 text-xs font-semibold hover:bg-gray-600 transition-colors">
+                    No
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmLogout(true)}
+                className="mt-2.5 flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors">
+                <LogOut className="w-3.5 h-3.5" /> Sign out
+              </button>
+            )}
           </div>
         ) : (
           <div className="px-4 py-2 text-xs text-gray-500">Broker VID: 319010</div>
