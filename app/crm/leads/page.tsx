@@ -45,6 +45,7 @@ function LeadBadge({ status }: { status: string }) {
 const EMPTY_LEAD = {
   first_name: "", last_name: "", business_name: "", address: "", city: "",
   state: "TX", zip: "", phone: "", phone2: "", email: "", email2: "",
+  sales_agent: "", referral_by: "",
 };
 
 const US_STATES = [
@@ -59,6 +60,11 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [agents, setAgents] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.getSalesAgents().then(setAgents).catch(() => {});
+  }, []);
 
   const set = (k: keyof typeof EMPTY_LEAD, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -67,7 +73,7 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
 
   const validate = () => {
     const e: Record<string, string> = {};
-    const required: (keyof typeof EMPTY_LEAD)[] = ["first_name", "last_name", "address", "city", "state", "zip", "phone", "email"];
+    const required: (keyof typeof EMPTY_LEAD)[] = ["first_name", "last_name", "address", "city", "state", "zip", "phone", "email", "sales_agent"];
     for (const f of required) if (!form[f].trim()) e[f] = "Required";
     if (form.phone && !/^[\d\s\-\(\)\+\.]{10,}$/.test(form.phone)) e.phone = "Invalid format";
     if (form.phone2 && !/^[\d\s\-\(\)\+\.]{10,}$/.test(form.phone2)) e.phone2 = "Invalid format";
@@ -143,6 +149,25 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
               value={form.email} onChange={v => set("email", v)} error={errors.email} />
             <FormInput label="Email 2" placeholder="alt@email.com" type="email"
               value={form.email2} onChange={v => set("email2", v)} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Sales Agent <span className="text-red-500">*</span></label>
+              <select
+                className={`${inputCls} ${errors.sales_agent ? "border-red-400 ring-1 ring-red-400/30" : ""}`}
+                value={form.sales_agent}
+                onChange={e => set("sales_agent", e.target.value)}
+              >
+                <option value="">— Select agent —</option>
+                {agents.map((a: any) => (
+                  <option key={a.id} value={a.name}>{a.name}</option>
+                ))}
+              </select>
+              {errors.sales_agent && <p className="text-xs text-red-500 mt-1">Required</p>}
+            </div>
+            <FormInput label="Referral By" placeholder="Customer name (optional)"
+              value={form.referral_by} onChange={v => set("referral_by", v)} />
           </div>
         </div>
 
