@@ -634,6 +634,7 @@ export default function LeadDetailPage() {
   const [leadForm, setLeadForm] = useState<any>({});
   const [leadFormErrors, setLeadFormErrors] = useState<Record<string, string>>({});
   const [savingLead, setSavingLead] = useState(false);
+  const [salesAgents, setSalesAgents] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTask, setNewTask] = useState({ title: "", task_type: "call", due_date: "", priority: "medium", description: "" });
@@ -664,6 +665,7 @@ export default function LeadDetailPage() {
     reload().catch(e => setError(e.message || "Failed to load")).finally(() => setLoading(false));
     loadTasks();
     loadNotes();
+    api.getSalesAgents().then(setSalesAgents).catch(() => {});
   }, [id]);
 
   const handleDealSaved = async () => {
@@ -691,6 +693,7 @@ export default function LeadDetailPage() {
       email: lead.email ?? "", email2: lead.email2 ?? "",
       address: lead.address, city: lead.city, state: lead.state, zip: lead.zip,
       referral_by: lead.referral_by ?? "",
+      sales_agent: lead.sales_agent ?? "",
     });
     setEditingLead(true);
   };
@@ -974,6 +977,19 @@ export default function LeadDetailPage() {
                   onChange={v => setLeadForm((f: any) => ({ ...f, referral_by: v }))}
                   inputCls={inputCls}
                 />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Sales Agent</label>
+                <select
+                  className={inputCls}
+                  value={leadForm.sales_agent}
+                  onChange={e => setLeadForm((f: any) => ({ ...f, sales_agent: e.target.value }))}
+                >
+                  <option value="">— Unassigned —</option>
+                  {salesAgents.map((a: any) => (
+                    <option key={a.id} value={a.name}>{a.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="flex gap-2 pt-1">
