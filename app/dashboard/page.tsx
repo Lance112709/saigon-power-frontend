@@ -93,17 +93,20 @@ export default function DashboardPage() {
   const [stats, setStats]     = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [overview, setOverview] = useState<any>(null);
+  const [expiring, setExpiring] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      api.getLeadsStats().catch(() => null),
-      api.getCommissionHistory().catch(() => []),
-      api.getDashboard().catch(() => null),
-    ]).then(([s, h, o]) => {
-      setStats(s);
-      setHistory(h ?? []);
-      setOverview(o);
+    Promise.allSettled([
+      api.getLeadsStats(),
+      api.getCommissionHistory(),
+      api.getDashboard(),
+      api.getExpiringDeals(),
+    ]).then(([s, h, o, e]) => {
+      setStats(s.status === "fulfilled" ? s.value : null);
+      setHistory(h.status === "fulfilled" ? (h.value ?? []) : []);
+      setOverview(o.status === "fulfilled" ? o.value : null);
+      setExpiring(e.status === "fulfilled" ? (e.value ?? []) : []);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -174,43 +177,39 @@ export default function DashboardPage() {
       {/* Pipeline + Chart */}
       <div className="grid grid-cols-5 gap-4">
 
-        {/* Pipeline Snapshot */}
+        {/* Expiring Deals */}
         <div className={showFinance ? "col-span-2" : "col-span-5"}>
-          <Section title="Pipeline Snapshot" action="View all" actionHref="/crm/leads">
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Leads", value: pipeline.lead ?? 0, color: "bg-blue-50 text-blue-700", border: "border-blue-100" },
-                  { label: "Converted", value: pipeline.converted ?? 0, color: "bg-emerald-50 text-emerald-700", border: "border-emerald-100" },
-                  { label: "Active Deals", value: stats?.active_deals ?? 0, color: "bg-violet-50 text-violet-700", border: "border-violet-100" },
-                  { label: "Expiring Soon", value: stats?.expiring_soon ?? 0, color: "bg-amber-50 text-amber-700", border: "border-amber-100" },
-                ].map(({ label, value, color, border }) => (
-                  <div key={label} className={`rounded-xl border ${border} p-4 text-center`}>
-                    <p className={`text-2xl font-bold ${color.split(" ")[1]}`}>{value}</p>
-                    <p className="text-xs text-slate-500 mt-1">{label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Commission overview */}
-              {showFinance && overview && (
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Commissions</p>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Expected</span>
-                    <span className="font-semibold text-[#0F1D5E]">{fmt$(overview.total_expected)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Received</span>
-                    <span className="font-semibold text-emerald-600">{fmt$(overview.total_actual)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Discrepancy</span>
-                    <span className={`font-semibold ${overview.net_discrepancy < 0 ? "text-red-500" : "text-emerald-600"}`}>
-                      {fmt$(overview.net_discrepancy)}
-                    </span>
-                  </div>
-                </div>
+          <Section title="Deals Expiring Within 30 Days" action="View dropped" actionHref="/crm/dropped">
+            <div className="divide-y divide-slate-100">
+              {expiring.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-slate-400">No deals expiring in the next 30 days.</div>
+              ) : (
+                expiring.map(d => {
+                  const urgent = d.days_left <= 7;
+                  return (
+                    <div key={d.deal_id}
+                      className="flex items-center justify-between px-5 py-3 hover:bg-slate-50/70 cursor-pointer"
+                      onClick={() => router.push(`/crm/leads/${d.lead_id}`)}>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-[#0F1D5E] truncate">{d.full_name}</p>
+                          {d.sgp_customer_id && (
+                            <span className="font-mono text-xs text-slate-400">{d.sgp_customer_id}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {d.supplier || "—"}{d.plan_name ? ` · ${d.plan_name}` : ""}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 ml-4">
+                        <p className="text-xs text-slate-400">{d.end_date}</p>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${urgent ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
+                          {d.days_left === 0 ? "Today" : `${d.days_left}d left`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </Section>
