@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -54,6 +54,86 @@ const US_STATES = [
   "NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","UT","VT",
   "VA","WA","WV","WI","WY",
 ];
+
+function ReferralSearch({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [query, setQuery] = useState(value);
+  const [results, setResults] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  const search = useCallback(async (q: string) => {
+    if (!q.trim()) { setResults([]); setOpen(false); return; }
+    setLoading(true);
+    try {
+      const data = await api.getLeadCustomers({ search: q, limit: "8" });
+      setResults(data);
+      setOpen(true);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    setQuery(v);
+    onChange(v);
+    search(v);
+  };
+
+  const select = (c: any) => {
+    const label = c.sgp_customer_id ? `${c.full_name} (${c.sgp_customer_id})` : c.full_name;
+    setQuery(label);
+    onChange(label);
+    setOpen(false);
+    setResults([]);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        className={inputCls}
+        placeholder="Type customer name to search..."
+        value={query}
+        onChange={handleInput}
+        onFocus={() => query.trim() && results.length > 0 && setOpen(true)}
+        autoComplete="off"
+      />
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+          {loading && <div className="px-4 py-3 text-xs text-slate-400">Searching...</div>}
+          {!loading && results.length === 0 && <div className="px-4 py-3 text-xs text-slate-400">No customers found</div>}
+          {!loading && results.map(c => (
+            <button key={c.lead_id} type="button" onMouseDown={() => select(c)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#EEF1FA] transition-colors text-left">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-[#0F1D5E] truncate">{c.full_name}</p>
+                {c.sgp_customer_id && <p className="text-xs text-slate-400">{c.sgp_customer_id}</p>}
+              </div>
+              {c.active_deal_count > 0 && (
+                <span className="shrink-0 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                  {c.active_deal_count} active
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lead: any) => void }) {
   const [form, setForm] = useState(EMPTY_LEAD);
@@ -166,8 +246,10 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
               </select>
               {errors.sales_agent && <p className="text-xs text-red-500 mt-1">Required</p>}
             </div>
-            <FormInput label="Referral By" placeholder="Customer name (optional)"
-              value={form.referral_by} onChange={v => set("referral_by", v)} />
+            <div>
+              <label className={labelCls}>Referral By</label>
+              <ReferralSearch value={form.referral_by} onChange={v => set("referral_by", v)} />
+            </div>
           </div>
         </div>
 
