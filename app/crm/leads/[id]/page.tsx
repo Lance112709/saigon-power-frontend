@@ -694,6 +694,10 @@ export default function LeadDetailPage() {
       address: lead.address, city: lead.city, state: lead.state, zip: lead.zip,
       referral_by: lead.referral_by ?? "",
       sales_agent: lead.sales_agent ?? "",
+      anxh: lead.anxh ?? "",
+      dob: lead.dob ?? "",
+      dl_number: lead.dl_number ?? "",
+      account_flag: lead.account_flag ?? "",
     });
     setEditingLead(true);
   };
@@ -749,7 +753,7 @@ export default function LeadDetailPage() {
   };
 
   const saveLeadInfo = async () => {
-    const required = ["first_name", "last_name", "phone", "email", "address", "city", "state", "zip"];
+    const required = ["first_name", "last_name", "phone", "email", "address", "city", "state", "zip", "anxh", "dob"];
     const errs: Record<string, string> = {};
     for (const f of required) {
       if (!String(leadForm[f] ?? "").trim()) errs[f] = "Required";
@@ -883,13 +887,30 @@ export default function LeadDetailPage() {
                 <IconBox icon={MapPin} />
                 <span>{lead.address}, {lead.city}, {lead.state} {lead.zip}</span>
               </div>
-              {(lead.referral_by || lead.sales_agent) && (
+              {(lead.referral_by || lead.sales_agent || lead.anxh || lead.dob || lead.dl_number || lead.account_flag) && (
                 <div className="flex items-center gap-2 flex-wrap">
                   {lead.sales_agent && (
-                    <span className="text-xs bg-[#EEF1FA] text-[#0F1D5E] px-2 py-0.5 rounded-lg">Sales Agent: <strong>{lead.sales_agent}</strong></span>
+                    <span className="text-xs bg-[#EEF1FA] text-[#0F1D5E] px-2 py-0.5 rounded-lg">Agent: <strong>{lead.sales_agent}</strong></span>
                   )}
                   {lead.referral_by && (
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">Referred by: <strong>{lead.referral_by}</strong></span>
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">Ref: <strong>{lead.referral_by}</strong></span>
+                  )}
+                  {lead.anxh && (
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">ANXH: <strong>{lead.anxh}</strong></span>
+                  )}
+                  {lead.dob && (
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">DOB: <strong>{lead.dob}</strong></span>
+                  )}
+                  {lead.dl_number && (
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">DL: <strong>{lead.dl_number}</strong></span>
+                  )}
+                  {lead.account_flag && (
+                    <span className={`text-xs px-2 py-0.5 rounded-lg font-semibold ${
+                      lead.account_flag === "VIP Client" ? "bg-amber-100 text-amber-700" :
+                      lead.account_flag === "Red Flag" ? "bg-red-100 text-red-600" :
+                      lead.account_flag === "65+" ? "bg-purple-100 text-purple-700" :
+                      "bg-blue-100 text-blue-700"
+                    }`}>{lead.account_flag}</span>
                   )}
                 </div>
               )}
@@ -994,6 +1015,32 @@ export default function LeadDetailPage() {
                   {salesAgents.map((a: any) => (
                     <option key={a.id} value={a.name}>{a.name}</option>
                   ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-slate-500">ANXH <span className="text-red-500">*</span></label>
+                <input className={`${inputCls} ${leadFormErrors.anxh ? "border-red-400" : ""}`} value={leadForm.anxh} onChange={e => { setLeadForm((f: any) => ({ ...f, anxh: e.target.value })); setLeadFormErrors(v => ({ ...v, anxh: "" })); }} />
+                {leadFormErrors.anxh && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">DOB <span className="text-red-500">*</span></label>
+                <input type="date" className={`${inputCls} ${leadFormErrors.dob ? "border-red-400" : ""}`} value={leadForm.dob} onChange={e => { setLeadForm((f: any) => ({ ...f, dob: e.target.value })); setLeadFormErrors(v => ({ ...v, dob: "" })); }} />
+                {leadFormErrors.dob && <p className="text-xs text-red-500 mt-1">Required</p>}
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">DL #</label>
+                <input className={inputCls} placeholder="Optional" value={leadForm.dl_number} onChange={e => setLeadForm((f: any) => ({ ...f, dl_number: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Account Flag</label>
+                <select className={inputCls} value={leadForm.account_flag} onChange={e => setLeadForm((f: any) => ({ ...f, account_flag: e.target.value }))}>
+                  <option value="">— None —</option>
+                  <option value="VIP Client">VIP Client</option>
+                  <option value="Red Flag">Red Flag</option>
+                  <option value="65+">65+</option>
+                  <option value="Payment Assistance Programs">Payment Assistance Programs</option>
                 </select>
               </div>
             </div>
