@@ -129,12 +129,14 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-slate-900">{greeting()} 👋</h1>
           <p className="text-sm text-slate-500 mt-0.5">{todayLabel()} · Here's your overview</p>
         </div>
-        <button
-          onClick={() => router.push("/reconciliation")}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:border-[#0F1D5E]/30 shadow-sm transition-colors"
-        >
-          <FileText className="w-4 h-4" /> View Reports
-        </button>
+        {user?.role === "admin" && (
+          <button
+            onClick={() => router.push("/reconciliation")}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:border-[#0F1D5E]/30 shadow-sm transition-colors"
+          >
+            <FileText className="w-4 h-4" /> View Reports
+          </button>
+        )}
       </div>
 
       {/* Top stat cards */}
