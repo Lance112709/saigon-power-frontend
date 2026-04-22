@@ -45,7 +45,7 @@ function LeadBadge({ status }: { status: string }) {
 const EMPTY_LEAD = {
   first_name: "", last_name: "", business_name: "", address: "", city: "",
   state: "TX", zip: "", phone: "", phone2: "", email: "", email2: "",
-  sales_agent: "", referral_by: "",
+  sales_agent: "", referral_by: "", source: "",
 };
 
 const US_STATES = [
@@ -250,6 +250,21 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
               <label className={labelCls}>Referral By</label>
               <ReferralSearch value={form.referral_by} onChange={v => set("referral_by", v)} />
             </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Source</label>
+            <select
+              className={inputCls}
+              value={form.source}
+              onChange={e => set("source", e.target.value)}
+            >
+              <option value="">— Select source —</option>
+              <option value="Customer Referral">Customer Referral</option>
+              <option value="Social Media">Social Media</option>
+              <option value="website">Website</option>
+              <option value="manual">Manual / Walk-in</option>
+            </select>
           </div>
         </div>
 
