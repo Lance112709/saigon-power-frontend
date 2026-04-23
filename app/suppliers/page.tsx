@@ -105,8 +105,8 @@ export default function SuppliersPage() {
           <CardContent>
             <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
               {[
-                { key: "name", label: "Full Name (e.g. NRG / Discount Power)" },
-                { key: "code", label: "Short Code (e.g. NRG)" },
+                { key: "name", label: "Full Name (e.g. Discount Power)" },
+                { key: "code", label: "Short Code (e.g. DP)" },
                 { key: "contact_email", label: "Contact Email" },
                 { key: "notes", label: "Notes" },
               ].map(({ key, label }) => (
