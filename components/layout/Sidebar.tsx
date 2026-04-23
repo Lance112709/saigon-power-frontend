@@ -37,7 +37,7 @@ const crmLinks: NavItem[] = [
   { href: "/crm/deals",   label: "All Deals",      icon: FileText,  perm: "view_all_deals" },
   { href: "/crm/dropped", label: "Dropped Deals",  icon: XCircle,   perm: "view_all_deals" },
   { href: "/sms", label: "SMS", icon: MessageSquare, roles: ["admin", "manager"] },
-  { href: "/admin/landing-rates", label: "Landing Page Rates", icon: Globe, roles: ["admin"] },
+  { href: "/admin/landing-rates", label: "Landing Page Rates", icon: Globe, roles: ["admin", "manager"] },
 ];
 
 const roleBadge: Record<Role, string> = {

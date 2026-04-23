@@ -33,7 +33,7 @@ export default function LandingRatesPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user && user.role !== "admin") router.replace("/dashboard");
+    if (user && user.role !== "admin" && user.role !== "manager") router.replace("/dashboard");
   }, [user]);
 
   const load = async () => {
