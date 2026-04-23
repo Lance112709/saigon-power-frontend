@@ -37,23 +37,19 @@ function StatCard({ icon, gradient, label, value, sub, onClick }: {
   value: string; sub?: string; onClick?: () => void;
 }) {
   return (
-    <div onClick={onClick} className={`relative rounded-2xl p-5 overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl ${gradient} ${onClick ? "cursor-pointer" : ""}`}>
-      {/* background glow orb */}
-      <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-white/10 blur-2xl" />
-      <div className="absolute -bottom-6 -left-2 w-16 h-16 rounded-full bg-black/10 blur-xl" />
+    <div onClick={onClick} className={`relative rounded-xl p-4 overflow-hidden group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${gradient} ${onClick ? "cursor-pointer" : ""}`}>
+      <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-white/10 blur-2xl" />
 
-      <div className="relative">
-        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-4 backdrop-blur-sm">
+      <div className="relative flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm">
           {icon}
         </div>
-        <p className="text-3xl font-black text-white tracking-tight">{value}</p>
-        <p className="text-sm font-semibold text-white/80 mt-0.5">{label}</p>
-        {sub && <p className="text-xs text-white/55 mt-1">{sub}</p>}
-        {onClick && (
-          <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            <ArrowUpRight className="w-4 h-4 text-white/60" />
-          </div>
-        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-2xl font-black text-white tracking-tight leading-none">{value}</p>
+          <p className="text-xs font-semibold text-white/80 mt-0.5 truncate">{label}</p>
+          {sub && <p className="text-[11px] text-white/50 mt-0.5 truncate">{sub}</p>}
+        </div>
+        {onClick && <ArrowUpRight className="w-3.5 h-3.5 text-white/40 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />}
       </div>
     </div>
   );
