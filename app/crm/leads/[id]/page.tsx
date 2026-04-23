@@ -446,8 +446,17 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
               <FormInput label="Contract Rate ($/kWh) *" placeholder="0.109" type="number" error={errors.rate}
                 value={form.rate} onChange={v => setStr("rate", v)} />
 
-              <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
-                value={form.adder} onChange={v => setStr("adder", v)} />
+              {form.product_type === "Commercial" ? (
+                <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
+                  value={form.adder} onChange={v => setStr("adder", v)} />
+              ) : form.product_type === "Residential" ? (
+                <div className="flex flex-col justify-center">
+                  <p className="text-xs font-semibold text-slate-500 mb-1">Adder ($/kWh)</p>
+                  <p className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                    Default adder will be applied from supplier settings
+                  </p>
+                </div>
+              ) : null}
 
               <FormInput label="Estimated Usage (kWh/mo) *" placeholder="1200" type="number" error={errors.est_kwh}
                 value={form.est_kwh} onChange={v => setStr("est_kwh", v)} />

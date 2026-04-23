@@ -39,6 +39,7 @@ export const api = {
   // Suppliers
   getSuppliers: () => request("/api/v1/suppliers"),
   createSupplier: (data: object) => request("/api/v1/suppliers", { method: "POST", body: JSON.stringify(data) }),
+  updateSupplier: (id: string, data: object) => request(`/api/v1/suppliers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   // Customers
   getCustomers: (search?: string) =>

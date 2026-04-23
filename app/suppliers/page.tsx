@@ -2,7 +2,66 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Plus, Save } from "lucide-react";
+
+function SupplierCard({ supplier, onUpdated }: { supplier: any; onUpdated: () => void }) {
+  const [adder, setAdder] = useState(supplier.default_adder != null ? String(supplier.default_adder) : "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.updateSupplier(supplier.id, { default_adder: adder ? parseFloat(adder) : null });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      onUpdated();
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <Card>
+      <CardContent className="pt-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="font-semibold text-gray-900">{supplier.name}</div>
+            <div className="text-xs text-gray-400 mt-0.5 font-mono">{supplier.code}</div>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${supplier.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
+            {supplier.is_active ? "Active" : "Inactive"}
+          </span>
+        </div>
+        {supplier.notes && <p className="text-sm text-gray-500 mt-3">{supplier.notes}</p>}
+        {supplier.contact_email && <p className="text-xs text-gray-400 mt-2">{supplier.contact_email}</p>}
+
+        {/* Default Adder */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <label className="text-xs font-semibold text-gray-500 block mb-1.5">
+            Default Residential Adder ($/kWh)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              step="0.0001"
+              placeholder="e.g. 0.0070"
+              value={adder}
+              onChange={e => setAdder(e.target.value)}
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20"
+            />
+            <button onClick={save} disabled={saving}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                saved ? "bg-emerald-100 text-emerald-700" : "bg-[#0F1D5E] text-white hover:bg-[#0F1D5E]/90"
+              } disabled:opacity-50`}>
+              <Save className="w-3 h-3" />
+              {saved ? "Saved!" : saving ? "..." : "Save"}
+            </button>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">Auto-applied to Residential deals for this REP</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -74,21 +133,7 @@ export default function SuppliersPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {suppliers.map((s: any) => (
-          <Card key={s.id}>
-            <CardContent className="pt-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-semibold text-gray-900">{s.name}</div>
-                  <div className="text-xs text-gray-400 mt-0.5 font-mono">{s.code}</div>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
-                  {s.is_active ? "Active" : "Inactive"}
-                </span>
-              </div>
-              {s.notes && <p className="text-sm text-gray-500 mt-3">{s.notes}</p>}
-              {s.contact_email && <p className="text-xs text-gray-400 mt-2">{s.contact_email}</p>}
-            </CardContent>
-          </Card>
+          <SupplierCard key={s.id} supplier={s} onUpdated={load} />
         ))}
       </div>
     </div>
