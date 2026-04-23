@@ -53,10 +53,22 @@ function AddTaskModal({ onClose, onSaved, prefillLeadId }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [users, setUsers] = useState<any[]>([]);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerResults, setCustomerResults] = useState<any[]>([]);
+  const [customerSearching, setCustomerSearching] = useState(false);
 
   useEffect(() => {
     api.getUsers().then(setUsers).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!customerQuery.trim()) { setCustomerResults([]); return; }
+    setCustomerSearching(true);
+    const t = setTimeout(() => {
+      api.getLeads({ search: customerQuery }).then(r => setCustomerResults((r || []).slice(0, 6))).catch(() => {}).finally(() => setCustomerSearching(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [customerQuery]);
 
   const submit = async () => {
     if (!form.title.trim()) { setError("Title is required"); return; }
@@ -110,9 +122,36 @@ function AddTaskModal({ onClose, onSaved, prefillLeadId }: {
             <label className="text-xs font-semibold text-slate-500 mb-1 block">Due Date *</label>
             <input type="datetime-local" className={inputCls} value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
           </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-500 mb-1 block">Customer ID</label>
-            <input className={inputCls} value={form.lead_id} onChange={e => setForm(f => ({ ...f, lead_id: e.target.value }))} placeholder="SGP-2026xxxxxx or lead UUID" />
+          <div className="relative">
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">Customer Name</label>
+            <input
+              className={inputCls}
+              value={customerQuery}
+              onChange={e => { setCustomerQuery(e.target.value); setForm(f => ({ ...f, lead_id: "" })); }}
+              placeholder="Search by name..."
+              autoComplete="off"
+            />
+            {form.lead_id && (
+              <p className="text-xs text-emerald-600 font-semibold mt-1">✓ {customerQuery}</p>
+            )}
+            {customerResults.length > 0 && !form.lead_id && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                {customerSearching && <p className="px-3 py-2 text-xs text-slate-400">Searching...</p>}
+                {customerResults.map(l => (
+                  <button key={l.id} type="button"
+                    className="w-full text-left px-3 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
+                    onClick={() => {
+                      const name = `${l.first_name} ${l.last_name}`.trim();
+                      setCustomerQuery(name);
+                      setForm(f => ({ ...f, lead_id: l.id }));
+                      setCustomerResults([]);
+                    }}>
+                    <p className="text-sm font-semibold text-slate-800">{l.first_name} {l.last_name}</p>
+                    <p className="text-xs text-slate-400">{l.phone}{l.sgp_customer_id ? ` · ${l.sgp_customer_id}` : ""}</p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-1 block">Assigned To</label>
