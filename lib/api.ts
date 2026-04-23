@@ -179,6 +179,11 @@ export const api = {
     return request(`/api/v1/call-list${q}`);
   },
 
+  // Landing Plans
+  getLandingPlans: () => request("/api/v1/landing-plans"),
+  updateLandingPlan: (id: number, data: object) =>
+    request(`/api/v1/landing-plans/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
   // Reconciliation
   getRuns: () => request("/api/v1/reconciliation/runs"),
   getRun: (id: string) => request(`/api/v1/reconciliation/runs/${id}`),

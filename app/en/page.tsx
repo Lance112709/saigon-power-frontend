@@ -98,11 +98,7 @@ const PROVIDERS = [
   "Constellation","NRG Energy","Ambit Energy","Stream Energy",
 ];
 
-const PLANS = [
-  { name: "No Gimmicks 12 Resi", provider: "Budget Power · 12 mo", rate: "7.6", badge: "Lowest" },
-  { name: "No Gimmicks 24 Resi", provider: "Budget Power · 24 mo", rate: "8.4", badge: null },
-  { name: "No Gimmicks 36 Resi", provider: "Budget Power · 36 mo", rate: "8.5", badge: null },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const FAQS = [
   { q: "Can I switch electricity providers?",
@@ -166,8 +162,18 @@ function ProviderTicker() {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
+type Plan = { id: number; term_months: number; plan_name: string; provider: string; rate: number; badge: string | null };
+
 export default function LandingPage() {
   const [zip, setZip] = useState("");
+  const [plans, setPlans] = useState<Plan[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/landing-plans`)
+      .then(r => r.json())
+      .then(setPlans)
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0a1a0e]" style={{ fontFamily:"'Inter',system-ui,sans-serif" }}>
@@ -305,18 +311,18 @@ export default function LandingPage() {
               </div>
 
               <div className="divide-y divide-white/6">
-                {PLANS.map((plan, i) => (
-                  <div key={i} className="flex items-center justify-between px-5 py-4 hover:bg-white/4 transition-colors">
+                {plans.map((plan) => (
+                  <div key={plan.id} className="flex items-center justify-between px-5 py-4 hover:bg-white/4 transition-colors">
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-white">{plan.name}</p>
+                        <p className="text-sm font-semibold text-white">{plan.plan_name}</p>
                         {plan.badge && (
                           <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#22c55e]/20 text-[#22c55e] uppercase tracking-wide">
                             {plan.badge}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-white/35 mt-0.5">{plan.provider}</p>
+                      <p className="text-xs text-white/35 mt-0.5">{plan.provider} · {plan.term_months} mo</p>
                     </div>
                     <div className="text-right">
                       <span className="text-2xl font-black text-white">{plan.rate}</span>
