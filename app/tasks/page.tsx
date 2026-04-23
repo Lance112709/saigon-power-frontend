@@ -52,11 +52,15 @@ function AddTaskModal({ onClose, onSaved, prefillLeadId }: {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [users, setUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.getUsers().then(setUsers).catch(() => {});
+  }, []);
 
   const submit = async () => {
     if (!form.title.trim()) { setError("Title is required"); return; }
     if (!form.due_date) { setError("Due date is required"); return; }
-    if (!form.lead_id.trim()) { setError("Lead ID is required"); return; }
     setSaving(true);
     try {
       await api.createTask({ ...form, lead_id: form.lead_id || undefined });
@@ -107,12 +111,23 @@ function AddTaskModal({ onClose, onSaved, prefillLeadId }: {
             <input type="datetime-local" className={inputCls} value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-500 mb-1 block">Lead ID *</label>
-            <input className={inputCls} value={form.lead_id} onChange={e => setForm(f => ({ ...f, lead_id: e.target.value }))} placeholder="Paste lead UUID" />
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">Customer ID</label>
+            <input className={inputCls} value={form.lead_id} onChange={e => setForm(f => ({ ...f, lead_id: e.target.value }))} placeholder="SGP-2026xxxxxx or lead UUID" />
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-1 block">Assigned To</label>
-            <input className={inputCls} value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} placeholder="Name or email" />
+            {users.length > 0 ? (
+              <select className={inputCls} value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}>
+                <option value="">— Unassigned —</option>
+                {users.map(u => (
+                  <option key={u.id} value={`${u.first_name} ${u.last_name}`}>
+                    {u.first_name} {u.last_name} ({u.role})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input className={inputCls} value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} placeholder="Name or email" />
+            )}
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-1 block">Notes</label>
