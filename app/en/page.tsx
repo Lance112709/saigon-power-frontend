@@ -200,13 +200,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-5 flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full border-2 border-[#22c55e]/60 flex items-center justify-center overflow-hidden bg-[#0f2d18]">
-              <img src="/sg-power-logo.jpg" alt="SP" className="w-full h-full object-cover"
-                onError={(e:any) => { e.target.style.display="none"; }} />
-            </div>
-            <div>
-              <p className="font-black text-white text-sm leading-tight tracking-tight">Saigon Power</p>
-            </div>
+            <img src="/sgpower-logo.webp" alt="Saigon Power" className="h-10 w-10 object-contain" />
+            <p className="font-black text-white text-sm leading-tight tracking-tight">Saigon Power</p>
           </div>
 
           {/* Nav links */}
@@ -551,10 +546,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-10 mb-10">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-full border border-[#22c55e]/40 flex items-center justify-center overflow-hidden">
-                  <img src="/sg-power-logo.jpg" alt="SP" className="w-full h-full object-cover"
-                    onError={(e:any) => { e.target.style.display="none"; }} />
-                </div>
+                <img src="/sgpower-logo.webp" alt="Saigon Power" className="h-9 w-9 object-contain" />
                 <span className="font-black text-lg tracking-tight">Saigon Power</span>
               </div>
               <p className="text-sm text-white/35 leading-relaxed max-w-xs">Texas's #1 electricity service for the Vietnamese community</p>
