@@ -221,6 +221,7 @@ export default function LandingPage() {
             {[["#plans","Compare Plans"],["#residential","Residential"],["#commercial","Commercial"],["#about","About Us"],["#faq","FAQ"]].map(([h,l]) => (
               <a key={h} href={h} className="text-sm font-medium text-white/65 hover:text-white transition-colors">{l}</a>
             ))}
+            <a href="/refer" className="text-sm font-semibold text-[#22c55e] hover:text-[#4ade80] transition-colors">Refer a Customer</a>
           </div>
 
           {/* Right CTA */}
