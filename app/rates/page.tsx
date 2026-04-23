@@ -97,7 +97,10 @@ export default function RatesPage() {
       )}
 
       <p className="text-xs text-slate-400 text-center pt-2">
-        Rates are updated by your admin. Contact your manager if pricing looks incorrect.
+        Rates are updated by admin. Pricing subject to change at any time.{" "}
+        Please email us at{" "}
+        <a href="mailto:info@saigonllc.com" className="text-[#0F1D5E] font-semibold hover:underline">info@saigonllc.com</a>
+        {" "}if pricing looks incorrect.
       </p>
     </div>
   );
