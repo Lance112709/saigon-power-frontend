@@ -32,6 +32,35 @@ function FormInput({
   );
 }
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0,3)}-${digits.slice(3)}`;
+  return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
+}
+
+function PhoneInput({ label, required, error, value, onChange }: {
+  label: string; required?: boolean; error?: string;
+  value: string; onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className={labelCls}>
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <input
+        type="tel"
+        className={`${inputCls} ${error ? "border-red-400 ring-1 ring-red-400/30" : ""}`}
+        placeholder="000-000-0000"
+        value={value}
+        onChange={e => onChange(formatPhone(e.target.value))}
+        maxLength={12}
+      />
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
 function LeadBadge({ status }: { status: string }) {
   return (
     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -218,9 +247,9 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormInput label="Phone" required placeholder="(555) 555-5555" type="tel"
+            <PhoneInput label="Phone" required
               value={form.phone} onChange={v => set("phone", v)} error={errors.phone} />
-            <FormInput label="Phone 2" placeholder="(555) 555-5555" type="tel"
+            <PhoneInput label="Phone 2"
               value={form.phone2} onChange={v => set("phone2", v)} error={errors.phone2} />
           </div>
 
