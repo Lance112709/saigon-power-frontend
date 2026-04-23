@@ -111,8 +111,6 @@ const FAQS = [
     a: "No. Switching never interrupts your service. The same utility continues to deliver power — only your billing company changes." },
   { q: "How long does enrollment take?",
     a: "Most switches are completed within 24 hours. In some cases it activates on your next meter read date (1–7 days)." },
-  { q: "Does Saigon Power charge a fee?",
-    a: "Never. Our service is 100% free to you. We're compensated by the energy provider when you enroll." },
   { q: "What if I'm in a contract?",
     a: "We'll check your contract and find out if switching makes financial sense — sometimes paying an ETF still saves money." },
 ];
