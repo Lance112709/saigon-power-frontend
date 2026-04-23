@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useAuth, Role } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, RefreshCw, Shield, Copy, Check, Hash } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Shield, Copy, Check, Hash, Pencil, X, Save } from "lucide-react";
 
 const ROLES: Role[] = ["admin", "manager", "csr", "sales_agent"];
 const ROLE_LABEL: Record<Role, string> = {
@@ -48,6 +48,12 @@ export default function UsersPage() {
   const [createError, setCreateError] = useState("");
   const [tempPw, setTempPw] = useState<{ name: string; email: string; pw: string } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Edit modal
+  const [editUser, setEditUser] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", email: "", role: "csr", sales_agent_name: "" });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const load = useCallback(async () => {
     setLoadingUsers(true);
@@ -125,6 +131,41 @@ export default function UsersPage() {
       await api.deleteUser(u.id);
       setUsers(prev => prev.filter(x => x.id !== u.id));
     } catch {}
+  };
+
+  const openEdit = (u: any) => {
+    setEditUser(u);
+    setEditForm({
+      first_name: u.first_name || "",
+      last_name: u.last_name || "",
+      email: u.email || "",
+      role: u.role || "csr",
+      sales_agent_name: u.sales_agent_name || "",
+    });
+    setEditError("");
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.first_name.trim() || !editForm.last_name.trim() || !editForm.email.trim()) {
+      setEditError("Name and email are required."); return;
+    }
+    setEditSaving(true); setEditError("");
+    try {
+      const updated = await api.updateUser(editUser.id, {
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
+        email: editForm.email.trim(),
+        role: editForm.role,
+        sales_agent_name: editForm.role === "sales_agent" ? editForm.sales_agent_name.trim() || null : null,
+      });
+      setUsers(prev => prev.map(x => x.id === editUser.id ? { ...x, ...updated } : x));
+      setEditUser(null);
+    } catch (err: any) {
+      const raw = err?.message || "Failed to save";
+      const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
+      try { setEditError(JSON.parse(body)?.detail ?? body); } catch { setEditError(body); }
+    }
+    setEditSaving(false);
   };
 
   const copyPw = () => {
@@ -270,6 +311,9 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{new Date(u.created_at).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button onClick={() => openEdit(u)} className="text-slate-400 hover:text-[#0F1D5E] transition-colors" title="Edit user">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                         <button onClick={() => resetPw(u)} className="text-slate-300 hover:text-amber-500 transition-colors" title="Reset password">
                           <RefreshCw className="w-3.5 h-3.5" />
                         </button>
@@ -359,6 +403,68 @@ export default function UsersPage() {
           </p>
         </div>
       </div>
+
+      {/* Edit User Modal */}
+      {editUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="font-bold text-[#0F1D5E]">Edit User</h3>
+              <button onClick={() => setEditUser(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              {editError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">{editError}</div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">First Name *</label>
+                  <input className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20"
+                    value={editForm.first_name} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Last Name *</label>
+                  <input className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20"
+                    value={editForm.last_name} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Email *</label>
+                <input type="email" className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20"
+                  value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Role *</label>
+                <select className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20"
+                  value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}>
+                  {ROLES.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                </select>
+              </div>
+              {editForm.role === "sales_agent" && (
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Agent Name (must match deal records exactly)</label>
+                  <input className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20"
+                    placeholder="e.g. Lance Nguyen"
+                    value={editForm.sales_agent_name} onChange={e => setEditForm(f => ({ ...f, sales_agent_name: e.target.value }))} />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 px-6 pb-5">
+              <button onClick={() => setEditUser(null)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={saveEdit} disabled={editSaving}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50 transition-colors">
+                <Save className="w-4 h-4" />
+                {editSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
