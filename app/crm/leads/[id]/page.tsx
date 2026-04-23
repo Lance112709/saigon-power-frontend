@@ -911,7 +911,7 @@ export default function LeadDetailPage() {
                     </span>
                   )}
                   {lead.dob && (
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">DOB: <strong>{lead.dob}</strong></span>
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">DOB: <strong>{lead.dob ? (() => { const [y,m,d] = lead.dob.split("-"); return `${m}/${d}/${y}`; })() : ""}</strong></span>
                   )}
                   {lead.dl_number && (
                     <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">DL: <strong>{lead.dl_number}</strong></span>
