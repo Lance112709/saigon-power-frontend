@@ -123,7 +123,7 @@ export default function AgentsPage() {
                 <input type="tel" className={inputCls} placeholder="(555) 555-5555" value={form.phone} onChange={e => set("phone", e.target.value)} />
               </div>
               <p className="text-[11px] text-slate-400 bg-slate-50 rounded-lg px-3 py-2">
-                Agent Code auto-generates as <strong>FirstName + last 4 of phone</strong> on save.
+                Agent ID auto-generates as <strong>FirstName + last 4 of phone</strong> on save.
               </p>
             </div>
             <button onClick={submit} disabled={saving}
@@ -146,7 +146,7 @@ export default function AgentsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    {["Name", "Agent Code", "Agent Type", "Email", "Phone", "Added", "Actions"].map((h, i) => (
+                    {["Name", "Agent ID", "Agent Type", "Email", "Phone", "Added", "Actions"].map((h, i) => (
                       <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -213,9 +213,9 @@ export default function AgentsPage() {
                 </div>
               )}
 
-              {/* Agent Code preview */}
+              {/* Agent ID preview */}
               <div className="bg-[#EEF1FA] rounded-xl px-4 py-3 flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Agent Code</span>
+                <span className="text-xs font-semibold text-slate-500">Agent ID</span>
                 <span className="font-mono font-black text-[#0F1D5E] text-sm">
                   {editAgent.agent_code || "—"}
                   <span className="ml-2 text-[10px] font-normal text-slate-400">(auto-updates on save)</span>
