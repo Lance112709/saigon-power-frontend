@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe,
+  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe, Tag,
 } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
@@ -21,6 +21,7 @@ const links: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/call-list", label: "Who To Call Today", icon: PhoneCall },
   { href: "/tasks", label: "Tasks & Follow-Ups", icon: Bell },
+  { href: "/rates", label: "Today's Rates", icon: Tag },
   { href: "/forecast", label: "Revenue Forecast", icon: TrendingUp, perm: "view_forecast" },
   { href: "/uploads", label: "Upload Statements", icon: Upload, perm: "view_uploads" },
   { href: "/reconciliation", label: "Reconciliation", icon: RefreshCw, perm: "view_reconciliation" },
