@@ -208,7 +208,6 @@ export default function LandingPage() {
             </div>
             <div>
               <p className="font-black text-white text-sm leading-tight tracking-tight">Saigon Power</p>
-              <p className="text-[10px] text-white/35">giadienre.com</p>
             </div>
           </div>
 
@@ -292,7 +291,7 @@ export default function LandingPage() {
 
             {/* Trust badges */}
             <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {["100% Free Service","No Credit Check","Rates Updated Daily","Switch in 24 Hours"].map(b => (
+              {["100% Free Service","Rates Updated Daily","Switch in 24 Hours"].map(b => (
                 <div key={b} className="flex items-center gap-1.5 text-sm text-white/50">
                   <CheckCircle className="w-4 h-4 text-[#22c55e]" />{b}
                 </div>
@@ -541,7 +540,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-x-7 gap-y-2 text-xs text-white/30">
-            {["Your data is secure","Always free","No spam, ever","No credit check"].map(b => (
+            {["Your data is secure","Always free","No spam, ever"].map(b => (
               <div key={b} className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#22c55e]" />{b}</div>
             ))}
           </div>
