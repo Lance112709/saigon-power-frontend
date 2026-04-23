@@ -125,6 +125,8 @@ export const api = {
   getSalesAgents: () => request("/api/v1/leads/agents"),
   createSalesAgent: (data: object) =>
     request("/api/v1/leads/agents", { method: "POST", body: JSON.stringify(data) }),
+  updateSalesAgent: (id: string, data: object) =>
+    request(`/api/v1/leads/agents/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteSalesAgent: (id: string) =>
     request(`/api/v1/leads/agents/${id}`, { method: "DELETE" }),
   getLeadCustomers: (params?: Record<string, string>) => {
