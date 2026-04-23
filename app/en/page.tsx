@@ -100,6 +100,12 @@ const PROVIDERS = [
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+const FALLBACK_PLANS = [
+  { id: 1, term_months: 12, plan_name: "No Gimmicks 12 Resi", provider: "Budget Power", rate: 7.6, badge: "Lowest", sort_order: 1 },
+  { id: 2, term_months: 24, plan_name: "No Gimmicks 24 Resi", provider: "Budget Power", rate: 8.4, badge: null,     sort_order: 2 },
+  { id: 3, term_months: 36, plan_name: "No Gimmicks 36 Resi", provider: "Budget Power", rate: 8.5, badge: null,     sort_order: 3 },
+];
+
 const FAQS = [
   { q: "Can I switch electricity providers?",
     a: "Yes! Texas is a deregulated electricity market, so you can freely choose your provider without any prior notice." },
@@ -166,12 +172,12 @@ type Plan = { id: number; term_months: number; plan_name: string; provider: stri
 
 export default function LandingPage() {
   const [zip, setZip] = useState("");
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plans, setPlans] = useState<Plan[]>(FALLBACK_PLANS);
 
   useEffect(() => {
     fetch(`${API_URL}/api/v1/landing-plans`)
-      .then(r => r.json())
-      .then(setPlans)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (Array.isArray(data) && data.length > 0) setPlans(data); })
       .catch(() => {});
   }, []);
 

@@ -30,6 +30,7 @@ export default function LandingRatesPage() {
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && user.role !== "admin") router.replace("/dashboard");
@@ -37,9 +38,15 @@ export default function LandingRatesPage() {
 
   const load = async () => {
     setLoading(true);
-    const data = await api.getLandingPlans().catch(() => []);
-    setPlans(data);
-    setLoading(false);
+    setError(null);
+    try {
+      const data = await api.getLandingPlans();
+      setPlans(data);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load plans");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -99,6 +106,14 @@ export default function LandingRatesPage() {
       {loading ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center text-slate-400 text-sm">
           Loading plans...
+        </div>
+      ) : error ? (
+        <div className="bg-white rounded-2xl border border-red-200 p-10 text-center">
+          <p className="text-red-600 font-semibold mb-1">Failed to load plans</p>
+          <p className="text-xs text-slate-400 mb-4">{error}</p>
+          <button onClick={load} className="px-4 py-2 bg-[#0F1D5E] text-white rounded-xl text-sm font-semibold">
+            Try Again
+          </button>
         </div>
       ) : (
         <div className="space-y-4">
