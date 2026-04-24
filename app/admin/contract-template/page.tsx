@@ -73,9 +73,7 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; font-size:
       </tr>
       <tr>
         <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Energy Provider:</td>
-        <td style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{rep_name}}</td>
-        <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Est. Monthly Bill:</td>
-        <td style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{est_monthly_bill}}</td>
+        <td colspan="3" style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{rep_name}}</td>
       </tr>
       <tr>
         <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Plan Name:</td>
@@ -148,7 +146,6 @@ const SAMPLE_DATA: Record<string, string> = {
   "{{plan_name}}": "12-Month Fixed",
   "{{rate}}": "8.50",
   "{{term_months}}": "12",
-  "{{est_monthly_bill}}": "$95.00",
   "{{early_termination_fee}}": "$150.00",
   "{{signature}}": "John Smith",
   "{{date}}": new Date().toLocaleDateString("en-US"),
