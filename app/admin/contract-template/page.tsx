@@ -53,6 +53,10 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; font-size:
         <td style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">Switch</td>
       </tr>
       <tr>
+        <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Start Date:</td>
+        <td colspan="3" style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{start_date}}</td>
+      </tr>
+      <tr>
         <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Service Address:</td>
         <td colspan="3" style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{service_address}}</td>
       </tr>
@@ -134,7 +138,7 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; font-size:
 
 const MERGE_TAGS = [
   "{{customer_name}}","{{customer_address}}","{{customer_phone}}","{{customer_email}}",
-  "{{ssn}}","{{dob}}","{{esi_id}}","{{service_address}}","{{rep_name}}","{{plan_name}}",
+  "{{ssn}}","{{dob}}","{{esi_id}}","{{service_address}}","{{start_date}}","{{rep_name}}","{{plan_name}}",
   "{{rate}}","{{term_months}}","{{est_monthly_bill}}","{{early_termination_fee}}",
   "{{signature}}","{{date}}",
 ];
@@ -147,6 +151,7 @@ const SAMPLE_DATA: Record<string, string> = {
   "{{ssn}}": "XXX-XX-1234",
   "{{dob}}": "01/15/1985",
   "{{esi_id}}": "1008901020030040050",
+  "{{start_date}}": "05/01/2026",
   "{{service_address}}": "123 Main St, Houston TX 77001",
   "{{rep_name}}": "Discount Power",
   "{{plan_name}}": "12-Month Fixed",
