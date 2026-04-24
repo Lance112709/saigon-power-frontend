@@ -242,6 +242,7 @@ const SUPPLIERS = [
 
 const DEAL_TYPES = ["New Business", "Renew", "TOS", "TOAO"];
 const SERVICE_ORDER_TYPES = ["PMVI", "MVI", "SWI"];
+const RENEW_SERVICE_ORDER_TYPES = ["PMVI", "MVI", "SWI", "Renewed with same REP"];
 
 const EMPTY_DEAL = {
   // Flags
@@ -437,7 +438,7 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
 
               <FormSelect label="Service Order Type *" error={errors.service_order_type} value={form.service_order_type} onChange={v => setStr("service_order_type", v)}>
                 <option value="">— Select —</option>
-                {SERVICE_ORDER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                {(form.deal_type === "Renew" ? RENEW_SERVICE_ORDER_TYPES : SERVICE_ORDER_TYPES).map(t => <option key={t} value={t}>{t}</option>)}
               </FormSelect>
 
               <FormSelect label="Contract Term *" error={errors.contract_term} value={form.contract_term} onChange={v => setStr("contract_term", v)}>
