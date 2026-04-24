@@ -15,6 +15,7 @@ function applyMergeTags(html: string, p: any, sig: string): string {
     .replaceAll("{{customer_address}}", p.customer_address || "")
     .replaceAll("{{customer_phone}}", p.customer_phone || "")
     .replaceAll("{{customer_email}}", p.customer_email || "")
+    .replaceAll("{{ssn}}", p.anxh || p.ssn || "")
     .replaceAll("{{dob}}", p.dob || "")
     .replaceAll("{{esi_id}}", p.esi_id || "")
     .replaceAll("{{service_address}}", p.service_address || p.customer_address || "")

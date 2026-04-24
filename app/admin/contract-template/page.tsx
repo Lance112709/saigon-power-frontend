@@ -26,14 +26,18 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; font-size:
         <td style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{customer_phone}}</td>
       </tr>
       <tr>
+        <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">SSN:</td>
+        <td style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{ssn}}</td>
+        <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Date of Birth:</td>
+        <td style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{dob}}</td>
+      </tr>
+      <tr>
         <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Billing Address:</td>
         <td colspan="3" style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{customer_address}}</td>
       </tr>
       <tr>
         <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Email:</td>
-        <td style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{customer_email}}</td>
-        <td style="padding: 4px 6px; font-weight: bold; color: #444; font-size: 10px;">Date of Birth:</td>
-        <td style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{dob}}</td>
+        <td colspan="3" style="padding: 4px 6px; border-bottom: 1px solid #ccc; font-size: 11px;">{{customer_email}}</td>
       </tr>
     </table>
   </div>
@@ -130,7 +134,7 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; font-size:
 
 const MERGE_TAGS = [
   "{{customer_name}}","{{customer_address}}","{{customer_phone}}","{{customer_email}}",
-  "{{dob}}","{{esi_id}}","{{service_address}}","{{rep_name}}","{{plan_name}}",
+  "{{ssn}}","{{dob}}","{{esi_id}}","{{service_address}}","{{rep_name}}","{{plan_name}}",
   "{{rate}}","{{term_months}}","{{est_monthly_bill}}","{{early_termination_fee}}",
   "{{signature}}","{{date}}",
 ];
@@ -140,6 +144,7 @@ const SAMPLE_DATA: Record<string, string> = {
   "{{customer_address}}": "123 Main St, Houston TX 77001",
   "{{customer_phone}}": "832-555-0100",
   "{{customer_email}}": "john@example.com",
+  "{{ssn}}": "XXX-XX-1234",
   "{{dob}}": "01/15/1985",
   "{{esi_id}}": "1008901020030040050",
   "{{service_address}}": "123 Main St, Houston TX 77001",
