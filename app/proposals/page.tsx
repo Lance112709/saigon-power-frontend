@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { FileSignature, Copy, Check, ExternalLink } from "lucide-react";
+import { FileSignature, Copy, Check, ExternalLink, Download } from "lucide-react";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -30,6 +30,15 @@ function CopyLink({ token }: { token: string }) {
       {copied ? "Copied!" : "Copy link"}
     </button>
   );
+}
+
+async function openContract(token: string) {
+  try {
+    const { url } = await api.getSignedContractUrl(token);
+    window.open(url, "_blank");
+  } catch {
+    alert("Could not load signed contract.");
+  }
 }
 
 export default function ProposalsPage() {
@@ -124,7 +133,7 @@ export default function ProposalsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {["Customer", "Plan / REP", "Rate", "Term", "Est. Bill", "Status", "Created", "Actions"].map(h => (
+                  {["Customer", "Plan / REP", "Rate", "Term", "Est. Bill", "Status", "Created", "Contract", "Actions"].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -156,6 +165,16 @@ export default function ProposalsPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
                       {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </td>
+                    <td className="px-4 py-3">
+                      {p.signed_contract_url ? (
+                        <button onClick={() => openContract(p.token)}
+                          className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">
+                          <Download className="w-3.5 h-3.5" /> Download
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">

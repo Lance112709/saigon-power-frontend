@@ -187,6 +187,19 @@ export const api = {
   updateLandingPlan: (id: number, data: object) =>
     request(`/api/v1/landing-plans/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
+  // Contract Templates
+  getContractTemplate: () => request("/api/v1/contracts/template"),
+  updateContractTemplate: (html_content: string) =>
+    request("/api/v1/contracts/template", { method: "PATCH", body: JSON.stringify({ html_content }) }),
+  storeSignedContract: (token: string, pdfBlob: Blob) => {
+    const formData = new FormData();
+    formData.append("file", pdfBlob, "contract.pdf");
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const stored = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    return fetch(`${API_URL}/api/v1/contracts/store/${token}`, { method: "POST", body: formData }).then(r => r.json());
+  },
+  getSignedContractUrl: (token: string) => request(`/api/v1/contracts/signed-url/${token}`),
+
   // Reconciliation
   getRuns: () => request("/api/v1/reconciliation/runs"),
   getRun: (id: string) => request(`/api/v1/reconciliation/runs/${id}`),

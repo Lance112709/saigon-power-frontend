@@ -1,43 +1,121 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { Zap, CheckCircle, AlertCircle, Shield, FileText } from "lucide-react";
+import { Zap, CheckCircle, AlertCircle, Shield, FileText, ChevronDown } from "lucide-react";
+
+function applyMergeTags(html: string, p: any, sig: string): string {
+  const today = new Date().toLocaleDateString("en-US");
+  const rateCents = p.rate != null ? (parseFloat(p.rate) * 100).toFixed(4) : "";
+  const etf = p.early_termination_fee != null ? `$${parseFloat(p.early_termination_fee).toFixed(2)}` : "$150.00";
+  const bill = p.est_monthly_bill != null ? `$${parseFloat(p.est_monthly_bill).toFixed(2)}` : "";
+
+  return html
+    .replaceAll("{{customer_name}}", p.customer_name || "")
+    .replaceAll("{{customer_address}}", p.customer_address || "")
+    .replaceAll("{{customer_phone}}", p.customer_phone || "")
+    .replaceAll("{{customer_email}}", p.customer_email || "")
+    .replaceAll("{{dob}}", p.dob || "")
+    .replaceAll("{{esi_id}}", p.esi_id || "")
+    .replaceAll("{{service_address}}", p.service_address || p.customer_address || "")
+    .replaceAll("{{rep_name}}", p.rep_name || "")
+    .replaceAll("{{plan_name}}", p.plan_name || "")
+    .replaceAll("{{rate}}", rateCents)
+    .replaceAll("{{term_months}}", String(p.term_months || ""))
+    .replaceAll("{{est_monthly_bill}}", bill)
+    .replaceAll("{{early_termination_fee}}", etf)
+    .replaceAll("{{signature}}", sig || "")
+    .replaceAll("{{date}}", today);
+}
 
 export default function ProposalAcceptPage() {
-  const params   = useParams();
-  const token    = params.token as string;
+  const params = useParams();
+  const token  = params.token as string;
 
-  const [proposal, setProposal] = useState<any>(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState("");
-  const [signature, setSignature] = useState("");
-  const [agreed, setAgreed]     = useState(false);
+  const [proposal, setProposal]     = useState<any>(null);
+  const [template, setTemplate]     = useState<any>(null);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState("");
+  const [signature, setSignature]   = useState("");
+  const [agreed, setAgreed]         = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [accepted, setAccepted] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState("");
+  const [accepted, setAccepted]     = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [contractOpen, setContractOpen] = useState(false);
+
+  const contractRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.getProposalByToken(token)
-      .then(setProposal)
-      .catch(() => setError("Proposal not found or this link has expired."))
-      .finally(() => setLoading(false));
+    Promise.allSettled([
+      api.getProposalByToken(token),
+      api.getContractTemplate(),
+    ]).then(([propRes, tmplRes]) => {
+      if (propRes.status === "fulfilled") setProposal(propRes.value);
+      else setError("Proposal not found or this link has expired.");
+      if (tmplRes.status === "fulfilled") setTemplate(tmplRes.value);
+    }).finally(() => setLoading(false));
   }, [token]);
+
+  const mergedHtml = useMemo(() => {
+    if (!template?.html_content || !proposal) return "";
+    return applyMergeTags(template.html_content, proposal, signature);
+  }, [template, proposal, signature]);
 
   const submit = async () => {
     if (!signature.trim()) { setSubmitError("Please type your full name as your signature."); return; }
     if (!agreed) { setSubmitError("Please agree to the terms to continue."); return; }
     setSubmitting(true);
     setSubmitError("");
+
     try {
+      // Generate and store PDF if contract template exists
+      if (mergedHtml && contractRef.current) {
+        setSubmitStatus("Generating your contract...");
+
+        const html2canvas = (await import("html2canvas")).default;
+        const { default: jsPDF } = await import("jspdf");
+
+        // Ensure contract is expanded for capture
+        setContractOpen(true);
+        await new Promise(r => setTimeout(r, 300));
+
+        const canvas = await html2canvas(contractRef.current, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+
+        const imgData  = canvas.toDataURL("image/jpeg", 0.92);
+        const pdf      = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        const pgW      = pdf.internal.pageSize.getWidth();
+        const pgH      = pdf.internal.pageSize.getHeight();
+        const imgH     = (canvas.height * pgW) / canvas.width;
+
+        let pos = 0;
+        while (pos < imgH) {
+          if (pos > 0) pdf.addPage();
+          pdf.addImage(imgData, "JPEG", 0, -pos, pgW, imgH);
+          pos += pgH;
+        }
+
+        const pdfBlob = pdf.output("blob");
+        setSubmitStatus("Uploading signed contract...");
+        await api.storeSignedContract(token, pdfBlob);
+      }
+
+      setSubmitStatus("Finalizing...");
       await api.acceptProposal(token, { signature: signature.trim() });
       setAccepted(true);
     } catch (err: any) {
-      const raw = err?.message || "Something went wrong. Please try again.";
+      const raw  = err?.message || "Something went wrong. Please try again.";
       const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
       try { setSubmitError(JSON.parse(body)?.detail ?? body); } catch { setSubmitError(body); }
     }
+
     setSubmitting(false);
+    setSubmitStatus("");
   };
 
   if (loading) {
@@ -124,7 +202,7 @@ export default function ProposalAcceptPage() {
             {[
               ["Energy Provider (REP)", p.rep_name || "—"],
               ["Plan Name",             p.plan_name || "—"],
-              ["Energy Rate",           p.rate != null ? `$${parseFloat(p.rate).toFixed(4)} per kWh` : "—"],
+              ["Energy Rate",           p.rate != null ? `${(parseFloat(p.rate) * 100).toFixed(4)} ¢/kWh` : "—"],
               ["Contract Term",         p.term_months ? `${p.term_months} Months` : "—"],
               ["Est. Monthly Bill",     p.est_monthly_bill != null ? `$${parseFloat(p.est_monthly_bill).toFixed(2)}/mo` : "—"],
               ["Early Termination Fee", p.early_termination_fee != null ? `$${parseFloat(p.early_termination_fee).toFixed(2)}` : "None"],
@@ -142,6 +220,32 @@ export default function ProposalAcceptPage() {
             </div>
           )}
         </div>
+
+        {/* Contract document */}
+        {mergedHtml && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setContractOpen(!contractOpen)}
+              className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#0F1D5E]" />
+                <span className="text-sm font-bold text-[#0F1D5E]">Authorization Contract</span>
+                <span className="text-xs text-slate-400">(review before signing)</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${contractOpen ? "rotate-180" : ""}`} />
+            </button>
+            {contractOpen && (
+              <div className="border-t border-slate-100">
+                <div
+                  ref={contractRef}
+                  className="overflow-auto bg-white"
+                  dangerouslySetInnerHTML={{ __html: mergedHtml }}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Terms */}
         <div className="bg-[#EEF1FA] rounded-2xl border border-[#0F1D5E]/10 p-5">
@@ -181,7 +285,7 @@ export default function ProposalAcceptPage() {
               className="mt-0.5 w-4 h-4 rounded border-slate-300 text-[#0F1D5E]"
             />
             <span className="text-sm text-slate-600">
-              I have read and agree to the Terms & Conditions above. I authorize Saigon Power LLC to proceed with my energy enrollment.
+              I have read and agree to the Terms & Conditions above and the Authorization Contract. I authorize Saigon Power LLC to proceed with my energy enrollment.
             </span>
           </label>
 
@@ -196,7 +300,7 @@ export default function ProposalAcceptPage() {
             disabled={submitting || !signature.trim() || !agreed}
             className="w-full py-3.5 rounded-xl bg-[#0F1D5E] text-white font-bold text-sm hover:bg-[#0F1D5E]/90 transition-colors disabled:opacity-40"
           >
-            {submitting ? "Submitting..." : "Accept & Sign Contract"}
+            {submitting ? (submitStatus || "Processing...") : "Accept & Sign Contract"}
           </button>
 
           <p className="text-xs text-center text-slate-400">

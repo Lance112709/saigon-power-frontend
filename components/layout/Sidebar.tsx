@@ -135,6 +135,7 @@ export default function Sidebar() {
           <>
             <SectionLabel>Admin</SectionLabel>
             <NavLink href="/admin/users" label="User Management" icon={Shield} />
+            <NavLink href="/admin/contract-template" label="Contract Template" icon={FileText} />
             <NavLink href="/admin/ai" label="AI Operations" icon={Bot} />
           </>
         )}
