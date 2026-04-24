@@ -317,11 +317,13 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
 
   const validate = () => {
     const e: Record<string, string> = {};
+    const isCommercial = form.product_type === "Commercial";
     const required: (keyof typeof EMPTY_DEAL)[] = [
       "status", "supplier", "product_type", "rate_type", "deal_type", "service_order_type",
-      "contract_term", "rate", "adder", "est_kwh", "expected_close_date",
+      "contract_term", "rate", "est_kwh", "expected_close_date",
       "start_date", "end_date", "service_address", "service_city",
       "service_state", "service_zip", "esiid", "sales_agent",
+      ...(isCommercial ? ["adder" as keyof typeof EMPTY_DEAL] : []),
     ];
     for (const f of required) {
       if (!String((form as any)[f] ?? "").trim()) e[f] = "Required";
