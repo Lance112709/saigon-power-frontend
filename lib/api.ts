@@ -103,6 +103,10 @@ export const api = {
     request("/api/v1/crm/import", { method: "POST", body: JSON.stringify({ file_path }) }),
 
   // Leads
+  getAllLeadDeals: (params?: Record<string, string>) => {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/leads/all-deals${q}`);
+  },
   getNewLeadsCount: (since: string) =>
     request(`/api/v1/leads?created_after=${encodeURIComponent(since)}&count_only=true`),
   getLeads: (params?: Record<string, string>) => {
