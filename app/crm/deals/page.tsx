@@ -4,6 +4,13 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Search, ChevronDown } from "lucide-react";
 
+function fmtDate(d?: string | null) {
+  if (!d) return "—";
+  const s = d.slice(0, 10);
+  const [y, m, day] = s.split("-");
+  return `${m}/${day}/${y}`;
+}
+
 function StatusBadge({ status, dealId, onUpdate, isLead }: { status: string; dealId: string; onUpdate: (id: string, s: string) => void; isLead?: boolean }) {
   const [saving, setSaving] = useState(false);
   const isActive = isLead ? status === "Active" : status === "ACTIVE";
@@ -188,8 +195,8 @@ export default function CrmDealsPage() {
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.rate != null ? `$${parseFloat(d.rate).toFixed(4)}` : "—"}</td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.contract_term || "—"}</td>
-                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.start_date || "—"}</td>
-                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.end_date || "—"}</td>
+                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{fmtDate(d.start_date)}</td>
+                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{fmtDate(d.end_date)}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.sales_agent || "—"}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={d.status} dealId={d.id} onUpdate={() => {}} isLead />
@@ -209,8 +216,8 @@ export default function CrmDealsPage() {
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.energy_rate != null ? parseFloat(d.energy_rate).toFixed(4) : "—"}</td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">—</td>
-                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.contract_start_date ? d.contract_start_date.slice(0, 10) : "—"}</td>
-                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.contract_end_date ? d.contract_end_date.slice(0, 10) : "—"}</td>
+                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{fmtDate(d.contract_start_date)}</td>
+                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{fmtDate(d.contract_end_date)}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.sales_agent || "—"}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={d.deal_status} dealId={d.id} onUpdate={handleCrmStatusUpdate} />

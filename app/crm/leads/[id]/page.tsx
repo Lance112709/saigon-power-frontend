@@ -213,6 +213,13 @@ function ProposalModal({ lead, onClose }: { lead: any; onClose: () => void }) {
 }
 
 // ── Add Deal Modal ─────────────────────────────────────────────────────────────
+function fmtDate(d?: string | null) {
+  if (!d) return null;
+  const s = d.slice(0, 10);
+  const [y, m, day] = s.split("-");
+  return `${m}/${day}/${y}`;
+}
+
 const FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo"] as const;
 type Flag = typeof FLAGS[number];
 
@@ -1126,15 +1133,15 @@ export default function LeadDetailPage() {
                     ["Rate",            d.rate != null ? `$${parseFloat(d.rate).toFixed(4)}/kWh` : null, ""],
                     ["Adder",           d.adder != null ? `${parseFloat(d.adder).toFixed(4)}` : null, ""],
                     ["Term",            d.contract_term,  ""],
-                    ["Start",           d.start_date,     ""],
-                    ["End",             d.end_date,       ""],
+                    ["Start",           fmtDate(d.start_date), ""],
+                    ["End",             fmtDate(d.end_date),   ""],
                     ["Agent",           d.sales_agent,    ""],
                     ["Deal Type",       d.deal_type,      ""],
                     ["Rate Type",       d.rate_type,      ""],
                     ["Service Order",   d.service_order_type, ""],
                     ["Product Type",    d.product_type,   ""],
                     ["Est. Usage",      d.est_kwh ? `${d.est_kwh} kWh/mo` : null, ""],
-                    ["Expected Close",  d.expected_close_date, ""],
+                    ["Expected Close",  fmtDate(d.expected_close_date), ""],
                     ["SGP Customer ID", d.sgp_customer_id, "font-mono"],
                   ].map(([label, val, extra]) => val ? (
                     <div key={label as string}>
