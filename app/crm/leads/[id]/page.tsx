@@ -645,6 +645,7 @@ export default function LeadDetailPage() {
   const [editingDeal, setEditingDeal] = useState<any>(null);
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
   const [terminatingDeal, setTerminatingDeal] = useState<any>(null);
+  const [expandedDealId, setExpandedDealId] = useState<string | null>(null);
   const [editingLead, setEditingLead] = useState(false);
   const [leadForm, setLeadForm] = useState<any>({});
   const [leadFormErrors, setLeadFormErrors] = useState<Record<string, string>>({});
@@ -1106,33 +1107,63 @@ export default function LeadDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {[...active, ...other].map(d => (
-                  <tr key={d.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
-                    <td className="px-4 py-3 font-semibold text-[#0F1D5E] whitespace-nowrap">{d.supplier || "—"}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.plan_name || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-400 whitespace-nowrap">{d.esiid || "—"}</td>
-                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.rate != null ? `$${parseFloat(d.rate).toFixed(4)}` : "—"}</td>
-                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.contract_term || "—"}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.start_date || "—"}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.end_date || "—"}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.sales_agent || "—"}</td>
-                    <td className="px-4 py-3"><DealStatusBtn status={d.status} dealId={d.id} leadId={id} onUpdate={handleDealStatusUpdate} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {d.status === "Active" && (
-                          <button onClick={() => setTerminatingDeal(d)}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors whitespace-nowrap"
-                            title="Terminate deal">
-                            <Ban className="w-3 h-3" /> Terminate
-                          </button>
-                        )}
-                        <button onClick={() => setEditingDeal(d)} className="text-slate-300 hover:text-[#0F1D5E] transition-colors" title="Edit"><Pencil className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => handleDeleteDeal(d.id)} disabled={deletingDealId === d.id} className="text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {[...active, ...other].map(d => {
+                  const isExpanded = expandedDealId === d.id;
+                  const flags = ["TOS","TOAO","Deposit","Special Deal","10% Promo"].filter(f => d[f.toLowerCase().replace(/[^a-z]/g,"_")] || d[f.replace(/[^a-zA-Z0-9]/g,"").toLowerCase()]);
+                  return (
+                    <>
+                      <tr key={d.id} className={`border-b border-slate-100 hover:bg-slate-50/70 cursor-pointer ${isExpanded ? "bg-slate-50/60" : ""}`}
+                        onClick={() => setExpandedDealId(isExpanded ? null : d.id)}>
+                        <td className="px-4 py-3 font-semibold text-[#0F1D5E] whitespace-nowrap">{d.supplier || "—"}</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.plan_name || "—"}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-slate-400 whitespace-nowrap">{d.esiid || "—"}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.rate != null ? `$${parseFloat(d.rate).toFixed(4)}` : "—"}</td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.contract_term || "—"}</td>
+                        <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.start_date || "—"}</td>
+                        <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.end_date || "—"}</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.sales_agent || "—"}</td>
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}><DealStatusBtn status={d.status} dealId={d.id} leadId={id} onUpdate={handleDealStatusUpdate} /></td>
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            {d.status === "Active" && (
+                              <button onClick={() => setTerminatingDeal(d)}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors whitespace-nowrap"
+                                title="Terminate deal">
+                                <Ban className="w-3 h-3" /> Terminate
+                              </button>
+                            )}
+                            <button onClick={() => setEditingDeal(d)} className="text-slate-300 hover:text-[#0F1D5E] transition-colors" title="Edit"><Pencil className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => handleDeleteDeal(d.id)} disabled={deletingDealId === d.id} className="text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${d.id}-detail`} className="border-b border-slate-100 bg-slate-50/40">
+                          <td colSpan={11} className="px-5 py-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-xs">
+                              {[
+                                ["Deal Type",         d.deal_type],
+                                ["Rate Type",         d.rate_type],
+                                ["Service Order",     d.service_order_type],
+                                ["Product Type",      d.product_type],
+                                ["Est. Usage",        d.est_kwh ? `${d.est_kwh} kWh/mo` : null],
+                                ["Expected Close",    d.expected_close_date],
+                                ["Service Address",   [d.service_address, d.service_city, d.service_state, d.service_zip].filter(Boolean).join(", ")],
+                                ["SGP Customer ID",   d.sgp_customer_id],
+                              ].map(([label, val]) => val ? (
+                                <div key={label as string}>
+                                  <p className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">{label}</p>
+                                  <p className="text-slate-700 mt-0.5">{val}</p>
+                                </div>
+                              ) : null)}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
               </tbody>
             </table>
           </div>
