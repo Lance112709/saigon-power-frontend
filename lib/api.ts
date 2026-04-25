@@ -66,8 +66,14 @@ export const api = {
 
   // Uploads
   getUploads: () => request("/api/v1/uploads"),
-  uploadFile: (formData: FormData) =>
-    fetch(`${API_URL}/api/v1/uploads`, { method: "POST", body: formData }).then(r => r.json()),
+  uploadFile: (formData: FormData) => {
+    const token = getToken();
+    return fetch(`${API_URL}/api/v1/uploads`, {
+      method: "POST",
+      body: formData,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(r => r.json());
+  },
 
   // CRM
   getCrmStats: () => request("/api/v1/crm/stats"),
