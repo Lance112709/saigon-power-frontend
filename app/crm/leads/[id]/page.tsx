@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -1109,10 +1109,9 @@ export default function LeadDetailPage() {
               <tbody>
                 {[...active, ...other].map(d => {
                   const isExpanded = expandedDealId === d.id;
-                  const flags = ["TOS","TOAO","Deposit","Special Deal","10% Promo"].filter(f => d[f.toLowerCase().replace(/[^a-z]/g,"_")] || d[f.replace(/[^a-zA-Z0-9]/g,"").toLowerCase()]);
                   return (
-                    <>
-                      <tr key={d.id} className={`border-b border-slate-100 hover:bg-slate-50/70 cursor-pointer ${isExpanded ? "bg-slate-50/60" : ""}`}
+                    <React.Fragment key={d.id}>
+                      <tr className={`border-b border-slate-100 hover:bg-slate-50/70 cursor-pointer ${isExpanded ? "bg-slate-50/60" : ""}`}
                         onClick={() => setExpandedDealId(isExpanded ? null : d.id)}>
                         <td className="px-4 py-3 font-semibold text-[#0F1D5E] whitespace-nowrap">{d.supplier || "—"}</td>
                         <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.plan_name || "—"}</td>
@@ -1139,7 +1138,7 @@ export default function LeadDetailPage() {
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr key={`${d.id}-detail`} className="border-b border-slate-100 bg-slate-50/40">
+                        <tr className="border-b border-slate-100 bg-slate-50/40">
                           <td colSpan={11} className="px-5 py-4">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-xs">
                               {[
@@ -1161,7 +1160,7 @@ export default function LeadDetailPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
