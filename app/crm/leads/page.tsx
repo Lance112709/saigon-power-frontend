@@ -334,6 +334,13 @@ export default function LeadsPage() {
 
   useEffect(() => { loadLeads(); }, [loadLeads]);
 
+  // Mark leads as seen when this page is visited
+  useEffect(() => {
+    if (!user) return;
+    const key = `leads_last_seen_${user.id || user.name}`;
+    localStorage.setItem(key, new Date().toISOString());
+  }, [user]);
+
   const handleLeadSaved = (lead: any) => {
     setShowAdd(false);
     setLeads(prev => [{

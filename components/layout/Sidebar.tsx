@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -61,6 +62,16 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout, loading, can } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [newLeadsCount, setNewLeadsCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const key = `leads_last_seen_${user.id || user.name}`;
+    const lastSeen = localStorage.getItem(key) || new Date(0).toISOString();
+    api.getNewLeadsCount(lastSeen)
+      .then((res: any) => setNewLeadsCount(res?.count || 0))
+      .catch(() => {});
+  }, [user, pathname]);
 
   const canSee = (item: NavItem) => {
     if (!user) return false;
@@ -75,7 +86,7 @@ export default function Sidebar() {
     (href === "/crm/leads" && (pathname === "/crm/leads" || pathname.startsWith("/crm/leads/"))) ||
     (href === "/crm/converted" && pathname === "/crm/converted");
 
-  const NavLink = ({ href, label, icon: Icon }: NavItem) => {
+  const NavLink = ({ href, label, icon: Icon, badge }: NavItem & { badge?: number }) => {
     const active = isActive(href);
     return (
       <Link href={href} className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150 ${
@@ -91,7 +102,12 @@ export default function Sidebar() {
         }`}>
           <Icon className="w-4 h-4 shrink-0" />
         </span>
-        <span className="truncate">{label}</span>
+        <span className="truncate flex-1">{label}</span>
+        {badge != null && badge > 0 && (
+          <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
       </Link>
     );
   };
@@ -127,7 +143,9 @@ export default function Sidebar() {
         {crmLinks.filter(canSee).length > 0 && (
           <>
             <SectionLabel>CRM</SectionLabel>
-            {crmLinks.filter(canSee).map(item => <NavLink key={item.href} {...item} />)}
+            {crmLinks.filter(canSee).map(item => (
+              <NavLink key={item.href} {...item} badge={item.href === "/crm/leads" ? newLeadsCount : undefined} />
+            ))}
           </>
         )}
 
