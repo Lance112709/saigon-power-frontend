@@ -1097,74 +1097,60 @@ export default function LeadDetailPage() {
             <button onClick={() => setShowDeal(true)} className="mt-3 text-sm text-[#0F1D5E] font-semibold hover:underline">Add the first deal →</button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  {["Supplier", "Plan", "ESI ID", "Rate", "Adder", "Term", "Start", "End", "Agent", "Status", ""].map((h, i) => (
-                    <th key={h || `col-${i}`} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[...active, ...other].map(d => {
-                  const isExpanded = expandedDealId === d.id;
-                  return (
-                    <React.Fragment key={d.id}>
-                      <tr className={`border-b border-slate-100 hover:bg-slate-50/70 cursor-pointer ${isExpanded ? "bg-slate-50/60" : ""}`}
-                        onClick={() => setExpandedDealId(isExpanded ? null : d.id)}>
-                        <td className="px-4 py-3 font-semibold text-[#0F1D5E] whitespace-nowrap">{d.supplier || "—"}</td>
-                        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.plan_name || "—"}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-slate-400 whitespace-nowrap">{d.esiid || "—"}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.rate != null ? `$${parseFloat(d.rate).toFixed(4)}` : "—"}</td>
-                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>
-                        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.contract_term || "—"}</td>
-                        <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.start_date || "—"}</td>
-                        <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{d.end_date || "—"}</td>
-                        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.sales_agent || "—"}</td>
-                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}><DealStatusBtn status={d.status} dealId={d.id} leadId={id} onUpdate={handleDealStatusUpdate} /></td>
-                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            {d.status === "Active" && (
-                              <button onClick={() => setTerminatingDeal(d)}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors whitespace-nowrap"
-                                title="Terminate deal">
-                                <Ban className="w-3 h-3" /> Terminate
-                              </button>
-                            )}
-                            <button onClick={() => setEditingDeal(d)} className="text-slate-300 hover:text-[#0F1D5E] transition-colors" title="Edit"><Pencil className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => handleDeleteDeal(d.id)} disabled={deletingDealId === d.id} className="text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr className="border-b border-slate-100 bg-slate-50/40">
-                          <td colSpan={11} className="px-5 py-4">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-xs">
-                              {[
-                                ["Deal Type",         d.deal_type],
-                                ["Rate Type",         d.rate_type],
-                                ["Service Order",     d.service_order_type],
-                                ["Product Type",      d.product_type],
-                                ["Est. Usage",        d.est_kwh ? `${d.est_kwh} kWh/mo` : null],
-                                ["Expected Close",    d.expected_close_date],
-                                ["Service Address",   [d.service_address, d.service_city, d.service_state, d.service_zip].filter(Boolean).join(", ")],
-                                ["SGP Customer ID",   d.sgp_customer_id],
-                              ].map(([label, val]) => val ? (
-                                <div key={label as string}>
-                                  <p className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">{label}</p>
-                                  <p className="text-slate-700 mt-0.5">{val}</p>
-                                </div>
-                              ) : null)}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="divide-y divide-slate-100">
+            {[...active, ...other].map(d => (
+              <div key={d.id} className="p-5 hover:bg-slate-50/50 transition-colors">
+                {/* Top row: supplier + status + actions */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-[#0F1D5E] text-sm">{d.supplier || "—"}</span>
+                    {d.plan_name && <span className="text-xs text-slate-400">{d.plan_name}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DealStatusBtn status={d.status} dealId={d.id} leadId={id} onUpdate={handleDealStatusUpdate} />
+                    {d.status === "Active" && (
+                      <button onClick={() => setTerminatingDeal(d)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+                        title="Terminate deal">
+                        <Ban className="w-3 h-3" /> Terminate
+                      </button>
+                    )}
+                    <button onClick={() => setEditingDeal(d)} className="text-slate-300 hover:text-[#0F1D5E] transition-colors" title="Edit"><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDeleteDeal(d.id)} disabled={deletingDealId === d.id} className="text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+                {/* All fields grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-3 text-xs">
+                  {[
+                    ["ESI ID",          d.esiid,          "font-mono text-slate-400"],
+                    ["Rate",            d.rate != null ? `$${parseFloat(d.rate).toFixed(4)}/kWh` : null, ""],
+                    ["Adder",           d.adder != null ? `${parseFloat(d.adder).toFixed(4)}` : null, ""],
+                    ["Term",            d.contract_term,  ""],
+                    ["Start",           d.start_date,     ""],
+                    ["End",             d.end_date,       ""],
+                    ["Agent",           d.sales_agent,    ""],
+                    ["Deal Type",       d.deal_type,      ""],
+                    ["Rate Type",       d.rate_type,      ""],
+                    ["Service Order",   d.service_order_type, ""],
+                    ["Product Type",    d.product_type,   ""],
+                    ["Est. Usage",      d.est_kwh ? `${d.est_kwh} kWh/mo` : null, ""],
+                    ["Expected Close",  d.expected_close_date, ""],
+                    ["SGP Customer ID", d.sgp_customer_id, "font-mono"],
+                  ].map(([label, val, extra]) => val ? (
+                    <div key={label as string}>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+                      <p className={`text-slate-700 mt-0.5 ${extra}`}>{val}</p>
+                    </div>
+                  ) : null)}
+                  {[d.service_address, d.service_city, d.service_state, d.service_zip].some(Boolean) && (
+                    <div className="col-span-2">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Service Address</p>
+                      <p className="text-slate-700 mt-0.5">{[d.service_address, d.service_city, d.service_state, d.service_zip].filter(Boolean).join(", ")}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
