@@ -405,7 +405,7 @@ export default function LeadsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {["Full Name", "Phone", "Address", "City", "Deals", "Status", "Created", ""].map(h => (
+                {["Full Name", "Phone", "Address", "Source", "Deals", "Status", "Created", ""].map(h => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -417,7 +417,13 @@ export default function LeadsPage() {
                   <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">{l.full_name}</td>
                   <td className="px-5 py-3.5 text-slate-500">{l.phone}</td>
                   <td className="px-5 py-3.5 text-slate-500 max-w-[180px] truncate">{l.address}</td>
-                  <td className="px-5 py-3.5 text-slate-500">{l.city}</td>
+                  <td className="px-5 py-3.5">
+                    {l.source === "referral" ? (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Landing Page</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">Manual</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3.5">
                     <span className="font-semibold text-emerald-600">{l.active_deal_count}</span>
                     <span className="text-slate-400"> / {l.deal_count}</span>
