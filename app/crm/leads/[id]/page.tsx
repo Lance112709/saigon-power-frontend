@@ -110,6 +110,7 @@ function ProposalModal({ lead, onClose }: { lead: any; onClose: () => void }) {
   const [form, setForm] = useState({
     rep_name: "", plan_name: "", rate: "", term_months: "",
     est_monthly_bill: "", early_termination_fee: "", notes: "",
+    service_address: "", esi_id: "", start_date: "",
   });
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState("");
@@ -129,6 +130,9 @@ function ProposalModal({ lead, onClose }: { lead: any; onClose: () => void }) {
         customer_email:   lead.email,
         customer_address: `${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
         ...form,
+        service_address:  form.service_address || `${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
+        esi_id:           form.esi_id,
+        start_date:       form.start_date,
       });
       setLink(`${APP_URL}/proposal/${res.token}`);
     } catch (err: any) {
@@ -192,6 +196,9 @@ function ProposalModal({ lead, onClose }: { lead: any; onClose: () => void }) {
               <div><label className={lbl}>Term (months)</label><input type="number" className={inp} placeholder="12" value={form.term_months} onChange={e => set("term_months", e.target.value)} /></div>
               <div><label className={lbl}>Est. Monthly Bill ($)</label><input type="number" className={inp} placeholder="120.00" value={form.est_monthly_bill} onChange={e => set("est_monthly_bill", e.target.value)} /></div>
               <div><label className={lbl}>Early Term. Fee ($)</label><input type="number" className={inp} placeholder="0" value={form.early_termination_fee} onChange={e => set("early_termination_fee", e.target.value)} /></div>
+              <div className="col-span-2"><label className={lbl}>Service Address</label><input className={inp} placeholder="123 Main St, Houston TX 77001" value={form.service_address} onChange={e => set("service_address", e.target.value)} /></div>
+              <div><label className={lbl}>ESI ID</label><input className={inp} placeholder="1008901020030040050" value={form.esi_id} onChange={e => set("esi_id", e.target.value)} /></div>
+              <div><label className={lbl}>Start Date</label><input type="date" className={inp} value={form.start_date} onChange={e => set("start_date", e.target.value)} /></div>
             </div>
             <div>
               <label className={lbl}>Notes</label>
