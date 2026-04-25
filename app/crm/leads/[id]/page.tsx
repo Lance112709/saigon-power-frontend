@@ -110,16 +110,27 @@ function ProposalModal({ lead, onClose }: { lead: any; onClose: () => void }) {
   const [form, setForm] = useState({
     rep_name: "", plan_name: "", rate: "", term_months: "",
     est_monthly_bill: "", early_termination_fee: "", notes: "",
-    service_address: "", esi_id: "", start_date: "",
+    service_address: "", esi_id: "", start_date: "", service_order_type: "",
   });
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState("");
-  const [link, setLink]       = useState("");
-  const [copied, setCopied]   = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [link, setLink]         = useState("");
+  const [copied, setCopied]     = useState(false);
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setFieldErrors(e => ({ ...e, [k]: "" }));
+  };
+
+  const REQUIRED = ["rep_name","plan_name","rate","term_months","early_termination_fee","service_address","esi_id","start_date","service_order_type"] as const;
 
   const submit = async () => {
+    const errs: Record<string, string> = {};
+    for (const k of REQUIRED) {
+      if (!String((form as any)[k] ?? "").trim()) errs[k] = "Required";
+    }
+    if (Object.keys(errs).length) { setFieldErrors(errs); setError("Please fill in all required fields."); return; }
     setSaving(true);
     setError("");
     try {
@@ -130,9 +141,10 @@ function ProposalModal({ lead, onClose }: { lead: any; onClose: () => void }) {
         customer_email:   lead.email,
         customer_address: `${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
         ...form,
-        service_address:  form.service_address || `${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
-        esi_id:           form.esi_id,
-        start_date:       form.start_date,
+        service_address:    form.service_address || `${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
+        esi_id:             form.esi_id,
+        start_date:         form.start_date,
+        service_order_type: form.service_order_type,
       });
       setLink(`${APP_URL}/proposal/${res.token}`);
     } catch (err: any) {
@@ -149,8 +161,13 @@ function ProposalModal({ lead, onClose }: { lead: any; onClose: () => void }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const inp = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20";
-  const lbl = "block text-xs font-medium text-slate-600 mb-1";
+  const inp = (k: string) => `w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 ${fieldErrors[k] ? "border-red-400" : "border-slate-200"}`;
+  const lbl = (k: string, label: string, optional = false) => (
+    <label className="block text-xs font-medium text-slate-600 mb-1">
+      {label}{!optional && <span className="text-red-500 ml-0.5">*</span>}
+      {fieldErrors[k] && <span className="text-red-500 ml-1 font-normal">— Required</span>}
+    </label>
+  );
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -190,19 +207,28 @@ function ProposalModal({ lead, onClose }: { lead: any; onClose: () => void }) {
             {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
             <div className="grid grid-cols-2 gap-3">
-              <div><label className={lbl}>REP / Provider</label><input className={inp} placeholder="Budget Power" value={form.rep_name} onChange={e => set("rep_name", e.target.value)} /></div>
-              <div><label className={lbl}>Plan Name</label><input className={inp} placeholder="12-Month Fixed" value={form.plan_name} onChange={e => set("plan_name", e.target.value)} /></div>
-              <div><label className={lbl}>Rate ($/kWh)</label><input type="number" className={inp} placeholder="0.1090" value={form.rate} onChange={e => set("rate", e.target.value)} /></div>
-              <div><label className={lbl}>Term (months)</label><input type="number" className={inp} placeholder="12" value={form.term_months} onChange={e => set("term_months", e.target.value)} /></div>
-              <div><label className={lbl}>Est. Monthly Bill ($)</label><input type="number" className={inp} placeholder="120.00" value={form.est_monthly_bill} onChange={e => set("est_monthly_bill", e.target.value)} /></div>
-              <div><label className={lbl}>Early Term. Fee ($)</label><input type="number" className={inp} placeholder="0" value={form.early_termination_fee} onChange={e => set("early_termination_fee", e.target.value)} /></div>
-              <div className="col-span-2"><label className={lbl}>Service Address</label><input className={inp} placeholder="123 Main St, Houston TX 77001" value={form.service_address} onChange={e => set("service_address", e.target.value)} /></div>
-              <div><label className={lbl}>ESI ID</label><input className={inp} placeholder="1008901020030040050" value={form.esi_id} onChange={e => set("esi_id", e.target.value)} /></div>
-              <div><label className={lbl}>Start Date</label><input type="date" className={inp} value={form.start_date} onChange={e => set("start_date", e.target.value)} /></div>
+              <div>{lbl("rep_name","REP / Provider")}<input className={inp("rep_name")} placeholder="Budget Power" value={form.rep_name} onChange={e => set("rep_name", e.target.value)} /></div>
+              <div>{lbl("plan_name","Plan Name")}<input className={inp("plan_name")} placeholder="12-Month Fixed" value={form.plan_name} onChange={e => set("plan_name", e.target.value)} /></div>
+              <div>{lbl("rate","Rate ($/kWh)")}<input type="number" className={inp("rate")} placeholder="0.1090" value={form.rate} onChange={e => set("rate", e.target.value)} /></div>
+              <div>{lbl("term_months","Term (months)")}<input type="number" className={inp("term_months")} placeholder="12" value={form.term_months} onChange={e => set("term_months", e.target.value)} /></div>
+              <div>{lbl("est_monthly_bill","Est. Monthly Bill ($)", true)}<input type="number" className={inp("est_monthly_bill")} placeholder="120.00" value={form.est_monthly_bill} onChange={e => set("est_monthly_bill", e.target.value)} /></div>
+              <div>{lbl("early_termination_fee","Early Term. Fee ($)")}<input type="number" className={inp("early_termination_fee")} placeholder="150" value={form.early_termination_fee} onChange={e => set("early_termination_fee", e.target.value)} /></div>
+              <div>{lbl("service_order_type","Service Order")}
+                <select className={inp("service_order_type")} value={form.service_order_type} onChange={e => set("service_order_type", e.target.value)}>
+                  <option value="">— Select —</option>
+                  <option value="PMVI">PMVI</option>
+                  <option value="MVI">MVI</option>
+                  <option value="SWI">SWI</option>
+                  <option value="Renewed with same REP">Renewed with same REP</option>
+                </select>
+              </div>
+              <div>{lbl("start_date","Start Date")}<input type="date" className={inp("start_date")} value={form.start_date} onChange={e => set("start_date", e.target.value)} /></div>
+              <div className="col-span-2">{lbl("service_address","Service Address")}<input className={inp("service_address")} placeholder="123 Main St, Houston TX 77001" value={form.service_address} onChange={e => set("service_address", e.target.value)} /></div>
+              <div className="col-span-2">{lbl("esi_id","ESI ID")}<input className={inp("esi_id")} placeholder="1008901020030040050" value={form.esi_id} onChange={e => set("esi_id", e.target.value)} /></div>
             </div>
             <div>
-              <label className={lbl}>Notes</label>
-              <textarea className={`${inp} resize-none`} rows={2} placeholder="Any additional notes..." value={form.notes} onChange={e => set("notes", e.target.value)} />
+              <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+              <textarea className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 resize-none" rows={2} placeholder="Any additional notes..." value={form.notes} onChange={e => set("notes", e.target.value)} />
             </div>
 
             <div className="flex gap-3 pt-1">
