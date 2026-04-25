@@ -87,6 +87,11 @@ export default function ProposalAcceptPage() {
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
+          onclone: (clonedDoc) => {
+            // Remove page stylesheets — contract uses inline styles only.
+            // This prevents html2canvas from choking on modern CSS color functions (lab, oklch, etc.)
+            clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach(el => el.remove());
+          },
         });
 
         const imgData  = canvas.toDataURL("image/jpeg", 0.92);
