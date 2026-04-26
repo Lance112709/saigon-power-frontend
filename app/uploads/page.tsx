@@ -16,7 +16,9 @@ const statusColor: Record<string, string> = {
 
 const FIELD_LABELS: Record<string, string> = {
   esiid: "ESI ID",
-  customer_name: "Customer Name",
+  customer_name: "Customer Name (full)",
+  customer_first_name: "Customer First Name",
+  customer_last_name: "Customer Last Name",
   billing_month: "Billing Month",
   amount: "Amount",
   kwh: "kWh",
