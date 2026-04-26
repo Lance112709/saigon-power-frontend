@@ -14,18 +14,28 @@ const statusColor: Record<string, string> = {
   parsing: "bg-blue-100 text-blue-800",
 };
 
+const FIELD_LABELS: Record<string, string> = {
+  esiid: "ESI ID",
+  customer_name: "Customer Name",
+  billing_month: "Billing Month",
+  amount: "Amount",
+  kwh: "kWh",
+  rate: "Rate",
+};
+
 export default function UploadsPage() {
-  const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState("");
-  const [uploads, setUploads] = useState<any[]>([]);
+  const [dragging, setDragging]         = useState(false);
+  const [uploading, setUploading]       = useState(false);
+  const [result, setResult]             = useState<any>(null);
+  const [error, setError]               = useState("");
+  const [uploads, setUploads]           = useState<any[]>([]);
   const [loadingUploads, setLoadingUploads] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [confirmed, setConfirmed] = useState<any>(null);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [confirming, setConfirming]     = useState(false);
+  const [confirmed, setConfirmed]       = useState<any>(null);
+  const [suppliers, setSuppliers]       = useState<any[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [billingMonth, setBillingMonth] = useState("");
+  const [manualMapping, setManualMapping] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadUploads = async () => {
@@ -45,12 +55,15 @@ export default function UploadsPage() {
     setError("");
     setResult(null);
     setConfirmed(null);
+    setManualMapping({});
     try {
       const fd = new FormData();
       fd.append("file", file);
       const res = await api.uploadFile(fd);
       if (res.detail) throw new Error(res.detail);
       setResult(res);
+      // Pre-populate manual mapping from AI result
+      setManualMapping(res.ai_mapping?.mapping ?? {});
       loadUploads();
       loadSuppliers();
     } catch (e: any) {
@@ -62,17 +75,22 @@ export default function UploadsPage() {
 
   const handleConfirm = async () => {
     if (!selectedSupplier) return alert("Please select a supplier first.");
-    if (!billingMonth) return alert("Please enter the billing month (e.g. 2026-03-01).");
+    if (!billingMonth) return alert("Please enter the billing month.");
     setConfirming(true);
     try {
+      const mappingToSend = { ...result.ai_mapping, mapping: manualMapping };
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
       const res = await fetch(`${API_URL}/api/v1/uploads/${result.upload_batch_id}/confirm`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           file_hash: result.file_hash,
           supplier_id: selectedSupplier,
           billing_month: billingMonth,
-          column_mapping: result.ai_mapping,
+          column_mapping: mappingToSend,
         }),
       });
       const data = await res.json();
@@ -92,6 +110,8 @@ export default function UploadsPage() {
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
   };
+
+  const headers: string[] = result?.headers ?? [];
 
   return (
     <div>
@@ -145,20 +165,34 @@ export default function UploadsPage() {
                 <CheckCircle className="w-5 h-5" /> File parsed — {result.rows_parsed} rows found
               </div>
 
-              <div className="text-sm text-gray-600 mb-2">
-                <strong>AI Column Mapping</strong> (confidence: {Math.round((result.ai_mapping?.confidence ?? 0) * 100)}%)
+              {/* Column Mapping */}
+              <div className="text-sm text-gray-700 font-semibold mb-2">
+                Column Mapping
+                <span className="text-gray-400 font-normal ml-2 text-xs">(fix any "Not found" by selecting the correct column)</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-                {Object.entries(result.ai_mapping?.mapping ?? {}).map(([field, col]) => (
-                  <div key={field} className="flex justify-between bg-white rounded p-2 border">
-                    <span className="text-gray-500 capitalize">{field.replace("_", " ")}</span>
-                    <span className={col ? "text-green-700 font-medium" : "text-red-400"}>
-                      {(col as string) || "Not found"}
-                    </span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {Object.keys(FIELD_LABELS).map((field) => {
+                  const current = manualMapping[field] ?? null;
+                  const isMissing = !current;
+                  return (
+                    <div key={field} className={`rounded-lg p-3 border bg-white ${isMissing ? "border-red-300" : "border-gray-200"}`}>
+                      <div className="text-xs font-semibold text-gray-500 mb-1">{FIELD_LABELS[field]}</div>
+                      <select
+                        value={current ?? ""}
+                        onChange={e => setManualMapping(prev => ({ ...prev, [field]: e.target.value || null as any }))}
+                        className={`w-full text-sm border rounded px-2 py-1 focus:outline-none ${isMissing ? "text-red-500 border-red-300" : "text-green-700 border-gray-200"}`}
+                      >
+                        <option value="">— Not mapped —</option>
+                        {headers.map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
               </div>
 
+              {/* Supplier + Billing Month */}
               <div className="border-t pt-4 grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">Supplier</label>
@@ -180,7 +214,6 @@ export default function UploadsPage() {
                     value={billingMonth}
                     onChange={e => setBillingMonth(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="2026-03-01"
                   />
                 </div>
               </div>
