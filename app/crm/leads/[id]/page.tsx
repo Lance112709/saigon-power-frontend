@@ -672,7 +672,7 @@ export default function LeadDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const canDeleteNotes = user?.role === "admin";
-  const canSeeFullAnxh = user?.role === "admin" || user?.role === "manager" || user?.role === "csr";
+  const canSeeFullAnxh = user?.role === "admin" || user?.role === "manager";
   const canEditAnxh    = user?.role === "admin" || user?.role === "manager" || user?.role === "csr";
   const id = params.id as string;
 
