@@ -133,6 +133,8 @@ export const api = {
   getLeadNotes: (leadId: string) => request(`/api/v1/leads/${leadId}/notes`),
   createLeadNote: (leadId: string, data: object) =>
     request(`/api/v1/leads/${leadId}/notes`, { method: "POST", body: JSON.stringify(data) }),
+  updateLeadNote: (leadId: string, noteId: string, content: string) =>
+    request(`/api/v1/leads/${leadId}/notes/${noteId}`, { method: "PATCH", body: JSON.stringify({ content }) }),
   deleteLeadNote: (leadId: string, noteId: string) =>
     request(`/api/v1/leads/${leadId}/notes/${noteId}`, { method: "DELETE" }),
   getSalesAgents: () => request("/api/v1/leads/agents"),

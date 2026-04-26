@@ -672,7 +672,8 @@ export default function LeadDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const canDeleteNotes = user?.role === "admin";
-  const canSeeFullAnxh = user?.role === "admin" || user?.role === "manager";
+  const canSeeFullAnxh = user?.role === "admin" || user?.role === "manager" || user?.role === "csr";
+  const canEditAnxh    = user?.role === "admin" || user?.role === "manager" || user?.role === "csr";
   const id = params.id as string;
 
   const [lead, setLead] = useState<any>(null);
@@ -697,6 +698,9 @@ export default function LeadDetailPage() {
   const [savingTask, setSavingTask] = useState(false);
   const [notes, setNotes] = useState<any[]>([]);
   const [noteText, setNoteText] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
+  const [savingEditNote, setSavingEditNote] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const [noteError, setNoteError] = useState("");
   const [taskError, setTaskError] = useState("");
@@ -806,6 +810,17 @@ export default function LeadDetailPage() {
     if (!confirm("Delete this note?")) return;
     await api.deleteLeadNote(id, noteId).catch(() => { });
     setNotes(prev => prev.filter(n => n.id !== noteId));
+  };
+
+  const handleSaveEditNote = async (noteId: string) => {
+    if (!editingNoteText.trim()) return;
+    setSavingEditNote(true);
+    try {
+      const updated = await api.updateLeadNote(id, noteId, editingNoteText.trim());
+      setNotes(prev => prev.map(n => n.id === noteId ? { ...n, content: updated.content ?? editingNoteText.trim() } : n));
+      setEditingNoteId(null);
+    } catch {}
+    setSavingEditNote(false);
   };
 
   const saveLeadInfo = async () => {
@@ -1079,7 +1094,7 @@ export default function LeadDetailPage() {
             <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className="text-xs text-slate-500">ANXH <span className="text-red-500">*</span></label>
-                {canSeeFullAnxh ? (
+                {canEditAnxh ? (
                   <>
                     <input className={`${inputCls} ${leadFormErrors.anxh ? "border-red-400" : ""}`} value={leadForm.anxh} onChange={e => { setLeadForm((f: any) => ({ ...f, anxh: e.target.value })); setLeadFormErrors(v => ({ ...v, anxh: "" })); }} />
                     {leadFormErrors.anxh && <p className="text-xs text-red-500 mt-1">Required</p>}
@@ -1228,27 +1243,62 @@ export default function LeadDetailPage() {
           <p className="px-5 py-8 text-center text-slate-400 text-sm">No notes yet.</p>
         ) : (
           <div className="divide-y divide-slate-100">
-            {notes.map(n => (
-              <div key={n.id} className="px-5 py-4 hover:bg-slate-50/50 group">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[#EEF1FA] flex items-center justify-center text-xs font-bold text-[#0F1D5E]">
-                      {n.author_name?.charAt(0)?.toUpperCase() || "?"}
+            {notes.map(n => {
+              const isOwn = (n.author_name || "").trim().toLowerCase() === (user?.name || "").trim().toLowerCase();
+              const canEdit = isOwn || user?.role === "admin" || user?.role === "manager";
+              const isEditing = editingNoteId === n.id;
+              return (
+                <div key={n.id} className="px-5 py-4 hover:bg-slate-50/50 group">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-[#EEF1FA] flex items-center justify-center text-xs font-bold text-[#0F1D5E]">
+                        {n.author_name?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                      <span className="text-sm font-semibold text-slate-700">{n.author_name}</span>
+                      <span className="text-xs text-slate-400">
+                        {new Date(n.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-slate-700">{n.author_name}</span>
-                    <span className="text-xs text-slate-400">
-                      {new Date(n.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
-                    </span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      {canEdit && !isEditing && (
+                        <button onClick={() => { setEditingNoteId(n.id); setEditingNoteText(n.content); }}
+                          className="text-slate-300 hover:text-blue-500 p-1">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {canDeleteNotes && (
+                        <button onClick={() => handleDeleteNote(n.id)} className="text-slate-300 hover:text-red-500 p-1">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {canDeleteNotes && (
-                    <button onClick={() => handleDeleteNote(n.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  {isEditing ? (
+                    <div className="ml-9 space-y-2">
+                      <textarea
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 resize-none"
+                        rows={3}
+                        value={editingNoteText}
+                        onChange={e => setEditingNoteText(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setEditingNoteId(null)}
+                          className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+                          Cancel
+                        </button>
+                        <button onClick={() => handleSaveEditNote(n.id)} disabled={savingEditNote || !editingNoteText.trim()}
+                          className="px-3 py-1.5 text-xs bg-[#0F1D5E] text-white rounded-lg font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+                          {savingEditNote ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap ml-9">{n.content}</p>
                   )}
                 </div>
-                <p className="text-sm text-slate-700 whitespace-pre-wrap ml-9">{n.content}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
