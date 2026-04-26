@@ -237,6 +237,7 @@ export const api = {
   getAgentLeaderboard: () => request("/api/v1/ai-agent/leaderboard"),
   getPipeline: () => request("/api/v1/ai-agent/pipeline"),
   getReconciliationGap: () => request("/api/v1/ai-agent/reconciliation-gap"),
+  getCommissionTracker: (monthsBack = 12) => request(`/api/v1/ai-agent/commission-tracker?months_back=${monthsBack}`),
 
   // SMS
   sendSms: (data: object) => request("/api/v1/sms/send", { method: "POST", body: JSON.stringify(data) }),

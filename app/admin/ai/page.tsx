@@ -38,7 +38,7 @@ const AGENT_HEX = ["#0F1D5E","#16a34a","#9333ea","#f59e0b","#f43f5e","#0891b2","
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "leaderboard" | "pipeline" | "performance" | "recon" | "alerts" | "reports";
+type Tab = "overview" | "leaderboard" | "pipeline" | "performance" | "recon" | "commission" | "alerts" | "reports";
 
 export default function AiOperationsPage() {
   const { user } = useAuth();
@@ -63,6 +63,9 @@ export default function AiOperationsPage() {
   const [reports,      setReports]      = useState<any[]>([]);
   const [recon,        setRecon]        = useState<any>(null);
   const [reconLoading, setReconLoading] = useState(false);
+  const [commTracker,  setCommTracker]  = useState<any>(null);
+  const [commLoading,  setCommLoading]  = useState(false);
+  const [commMonths,   setCommMonths]   = useState(12);
 
   useEffect(() => {
     if (user && user.role !== "admin") router.push("/dashboard");
@@ -99,6 +102,11 @@ export default function AiOperationsPage() {
     try { setRecon(await api.getReconciliationGap()); } finally { setReconLoading(false); }
   }, []);
 
+  const loadCommTracker = useCallback(async (months = commMonths) => {
+    setCommLoading(true);
+    try { setCommTracker(await api.getCommissionTracker(months)); } finally { setCommLoading(false); }
+  }, [commMonths]);
+
   const handleTab = (tab: Tab) => {
     setActiveTab(tab);
     if (tab === "leaderboard" && leaderboard.length === 0) loadLeaderboard();
@@ -106,6 +114,7 @@ export default function AiOperationsPage() {
     if (tab === "performance" && !dealsData)               loadDeals(dealsMode);
     if (tab === "reports"     && reports.length === 0)     loadReports();
     if (tab === "recon"       && !recon)                   loadRecon();
+    if (tab === "commission"  && !commTracker)             loadCommTracker();
   };
 
   const handleScan = async () => {
@@ -135,6 +144,7 @@ export default function AiOperationsPage() {
     { key: "pipeline",     label: "Pipeline & Revenue"    },
     { key: "performance",  label: "Deals by Agent"        },
     { key: "recon",        label: "Reconciliation Gap"    },
+    { key: "commission",   label: "Commission Tracker"    },
     { key: "alerts",       label: `Alerts (${totalAlerts})` },
     { key: "reports",      label: "Reports"               },
   ];
@@ -205,6 +215,14 @@ export default function AiOperationsPage() {
           )}
           {activeTab === "recon" && (
             <ReconciliationGapTab data={recon} loading={reconLoading} onRefresh={loadRecon} />
+          )}
+          {activeTab === "commission" && (
+            <CommissionTrackerTab
+              data={commTracker} loading={commLoading}
+              months={commMonths}
+              onMonthsChange={m => { setCommMonths(m); loadCommTracker(m); }}
+              onRefresh={() => loadCommTracker(commMonths)}
+            />
           )}
           {activeTab === "alerts" && (
             <AlertsList critical={dashboard?.alerts.critical||[]} warnings={dashboard?.alerts.warnings||[]}
@@ -966,6 +984,138 @@ function RenewalBadge({ days, count, color }: { days: number; count: number; col
     <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${c}`}>
       <span className="text-lg font-bold">{count}</span>
       <span className="text-sm">within {days} days</span>
+    </div>
+  );
+}
+
+// ── Commission Tracker Tab ─────────────────────────────────────────────────────
+
+function CommissionTrackerTab({ data, loading, months, onMonthsChange, onRefresh }: {
+  data: any; loading: boolean; months: number;
+  onMonthsChange: (m: number) => void; onRefresh: () => void;
+}) {
+  if (loading) return <Spinner text="Loading commission data..." />;
+  if (!data) return (
+    <div className="text-center py-8">
+      <p className="text-sm text-gray-400 mb-3">Click to load commission payment history.</p>
+      <button onClick={onRefresh} className="px-4 py-2 text-sm bg-[#0F1D5E] text-white rounded-xl hover:bg-[#1a2d7c]">Load Data</button>
+    </div>
+  );
+
+  const totals: { month: string; label: string; total: number }[] = data.monthly_totals || [];
+  const missing: { month: string; label: string; missing_suppliers: { supplier_id: string; supplier_name: string }[] }[] = data.missing_by_month || [];
+  const suppliers: { supplier_id: string; supplier_name: string; total_received: number; months_paid: number }[] = data.supplier_summary || [];
+  const maxTotal = Math.max(...totals.map(t => t.total), 1);
+  const grandTotal = totals.reduce((s, t) => s + t.total, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-gray-900 text-base">Commission Payment Tracker</h3>
+          <p className="text-sm text-gray-400 mt-0.5">
+            Total received: <span className="font-semibold text-[#0F1D5E]">${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {[6, 12, 24].map(m => (
+            <button key={m} onClick={() => onMonthsChange(m)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${months === m ? "bg-[#0F1D5E] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+              {m}mo
+            </button>
+          ))}
+          <button onClick={onRefresh} className="ml-2 p-1.5 rounded-lg text-gray-400 hover:text-[#0F1D5E] hover:bg-gray-100">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Monthly Commission Received</p>
+        <div className="flex items-end gap-1.5 h-40">
+          {totals.map((t, i) => {
+            const pct = maxTotal > 0 ? (t.total / maxTotal) * 100 : 0;
+            const hasMissing = missing.some(m => m.month === t.month);
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+                  {t.label}: ${t.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  {hasMissing ? " ⚠️ Missing REP" : ""}
+                </div>
+                <div className="w-full rounded-t-md transition-all"
+                  style={{
+                    height: `${Math.max(pct, t.total > 0 ? 4 : 0)}%`,
+                    background: hasMissing ? "#f97316" : "#16a34a",
+                    opacity: 0.85,
+                  }} />
+                {hasMissing && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" title="Missing REP payment" />}
+              </div>
+            );
+          })}
+        </div>
+        {/* X-axis labels */}
+        <div className="flex gap-1.5 mt-2">
+          {totals.map((t, i) => (
+            <div key={i} className="flex-1 text-center text-xs text-gray-400 truncate">{t.label}</div>
+          ))}
+        </div>
+        <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-600 inline-block" /> Received</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-orange-400 inline-block" /> Missing REP payment</span>
+        </div>
+      </div>
+
+      {/* Missing payments alert */}
+      {missing.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-3">
+          <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
+            <AlertTriangle className="w-4 h-4" />
+            {missing.reduce((s, m) => s + m.missing_suppliers.length, 0)} Missing Commission Payment{missing.reduce((s, m) => s + m.missing_suppliers.length, 0) > 1 ? "s" : ""}
+          </div>
+          <div className="space-y-2">
+            {missing.map((m, i) => (
+              <div key={i} className="bg-white border border-red-200 rounded-xl px-4 py-3">
+                <p className="text-xs font-bold text-red-700 mb-1">{m.label}</p>
+                <div className="flex flex-wrap gap-2">
+                  {m.missing_suppliers.map((s, j) => (
+                    <span key={j} className="text-xs bg-red-100 text-red-700 font-semibold px-2 py-1 rounded-full">{s.supplier_name}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Supplier breakdown table */}
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <p className="text-sm font-bold text-gray-800">By REP / Supplier</p>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-100">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Supplier</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Received</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Months Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            {suppliers.map((s, i) => (
+              <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                <td className="px-4 py-3 font-semibold text-gray-800">{s.supplier_name}</td>
+                <td className="px-4 py-3 text-right font-bold text-green-700">${s.total_received.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                <td className="px-4 py-3 text-right text-gray-500">{s.months_paid} / {months}</td>
+              </tr>
+            ))}
+            {suppliers.length === 0 && (
+              <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400 text-sm">No commission data found. Upload commission statements first.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
