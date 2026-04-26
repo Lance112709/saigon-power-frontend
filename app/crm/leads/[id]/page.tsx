@@ -673,7 +673,7 @@ export default function LeadDetailPage() {
   const { user } = useAuth();
   const canDeleteNotes = user?.role === "admin";
   const canSeeFullAnxh = user?.role === "admin" || user?.role === "manager";
-  const canEditAnxh    = user?.role === "admin" || user?.role === "manager" || user?.role === "csr";
+  const canEditAnxh    = user?.role === "admin" || user?.role === "manager";
   const id = params.id as string;
 
   const [lead, setLead] = useState<any>(null);

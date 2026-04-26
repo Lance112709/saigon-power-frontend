@@ -74,7 +74,7 @@ function LeadBadge({ status }: { status: string }) {
 const EMPTY_LEAD = {
   first_name: "", last_name: "", business_name: "", address: "", city: "",
   state: "TX", zip: "", phone: "", phone2: "", email: "", email2: "",
-  sales_agent: "", referral_by: "", source: "",
+  sales_agent: "", referral_by: "", source: "", anxh: "",
 };
 
 const US_STATES = [
@@ -164,7 +164,8 @@ function ReferralSearch({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lead: any) => void }) {
+function AddLeadModal({ onClose, onSaved, userRole }: { onClose: () => void; onSaved: (lead: any) => void; userRole?: string }) {
+  const canAddAnxh = userRole === "admin" || userRole === "manager" || userRole === "csr";
   const [form, setForm] = useState(EMPTY_LEAD);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
@@ -281,6 +282,18 @@ function AddLeadModal({ onClose, onSaved }: { onClose: () => void; onSaved: (lea
             </div>
           </div>
 
+          {canAddAnxh && (
+            <div>
+              <label className={labelCls}>ANXH <span className="text-xs text-slate-400 font-normal">(SSN — will be masked after saving)</span></label>
+              <input
+                className={inputCls}
+                placeholder="Enter SSN / ANXH"
+                value={form.anxh}
+                onChange={e => set("anxh", e.target.value)}
+              />
+            </div>
+          )}
+
           <div>
             <label className={labelCls}>Source</label>
             <select
@@ -363,7 +376,7 @@ export default function LeadsPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-6">
-      {showAdd && <AddLeadModal onClose={() => setShowAdd(false)} onSaved={handleLeadSaved} />}
+      {showAdd && <AddLeadModal onClose={() => setShowAdd(false)} onSaved={handleLeadSaved} userRole={user?.role} />}
 
       <div className="flex items-start justify-between">
         <div>
