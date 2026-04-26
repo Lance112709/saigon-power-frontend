@@ -56,6 +56,7 @@ export default function UploadsPage() {
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [billingMonth, setBillingMonth] = useState("");
   const [manualMapping, setManualMapping] = useState<Record<string, string>>({});
+  const [amountReceived, setAmountReceived] = useState("");
   const [editingUpload, setEditingUpload] = useState<any>(null);
   const [editName, setEditName]           = useState("");
   const [editSupplier, setEditSupplier]   = useState("");
@@ -116,6 +117,7 @@ export default function UploadsPage() {
     setResult(null);
     setConfirmed(null);
     setManualMapping({});
+    setAmountReceived("");
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -151,6 +153,7 @@ export default function UploadsPage() {
           supplier_id: selectedSupplier,
           billing_month: billingMonth,
           column_mapping: mappingToSend,
+          amount_received: amountReceived ? parseFloat(amountReceived) : null,
         }),
       });
       const data = await res.json();
@@ -218,6 +221,34 @@ export default function UploadsPage() {
                 Imported {confirmed.rows_imported} records successfully!
                 {confirmed.rows_skipped > 0 && <span className="text-gray-500 font-normal ml-2">({confirmed.rows_skipped} rows skipped)</span>}
               </div>
+
+              {/* Amount reconciliation */}
+              {confirmed.amount_received != null && (
+                <div className={`p-4 rounded-lg border ${confirmed.amounts_match ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"}`}>
+                  <div className={`font-bold text-sm mb-3 flex items-center gap-2 ${confirmed.amounts_match ? "text-green-700" : "text-red-700"}`}>
+                    {confirmed.amounts_match
+                      ? <><CheckCircle className="w-4 h-4" /> Amounts Match — Commission Verified</>
+                      : <><XCircle className="w-4 h-4" /> Amount Mismatch — Review Required</>
+                    }
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="text-xs text-gray-500 mb-1">Amount Received</div>
+                      <div className="font-bold text-gray-800">${confirmed.amount_received.toFixed(2)}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="text-xs text-gray-500 mb-1">Total Affinity Amount</div>
+                      <div className="font-bold text-gray-800">${confirmed.total_affinity_amount.toFixed(2)}</div>
+                    </div>
+                    <div className={`rounded-lg p-3 border ${confirmed.amounts_match ? "bg-green-100 border-green-200" : "bg-red-100 border-red-200"}`}>
+                      <div className="text-xs text-gray-500 mb-1">Difference</div>
+                      <div className={`font-bold ${confirmed.amounts_match ? "text-green-700" : "text-red-700"}`}>
+                        {confirmed.difference >= 0 ? "+" : ""}${confirmed.difference.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {confirmed.going_final?.length > 0 && (
                 <div className="p-4 bg-red-50 border border-red-300 rounded-lg">
@@ -287,8 +318,8 @@ export default function UploadsPage() {
                 })}
               </div>
 
-              {/* Supplier + Billing Month */}
-              <div className="border-t pt-4 grid grid-cols-2 gap-4">
+              {/* Supplier + Billing Month + Amount Received */}
+              <div className="border-t pt-4 grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">Supplier</label>
                   <select
@@ -308,6 +339,20 @@ export default function UploadsPage() {
                     type="date"
                     value={billingMonth}
                     onChange={e => setBillingMonth(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Amount Received <span className="text-gray-400 font-normal">(total $)</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="e.g. 4250.00"
+                    value={amountReceived}
+                    onChange={e => setAmountReceived(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
