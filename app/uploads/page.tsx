@@ -21,6 +21,7 @@ const FIELD_LABELS: Record<string, string> = {
   amount: "Amount",
   kwh: "kWh",
   rate: "Rate",
+  customer_status: "Customer Status",
 };
 
 export default function UploadsPage() {
@@ -152,10 +153,45 @@ export default function UploadsPage() {
           )}
 
           {confirmed && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 font-medium">
-              <CheckCircle className="w-5 h-5" />
-              Imported {confirmed.rows_imported} records successfully!
-              {confirmed.rows_skipped > 0 && <span className="text-gray-500 font-normal ml-2">({confirmed.rows_skipped} rows skipped)</span>}
+            <div className="mt-4 space-y-3">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 font-medium">
+                <CheckCircle className="w-5 h-5" />
+                Imported {confirmed.rows_imported} records successfully!
+                {confirmed.rows_skipped > 0 && <span className="text-gray-500 font-normal ml-2">({confirmed.rows_skipped} rows skipped)</span>}
+              </div>
+
+              {confirmed.going_final?.length > 0 && (
+                <div className="p-4 bg-red-50 border border-red-300 rounded-lg">
+                  <div className="flex items-center gap-2 text-red-700 font-bold mb-3">
+                    <XCircle className="w-5 h-5" />
+                    {confirmed.going_final.length} Account{confirmed.going_final.length > 1 ? "s" : ""} Going Final — Action Required
+                  </div>
+                  <div className="space-y-2">
+                    {confirmed.going_final.map((a: any, i: number) => (
+                      <div key={i} className="bg-white border border-red-200 rounded-lg px-4 py-3 flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-gray-800 text-sm">
+                            {a.lead?.name || a.customer_name || "Unknown"}
+                          </div>
+                          <div className="text-xs text-gray-400 font-mono mt-0.5">{a.esiid}</div>
+                          {a.lead?.phone && (
+                            <div className="text-xs text-gray-500 mt-0.5">{a.lead.phone}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-red-100 text-red-700 font-semibold px-2 py-1 rounded-full">{a.status}</span>
+                          {a.lead?.id && (
+                            <a href={`/crm/leads/${a.lead.id}`}
+                              className="text-xs text-blue-600 hover:underline font-medium">
+                              View Lead →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
