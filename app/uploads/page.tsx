@@ -1,8 +1,9 @@
 "use client";
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, CheckCircle, XCircle, Pencil, Trash2 } from "lucide-react";
+import { Upload, CheckCircle, XCircle, Pencil, Trash2, Eye } from "lucide-react";
 
 const API_URL_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -44,6 +45,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export default function UploadsPage() {
+  const router = useRouter();
   const [dragging, setDragging]         = useState(false);
   const [uploading, setUploading]       = useState(false);
   const [result, setResult]             = useState<any>(null);
@@ -225,11 +227,18 @@ export default function UploadsPage() {
               {/* Amount reconciliation */}
               {confirmed.amount_received != null && (
                 <div className={`p-4 rounded-lg border ${confirmed.amounts_match ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"}`}>
-                  <div className={`font-bold text-sm mb-3 flex items-center gap-2 ${confirmed.amounts_match ? "text-green-700" : "text-red-700"}`}>
-                    {confirmed.amounts_match
-                      ? <><CheckCircle className="w-4 h-4" /> Amounts Match — Commission Verified</>
-                      : <><XCircle className="w-4 h-4" /> Amount Mismatch — Review Required</>
-                    }
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`font-bold text-sm flex items-center gap-2 ${confirmed.amounts_match ? "text-green-700" : "text-red-700"}`}>
+                      {confirmed.amounts_match
+                        ? <><CheckCircle className="w-4 h-4" /> Amounts Match — Commission Verified</>
+                        : <><XCircle className="w-4 h-4" /> Amount Mismatch — Review Required</>
+                      }
+                    </div>
+                    <button
+                      onClick={() => router.push(`/uploads/${confirmed.upload_batch_id || result?.upload_batch_id}`)}
+                      className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1">
+                      <Eye className="w-3.5 h-3.5" /> View Records
+                    </button>
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div className="bg-white rounded-lg p-3 border border-gray-200">
@@ -407,14 +416,18 @@ export default function UploadsPage() {
                     </td>
                     <td className="py-3 text-gray-500">{new Date(u.created_at).toLocaleDateString()}</td>
                     <td className="py-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => router.push(`/uploads/${u.id}`)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="View Records">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
                         <button onClick={() => openEdit(u)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Edit">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => deleteUpload(u.id, u.original_filename)}
                           disabled={deletingId === u.id}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40">
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40" title="Delete">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
