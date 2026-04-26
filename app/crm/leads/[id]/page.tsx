@@ -673,7 +673,9 @@ export default function LeadDetailPage() {
   const { user } = useAuth();
   const canDeleteNotes = user?.role === "admin";
   const canSeeFullAnxh = user?.role === "admin" || user?.role === "manager";
-  const canEditAnxh    = user?.role === "admin" || user?.role === "manager";
+  const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
+  // CSR can only edit ANXH if it hasn't been set yet
+  const canEditAnxh = (lead: any) => isAdminOrManager || (user?.role === "csr" && !lead?.anxh);
   const id = params.id as string;
 
   const [lead, setLead] = useState<any>(null);
@@ -1094,7 +1096,7 @@ export default function LeadDetailPage() {
             <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className="text-xs text-slate-500">ANXH <span className="text-red-500">*</span></label>
-                {canEditAnxh ? (
+                {canEditAnxh(lead) ? (
                   <>
                     <input className={`${inputCls} ${leadFormErrors.anxh ? "border-red-400" : ""}`} value={leadForm.anxh} onChange={e => { setLeadForm((f: any) => ({ ...f, anxh: e.target.value })); setLeadFormErrors(v => ({ ...v, anxh: "" })); }} />
                     {leadFormErrors.anxh && <p className="text-xs text-red-500 mt-1">Required</p>}

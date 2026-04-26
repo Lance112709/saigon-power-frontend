@@ -74,7 +74,7 @@ function LeadBadge({ status }: { status: string }) {
 const EMPTY_LEAD = {
   first_name: "", last_name: "", business_name: "", address: "", city: "",
   state: "TX", zip: "", phone: "", phone2: "", email: "", email2: "",
-  sales_agent: "", referral_by: "", source: "", anxh: "",
+  sales_agent: "", referral_by: "", source: "",
 };
 
 const US_STATES = [
@@ -165,7 +165,6 @@ function ReferralSearch({ value, onChange }: { value: string; onChange: (v: stri
 }
 
 function AddLeadModal({ onClose, onSaved, userRole }: { onClose: () => void; onSaved: (lead: any) => void; userRole?: string }) {
-  const canAddAnxh = userRole === "admin" || userRole === "manager" || userRole === "csr";
   const [form, setForm] = useState(EMPTY_LEAD);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
@@ -281,18 +280,6 @@ function AddLeadModal({ onClose, onSaved, userRole }: { onClose: () => void; onS
               <ReferralSearch value={form.referral_by} onChange={v => set("referral_by", v)} />
             </div>
           </div>
-
-          {canAddAnxh && (
-            <div>
-              <label className={labelCls}>ANXH <span className="text-xs text-slate-400 font-normal">(SSN — will be masked after saving)</span></label>
-              <input
-                className={inputCls}
-                placeholder="Enter SSN / ANXH"
-                value={form.anxh}
-                onChange={e => set("anxh", e.target.value)}
-              />
-            </div>
-          )}
 
           <div>
             <label className={labelCls}>Source</label>
