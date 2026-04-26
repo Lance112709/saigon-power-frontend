@@ -15,15 +15,15 @@ const statusColor: Record<string, string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
-  esiid: "ESI ID",
-  customer_name: "Customer Name (full)",
-  customer_first_name: "Customer First Name",
-  customer_last_name: "Customer Last Name",
-  billing_month: "Billing Month",
-  amount: "Amount",
-  kwh: "kWh",
-  rate: "Rate",
-  customer_status: "Customer Status",
+  customer_name:    "Customer Name",
+  esiid:            "ESI ID",
+  customer_status:  "Customer Status",
+  service_address:  "Service Address",
+  rate:             "Affinity Rate",
+  amount:           "Affinity Amount",
+  kwh:              "Usage (kWh)",
+  bill_start_date:  "Bill Start Date",
+  bill_end_date:    "Bill End Date",
 };
 
 export default function UploadsPage() {
