@@ -2,7 +2,23 @@
 import { useState, useRef } from "react";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, CheckCircle, XCircle } from "lucide-react";
+import { Upload, CheckCircle, XCircle, Pencil, Trash2 } from "lucide-react";
+
+const API_URL_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+async function authFetch(path: string, options: RequestInit = {}) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+  const res = await fetch(`${API_URL_BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers as Record<string, string> || {}),
+    },
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || "Request failed");
+  return res.json();
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -39,6 +55,11 @@ export default function UploadsPage() {
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [billingMonth, setBillingMonth] = useState("");
   const [manualMapping, setManualMapping] = useState<Record<string, string>>({});
+  const [editingUpload, setEditingUpload] = useState<any>(null);
+  const [editName, setEditName]           = useState("");
+  const [editSupplier, setEditSupplier]   = useState("");
+  const [editSaving, setEditSaving]       = useState(false);
+  const [deletingId, setDeletingId]       = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadUploads = async () => {
@@ -51,6 +72,41 @@ export default function UploadsPage() {
   const loadSuppliers = async () => {
     const data = await api.getSuppliers();
     setSuppliers(data);
+  };
+
+  const openEdit = (u: any) => {
+    setEditingUpload(u);
+    setEditName(u.original_filename || "");
+    setEditSupplier(u.supplier_id || "");
+    if (suppliers.length === 0) loadSuppliers();
+  };
+
+  const saveEdit = async () => {
+    if (!editingUpload) return;
+    setEditSaving(true);
+    try {
+      await authFetch(`/api/v1/uploads/${editingUpload.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ original_filename: editName, supplier_id: editSupplier || null }),
+      });
+      setEditingUpload(null);
+      loadUploads();
+    } catch (e: any) {
+      alert(e.message || "Save failed");
+    }
+    setEditSaving(false);
+  };
+
+  const deleteUpload = async (id: string, filename: string) => {
+    if (!confirm(`Delete "${filename}" and all its imported commission rows? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await authFetch(`/api/v1/uploads/${id}`, { method: "DELETE" });
+      loadUploads();
+    } catch (e: any) {
+      alert(e.message || "Delete failed");
+    }
+    setDeletingId(null);
   };
 
   const handleFile = async (file: File) => {
@@ -288,6 +344,7 @@ export default function UploadsPage() {
                   <th className="pb-2 font-medium">Imported</th>
                   <th className="pb-2 font-medium">Status</th>
                   <th className="pb-2 font-medium">Date</th>
+                  <th className="pb-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -303,6 +360,19 @@ export default function UploadsPage() {
                       </span>
                     </td>
                     <td className="py-3 text-gray-500">{new Date(u.created_at).toLocaleDateString()}</td>
+                    <td className="py-3">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => openEdit(u)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deleteUpload(u.id, u.original_filename)}
+                          disabled={deletingId === u.id}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -310,6 +380,40 @@ export default function UploadsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit modal */}
+      {editingUpload && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">Edit Upload</h2>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">File Name</label>
+              <input value={editName} onChange={e => setEditName(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Supplier</label>
+              <select value={editSupplier} onChange={e => setEditSupplier(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm">
+                <option value="">— None —</option>
+                {suppliers.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setEditingUpload(null)}
+                className="flex-1 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button onClick={saveEdit} disabled={editSaving}
+                className="flex-1 py-2 bg-[#0F1D5E] text-white rounded-xl text-sm font-bold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+                {editSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
