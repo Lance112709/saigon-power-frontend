@@ -563,102 +563,185 @@ function PipelineTab({ data, loading, onRefresh }: { data: any; loading: boolean
 function DealsByAgent({ data, mode, loading, onModeChange }: {
   data: any; mode: "month"|"day"; loading: boolean; onModeChange: (m: "month"|"day") => void;
 }) {
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; agent: string; count: number } | null>(null);
+
   if (loading) return <Spinner text="Loading..." />;
   if (!data) return <div className="py-8 text-center text-sm text-gray-400">No data yet.</div>;
   const { agents, rows, agent_totals } = data;
   if (!rows?.length) return <div className="py-8 text-center text-sm text-gray-400">No closed deals in this period.</div>;
 
   const maxTotal = Math.max(...rows.map((r: any) => r.total), 1);
+  const grandTotal = agents.reduce((s: number, a: string) => s + agent_totals[a], 0);
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-gray-600">View by:</span>
-        <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+      {/* Mode toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-[#0F1D5E]" />
+          <span className="text-sm font-semibold text-slate-700">Deals Closed by Period</span>
+        </div>
+        <div className="flex rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-0.5 gap-0.5">
           {(["month","day"] as const).map(m => (
             <button key={m} onClick={() => onModeChange(m)}
-              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                mode === m ? "bg-[#0F1D5E] text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                mode === m ? "bg-white text-[#0F1D5E] shadow-sm" : "text-slate-400 hover:text-slate-600"
               }`}>{m === "month" ? "Monthly" : "Daily"}</button>
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {agents.map((agent: string, i: number) => (
-          <div key={agent} className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className={`w-2 h-2 rounded-full mb-2 inline-block mr-2 ${AGENT_COLORS[i % AGENT_COLORS.length]}`} />
-            <p className="text-xl font-bold text-gray-900">{agent_totals[agent]}</p>
-            <p className="text-xs text-gray-500 truncate">{agent}</p>
-            <p className="text-xs text-gray-400">deals closed</p>
-          </div>
-        ))}
-      </div>
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 overflow-x-auto">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-[#0F1D5E]" /> Deals Closed by Period
-        </h3>
-        <div className="flex items-end gap-2 min-w-0" style={{ minHeight: 160 }}>
-          {rows.map((row: any) => (
-            <div key={row.period} className="flex flex-col items-center gap-1 flex-1 min-w-[40px]">
-              <span className="text-xs font-semibold text-gray-700">{row.total || ""}</span>
-              <div className="w-full flex flex-col-reverse rounded overflow-hidden"
-                style={{ height: `${Math.max((row.total / maxTotal) * 140, row.total > 0 ? 8 : 0)}px` }}>
-                {agents.map((agent: string, i: number) => {
-                  const count = row[agent] || 0;
-                  if (!count) return null;
-                  return <div key={agent} title={`${agent}: ${count}`}
-                    className={`w-full ${AGENT_COLORS[i % AGENT_COLORS.length]}`}
-                    style={{ height: `${(count / row.total) * 100}%`, minHeight: 4 }} />;
-                })}
+
+      {/* Agent stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {agents.map((agent: string, i: number) => {
+          const hex = AGENT_HEX[i % AGENT_HEX.length];
+          const pct = grandTotal > 0 ? Math.round((agent_totals[agent] / grandTotal) * 100) : 0;
+          return (
+            <div key={agent} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold"
+                  style={{ backgroundColor: hex }}>
+                  {agent.split(" ").map((w: string) => w[0]).join("").slice(0,2).toUpperCase()}
+                </div>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${hex}15`, color: hex }}>
+                  {pct}%
+                </span>
               </div>
-              <span className="text-xs text-gray-400 text-center leading-tight">
-                {mode === "month" ? row.period.slice(0, 7) : row.period.slice(5)}
-              </span>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{agent_totals[agent]}</p>
+              <p className="text-xs text-slate-500 truncate mt-0.5">{agent}</p>
+              <p className="text-xs text-slate-400">deals closed</p>
             </div>
-          ))}
+          );
+        })}
+      </div>
+
+      {/* Bar chart */}
+      <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm overflow-x-auto relative">
+        <div
+          className="flex items-end gap-3"
+          style={{ minHeight: 200, minWidth: `${rows.length * 56}px` }}
+          onMouseLeave={() => setTooltip(null)}
+        >
+          {rows.map((row: any) => {
+            const barH = Math.max((row.total / maxTotal) * 176, row.total > 0 ? 12 : 0);
+            const label = mode === "month" ? row.period.slice(0, 7) : row.period.slice(5);
+            return (
+              <div key={row.period} className="flex flex-col items-center gap-1.5 flex-1 min-w-[48px]">
+                {row.total > 0 && (
+                  <span className="text-xs font-bold text-slate-600">{row.total}</span>
+                )}
+                <div className="w-full rounded-xl overflow-hidden flex flex-col-reverse shadow-sm"
+                  style={{ height: `${barH}px`, minHeight: row.total > 0 ? 12 : 0 }}>
+                  {agents.map((agent: string, i: number) => {
+                    const count = row[agent] || 0;
+                    if (!count) return null;
+                    const hex = AGENT_HEX[i % AGENT_HEX.length];
+                    const pct = (count / row.total) * 100;
+                    return (
+                      <div key={agent}
+                        className="w-full cursor-pointer transition-opacity hover:opacity-80"
+                        style={{ height: `${pct}%`, minHeight: 6, backgroundColor: hex }}
+                        onMouseEnter={e => {
+                          const rect = (e.target as HTMLElement).getBoundingClientRect();
+                          setTooltip({ x: rect.left + rect.width / 2, y: rect.top - 8, agent, count });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <span className="text-[10px] text-slate-400 text-center leading-tight whitespace-nowrap">{label}</span>
+              </div>
+            );
+          })}
         </div>
-        <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-100">
-          {agents.map((agent: string, i: number) => (
-            <div key={agent} className="flex items-center gap-1.5 text-xs text-gray-600">
-              <div className={`w-3 h-3 rounded-sm ${AGENT_COLORS[i % AGENT_COLORS.length]}`} />{agent}
-            </div>
-          ))}
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4 mt-5 pt-4 border-t border-slate-100">
+          {agents.map((agent: string, i: number) => {
+            const hex = AGENT_HEX[i % AGENT_HEX.length];
+            return (
+              <div key={agent} className="flex items-center gap-2 text-xs text-slate-600">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: hex }} />
+                <span className="font-medium">{agent}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Period</th>
-              {agents.map((a: string) => (
-                <th key={a} className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase truncate max-w-[100px]">{a}</th>
-              ))}
-              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...rows].reverse().map((row: any, i: number) => (
-              <tr key={row.period} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-                <td className="px-4 py-3 font-medium text-gray-700">{row.period}</td>
-                {agents.map((a: string) => (
-                  <td key={a} className="px-3 py-3 text-center text-gray-700">
-                    {row[a] > 0 ? <span className="font-semibold">{row[a]}</span> : <span className="text-gray-300">—</span>}
-                  </td>
-                ))}
-                <td className="px-4 py-3 text-center font-bold text-[#0F1D5E]">{row.total}</td>
+
+      {/* Tooltip portal */}
+      {tooltip && (
+        <div className="fixed z-50 pointer-events-none" style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}>
+          <div className="bg-slate-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
+            {tooltip.agent}: <span className="text-white">{tooltip.count}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Data table */}
+      <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Breakdown by Period</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100">
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Period</th>
+                {agents.map((a: string, i: number) => {
+                  const hex = AGENT_HEX[i % AGENT_HEX.length];
+                  return (
+                    <th key={a} className="text-center px-3 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: hex }}>
+                      {a.split(" ")[0]}
+                    </th>
+                  );
+                })}
+                <th className="text-center px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Total</th>
               </tr>
-            ))}
-            <tr className="bg-gray-100 border-t border-gray-200">
-              <td className="px-4 py-3 font-bold text-gray-700">Total</td>
-              {agents.map((a: string) => (
-                <td key={a} className="px-3 py-3 text-center font-bold text-gray-700">{agent_totals[a]}</td>
+            </thead>
+            <tbody>
+              {[...rows].reverse().map((row: any, i: number) => (
+                <tr key={row.period} className="border-b border-slate-50 hover:bg-slate-50/70 transition-colors">
+                  <td className="px-5 py-3 font-semibold text-slate-700 text-xs whitespace-nowrap">{row.period}</td>
+                  {agents.map((a: string, ai: number) => {
+                    const hex = AGENT_HEX[ai % AGENT_HEX.length];
+                    return (
+                      <td key={a} className="px-3 py-3 text-center">
+                        {row[a] > 0 ? (
+                          <span className="inline-block min-w-[28px] px-2 py-0.5 rounded-lg text-xs font-bold"
+                            style={{ backgroundColor: `${hex}18`, color: hex }}>
+                            {row[a]}
+                          </span>
+                        ) : (
+                          <span className="text-slate-200 text-xs">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="px-5 py-3 text-center">
+                    <span className="text-sm font-bold text-[#0F1D5E]">{row.total || "—"}</span>
+                  </td>
+                </tr>
               ))}
-              <td className="px-4 py-3 text-center font-bold text-[#0F1D5E]">
-                {agents.reduce((s: number, a: string) => s + agent_totals[a], 0)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </tbody>
+            <tfoot>
+              <tr className="bg-slate-50 border-t-2 border-slate-200">
+                <td className="px-5 py-3.5 text-xs font-bold text-slate-700 uppercase tracking-wider">Total</td>
+                {agents.map((a: string, ai: number) => {
+                  const hex = AGENT_HEX[ai % AGENT_HEX.length];
+                  return (
+                    <td key={a} className="px-3 py-3.5 text-center">
+                      <span className="text-sm font-bold" style={{ color: hex }}>{agent_totals[a]}</span>
+                    </td>
+                  );
+                })}
+                <td className="px-5 py-3.5 text-center">
+                  <span className="text-sm font-bold text-[#0F1D5E]">{grandTotal}</span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </div>
   );

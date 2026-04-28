@@ -359,11 +359,13 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
   const validate = () => {
     const e: Record<string, string> = {};
     const isCommercial = form.product_type === "Commercial";
+    // When editing existing deals, deal_type/service_order_type/sales_agent may be empty (created before those fields existed)
     const required: (keyof typeof EMPTY_DEAL)[] = [
-      "status", "supplier", "product_type", "rate_type", "deal_type", "service_order_type",
+      "status", "supplier", "product_type", "rate_type",
       "contract_term", "rate", "est_kwh", "expected_close_date",
       "start_date", "end_date", "service_address", "service_city",
-      "service_state", "service_zip", "esiid", "sales_agent",
+      "service_state", "service_zip", "esiid",
+      ...(existing ? [] : ["deal_type" as keyof typeof EMPTY_DEAL, "service_order_type" as keyof typeof EMPTY_DEAL, "sales_agent" as keyof typeof EMPTY_DEAL]),
       ...(isCommercial ? ["adder" as keyof typeof EMPTY_DEAL] : []),
     ];
     for (const f of required) {
@@ -826,7 +828,7 @@ export default function LeadDetailPage() {
   };
 
   const saveLeadInfo = async () => {
-    const required = ["first_name", "last_name", "phone", "email", "address", "city", "state", "zip", "anxh", "dob"];
+    const required = ["first_name", "last_name", "phone", "address", "city", "state", "zip"];
     const errs: Record<string, string> = {};
     for (const f of required) {
       if (!String(leadForm[f] ?? "").trim()) errs[f] = "Required";
@@ -1095,7 +1097,7 @@ export default function LeadDetailPage() {
             </div>
             <div className="grid grid-cols-4 gap-3">
               <div>
-                <label className="text-xs text-slate-500">ANXH <span className="text-red-500">*</span></label>
+                <label className="text-xs text-slate-500">ANXH</label>
                 {canEditAnxh(lead) ? (
                   <>
                     <input className={`${inputCls} ${leadFormErrors.anxh ? "border-red-400" : ""}`} value={leadForm.anxh} onChange={e => { setLeadForm((f: any) => ({ ...f, anxh: e.target.value })); setLeadFormErrors(v => ({ ...v, anxh: "" })); }} />
@@ -1106,7 +1108,7 @@ export default function LeadDetailPage() {
                 )}
               </div>
               <div>
-                <label className="text-xs text-slate-500">DOB <span className="text-red-500">*</span></label>
+                <label className="text-xs text-slate-500">DOB</label>
                 <input type="date" className={`${inputCls} ${leadFormErrors.dob ? "border-red-400" : ""}`} value={leadForm.dob} onChange={e => { setLeadForm((f: any) => ({ ...f, dob: e.target.value })); setLeadFormErrors(v => ({ ...v, dob: "" })); }} />
                 {leadFormErrors.dob && <p className="text-xs text-red-500 mt-1">Required</p>}
               </div>
