@@ -36,6 +36,8 @@ interface Deal {
   plan_name: string;
   est_kwh: number;
   adder: number;
+  applied_rate?: number;
+  applied_type?: string;
   commission: number;
   start_date?: string;
   end_date?: string;
