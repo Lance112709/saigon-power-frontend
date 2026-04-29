@@ -382,11 +382,17 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
     }
     setSaving(true);
     setApiError("");
+    // Coerce empty-string numeric fields to null so Postgres doesn't get a type mismatch
+    const numericFields = ["rate", "adder", "est_kwh", "contract_term"];
+    const cleanedForm = { ...form } as any;
+    for (const f of numericFields) {
+      if (cleanedForm[f] === "") cleanedForm[f] = null;
+    }
     try {
       if (existing) {
-        await api.updateLeadDeal(leadId, existing.id, form);
+        await api.updateLeadDeal(leadId, existing.id, cleanedForm);
       } else {
-        await api.createLeadDeal(leadId, form);
+        await api.createLeadDeal(leadId, cleanedForm);
       }
       onSaved();
     } catch (err: any) {
