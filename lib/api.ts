@@ -196,6 +196,8 @@ export const api = {
     request(`/api/v1/agent-commissions/${id}/close-out`, { method: "PATCH", body: JSON.stringify(data || {}) }),
   markAgentCommissionPaid: (id: string, data?: object) =>
     request(`/api/v1/agent-commissions/${id}/mark-paid`, { method: "PATCH", body: JSON.stringify(data || {}) }),
+  getAgentCommissionBreakdown: (id: string) =>
+    request(`/api/v1/agent-commissions/${id}/breakdown`),
   getCommissionLogs: (params?: Record<string, string>) => {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/agent-commissions/logs${q}`);

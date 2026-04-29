@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   DollarSign, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp,
-  RefreshCw, AlertTriangle, FileText, Filter, Activity,
+  RefreshCw, AlertTriangle, FileText, Filter, Activity, ChevronRight,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -25,6 +25,20 @@ interface Commission {
   paid_at?: string;
   paid_by?: string;
   notes?: string;
+}
+
+interface Deal {
+  deal_id: string;
+  lead_id?: string;
+  customer_name: string;
+  phone?: string;
+  supplier: string;
+  plan_name: string;
+  est_kwh: number;
+  adder: number;
+  commission: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 interface Log {
@@ -186,6 +200,8 @@ export default function CommissionsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [modal, setModal] = useState<Modal | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [breakdown, setBreakdown] = useState<Record<string, Deal[]>>({});
 
   // Load commissions
   const load = useCallback(async () => {
@@ -210,6 +226,19 @@ export default function CommissionsPage() {
     api.getCommissionLogs({ month: String(month), year: String(year) })
       .then(setLogs).catch(() => {});
   }, [showLogs, month, year]);
+
+  // ── Breakdown toggle ───────────────────────────────────────────────────────
+
+  const toggleBreakdown = async (id: string) => {
+    if (expandedId === id) { setExpandedId(null); return; }
+    setExpandedId(id);
+    if (!breakdown[id]) {
+      try {
+        const data = await api.getAgentCommissionBreakdown(id);
+        setBreakdown(prev => ({ ...prev, [id]: data.deals }));
+      } catch {}
+    }
+  };
 
   // ── Calculate ──────────────────────────────────────────────────────────────
 
@@ -395,68 +424,116 @@ export default function CommissionsPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(row => (
-                <tr key={row.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
-                  <td className="px-5 py-4 font-semibold text-[#0F1D5E]">{row.agent_name}</td>
-                  <td className="px-5 py-4 text-slate-600">{MONTHS[row.month - 1]} {row.year}</td>
-                  <td className="px-5 py-4 text-right text-slate-700">{row.total_deals}</td>
-                  <td className="px-5 py-4 text-right font-semibold text-emerald-600">{fmt(row.total_commission)}</td>
-                  <td className="px-5 py-4"><StatusBadge status={row.status} /></td>
-                  <td className="px-5 py-4 text-slate-400 text-xs">
-                    {row.status === "paid"       && row.paid_by       ? <span><span className="font-medium text-slate-600">{row.paid_by}</span><br />{fmtDate(row.paid_at)}</span>
-                    : row.status === "closed_out" && row.closed_out_by ? <span><span className="font-medium text-slate-600">{row.closed_out_by}</span><br />{fmtDate(row.closed_out_at)}</span>
-                    : row.status === "approved"   && row.approved_by   ? <span><span className="font-medium text-slate-600">{row.approved_by}</span><br />{fmtDate(row.approved_at)}</span>
-                    : <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Approve */}
-                      {row.status === "calculated" && (
+              {rows.map(row => {
+                const isExpanded = expandedId === row.id;
+                const deals = breakdown[row.id] || [];
+                return (
+                  <>
+                    <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50/60 transition-colors ${isExpanded ? "bg-slate-50/60" : ""}`}>
+                      {/* Agent name — clickable */}
+                      <td className="px-5 py-4">
                         <button
-                          onClick={() => openAction(row, "approve")}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
+                          onClick={() => toggleBreakdown(row.id)}
+                          className="flex items-center gap-1.5 font-semibold text-[#0F1D5E] hover:text-emerald-600 transition-colors group"
                         >
-                          Approve
+                          <ChevronRight className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-90" : ""} text-slate-400 group-hover:text-emerald-500`} />
+                          {row.agent_name}
                         </button>
-                      )}
-                      {/* Close Out */}
-                      {row.status === "approved" && (
-                        <button
-                          onClick={() => openAction(row, "close_out")}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 transition-colors"
-                        >
-                          Close Out
-                        </button>
-                      )}
-                      {/* Mark Paid */}
-                      {row.status === "closed_out" && (
-                        <button
-                          onClick={() => openAction(row, "mark_paid")}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-                        >
-                          Mark as Paid ✓
-                        </button>
-                      )}
-                      {/* Paid badge */}
-                      {row.status === "paid" && (
-                        <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 text-slate-400 border border-slate-200">
-                          Paid ✓
-                        </span>
-                      )}
-                      {/* Recalculate — only on calculated rows */}
-                      {row.status === "calculated" && (
-                        <button
-                          onClick={handleCalculate}
-                          title="Recalculate this month"
-                          className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-[#0F1D5E] hover:bg-slate-100 border border-slate-200 transition-colors"
-                        >
-                          <RefreshCw className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">{MONTHS[row.month - 1]} {row.year}</td>
+                      <td className="px-5 py-4 text-right text-slate-700">{row.total_deals}</td>
+                      <td className="px-5 py-4 text-right font-semibold text-emerald-600">{fmt(row.total_commission)}</td>
+                      <td className="px-5 py-4"><StatusBadge status={row.status} /></td>
+                      <td className="px-5 py-4 text-slate-400 text-xs">
+                        {row.status === "paid"       && row.paid_by       ? <span><span className="font-medium text-slate-600">{row.paid_by}</span><br />{fmtDate(row.paid_at)}</span>
+                        : row.status === "closed_out" && row.closed_out_by ? <span><span className="font-medium text-slate-600">{row.closed_out_by}</span><br />{fmtDate(row.closed_out_at)}</span>
+                        : row.status === "approved"   && row.approved_by   ? <span><span className="font-medium text-slate-600">{row.approved_by}</span><br />{fmtDate(row.approved_at)}</span>
+                        : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {row.status === "calculated" && (
+                            <button onClick={() => openAction(row, "approve")}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors">
+                              Approve
+                            </button>
+                          )}
+                          {row.status === "approved" && (
+                            <button onClick={() => openAction(row, "close_out")}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 transition-colors">
+                              Close Out
+                            </button>
+                          )}
+                          {row.status === "closed_out" && (
+                            <button onClick={() => openAction(row, "mark_paid")}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors">
+                              Mark as Paid ✓
+                            </button>
+                          )}
+                          {row.status === "paid" && (
+                            <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 text-slate-400 border border-slate-200">Paid ✓</span>
+                          )}
+                          {row.status === "calculated" && (
+                            <button onClick={handleCalculate} title="Recalculate"
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-[#0F1D5E] hover:bg-slate-100 border border-slate-200 transition-colors">
+                              <RefreshCw className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Breakdown sub-rows */}
+                    {isExpanded && (
+                      <tr key={`${row.id}-breakdown`} className="bg-[#F8FAFF] border-b border-slate-200">
+                        <td colSpan={7} className="px-6 py-4">
+                          <div className="mb-2 flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Deal Breakdown — {row.agent_name}</span>
+                            <span className="text-xs text-slate-400">· Formula: kWh × Adder = Commission/month</span>
+                          </div>
+                          {deals.length === 0 ? (
+                            <p className="text-xs text-slate-400 py-2">Loading deals…</p>
+                          ) : (
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-200">
+                                  <th className="pb-2 text-left">Customer</th>
+                                  <th className="pb-2 text-left">Supplier / REP</th>
+                                  <th className="pb-2 text-right">Est. kWh</th>
+                                  <th className="pb-2 text-right">Adder ($/kWh)</th>
+                                  <th className="pb-2 text-right">Commission</th>
+                                  <th className="pb-2 text-left pl-4">Contract Period</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {deals.map(d => (
+                                  <tr key={d.deal_id} className="hover:bg-white/60">
+                                    <td className="py-2 pr-4 font-medium text-slate-700">{d.customer_name}</td>
+                                    <td className="py-2 pr-4 text-slate-500">{d.supplier}</td>
+                                    <td className="py-2 pr-4 text-right text-slate-600">{d.est_kwh.toLocaleString()}</td>
+                                    <td className="py-2 pr-4 text-right text-slate-600">${d.adder.toFixed(4)}</td>
+                                    <td className="py-2 pr-4 text-right font-semibold text-emerald-600">{fmt(d.commission)}</td>
+                                    <td className="py-2 pl-4 text-slate-400">
+                                      {d.start_date ? d.start_date.slice(0,10) : "—"} → {d.end_date ? d.end_date.slice(0,10) : "—"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="border-t-2 border-slate-200 font-semibold">
+                                  <td colSpan={4} className="pt-2 text-right text-slate-500">Total:</td>
+                                  <td className="pt-2 pr-4 text-right text-emerald-600">{fmt(deals.reduce((s,d) => s + d.commission, 0))}</td>
+                                  <td />
+                                </tr>
+                              </tfoot>
+                            </table>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         )}
