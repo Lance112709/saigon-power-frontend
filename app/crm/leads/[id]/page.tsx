@@ -265,13 +265,13 @@ const FLAG_KEYS: Record<Flag, string> = {
 };
 
 const CONTRACT_TERMS = [
-  "6 Months", "12 Months", "24 Months", "36 Months",
-  "48 Months", "60 Months", "Month to Month",
+  "6 Months", "12 Months", "16 Months", "23 Months", "24 Months",
+  "28 Months", "36 Months", "48 Months", "60 Months", "Month to Month",
 ];
 
 const TERM_MONTHS: Record<string, number> = {
-  "6 Months": 6, "12 Months": 12, "24 Months": 24,
-  "36 Months": 36, "48 Months": 48, "60 Months": 60,
+  "6 Months": 6, "12 Months": 12, "16 Months": 16, "23 Months": 23,
+  "24 Months": 24, "28 Months": 28, "36 Months": 36, "48 Months": 48, "60 Months": 60,
 };
 
 const SUPPLIERS = [
