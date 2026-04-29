@@ -170,6 +170,7 @@ export default function CustomerProfilePage() {
   const router = useRouter();
   const { user } = useAuth();
   const canDeleteNotes = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "manager";
   const id = params.id as string;
 
   const [customer, setCustomer] = useState<any>(null);
@@ -237,6 +238,15 @@ export default function CustomerProfilePage() {
 
   const handleDealStatusUpdate = (dealId: string, newStatus: string) => {
     setDeals(prev => prev.map(d => d.id === dealId ? { ...d, deal_status: newStatus } : d));
+  };
+
+  const handleDeleteDeal = async (e: React.MouseEvent, dealId: string) => {
+    e.stopPropagation();
+    if (!confirm("Delete this deal? This cannot be undone.")) return;
+    try {
+      await api.deleteCrmDeal(dealId);
+      setDeals(prev => prev.filter(d => d.id !== dealId));
+    } catch {}
   };
 
   const handleAddNote = async () => {
@@ -601,8 +611,13 @@ export default function CustomerProfilePage() {
                           <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">{d.provider}</span>
                         )}
                       </div>
-                      <div onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                         <StatusBadge status={d.deal_status} dealId={d.id} onUpdate={handleDealStatusUpdate} />
+                        {isAdmin && (
+                          <button onClick={e => handleDeleteDeal(e, d.id)} className="text-slate-300 hover:text-red-500 transition-colors" title="Delete deal">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                     {/* Row 2: key fields in a wrapping flex */}

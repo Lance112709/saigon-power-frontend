@@ -93,6 +93,7 @@ export const api = {
   updateCrmDeal: (id: string, data: object) =>
     request(`/api/v1/crm/deals/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   getCrmDeal: (id: string) => request(`/api/v1/crm/deals/${id}`),
+  deleteCrmDeal: (id: string) => request(`/api/v1/crm/deals/${id}`, { method: "DELETE" }),
   getCrmCustomerNotes: (id: string) => request(`/api/v1/crm/customers/${id}/notes`),
   createCrmCustomerNote: (id: string, data: object) =>
     request(`/api/v1/crm/customers/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
