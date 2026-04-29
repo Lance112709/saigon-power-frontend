@@ -19,12 +19,21 @@ export default function RenewalsPage() {
   const router = useRouter();
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [providers, setProviders] = useState<string[]>([]);
+  const [agents, setAgents] = useState<string[]>([]);
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [provider, setProvider] = useState("");
   const [salesAgent, setSalesAgent] = useState("");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    (api as any).getRenewalFilters().then((f: any) => {
+      setProviders(f.providers || []);
+      setAgents(f.agents || []);
+    }).catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,25 +135,19 @@ export default function RenewalsPage() {
           {/* REP / Provider */}
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">REP / Provider</label>
-            <input
-              type="text"
-              placeholder="e.g. Budget Power"
-              value={provider}
-              onChange={e => setProvider(e.target.value)}
-              className={`${inputCls} w-full`}
-            />
+            <select value={provider} onChange={e => setProvider(e.target.value)} className={`${inputCls} w-full`}>
+              <option value="">All REPs</option>
+              {providers.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
           </div>
 
           {/* Sales Agent */}
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Sales Agent</label>
-            <input
-              type="text"
-              placeholder="Agent name"
-              value={salesAgent}
-              onChange={e => setSalesAgent(e.target.value)}
-              className={`${inputCls} w-full`}
-            />
+            <select value={salesAgent} onChange={e => setSalesAgent(e.target.value)} className={`${inputCls} w-full`}>
+              <option value="">All Agents</option>
+              {agents.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
           </div>
         </div>
       </div>
