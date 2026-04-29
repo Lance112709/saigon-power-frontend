@@ -166,12 +166,19 @@ export default function CommissionsPage() {
     if (user && user.role !== "admin") router.replace("/dashboard");
   }, [user, router]);
 
+  useEffect(() => {
+    api.getSalesAgents()
+      .then((data: any[]) => setAgents(data.map((a: any) => a.name).filter(Boolean).sort()))
+      .catch(() => {});
+  }, []);
+
   const now  = new Date();
   const [month, setMonth]   = useState(now.getMonth() + 1);
   const [year,  setYear]    = useState(now.getFullYear());
   const [status, setStatus] = useState("");
   const [agentQ, setAgentQ] = useState("");
 
+  const [agents,  setAgents]  = useState<string[]>([]);
   const [rows,    setRows]    = useState<Commission[]>([]);
   const [logs,    setLogs]    = useState<Log[]>([]);
   const [loading, setLoading] = useState(false);
@@ -344,13 +351,10 @@ export default function CommissionsPage() {
           </div>
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Agent</label>
-            <input
-              type="text"
-              placeholder="Search agent…"
-              value={agentQ}
-              onChange={e => setAgentQ(e.target.value)}
-              className={`${inputCls} w-full`}
-            />
+            <select value={agentQ} onChange={e => setAgentQ(e.target.value)} className={`${inputCls} w-full`}>
+              <option value="">All Agents</option>
+              {agents.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
           </div>
         </div>
       </div>
