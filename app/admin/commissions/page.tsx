@@ -500,7 +500,7 @@ export default function CommissionsPage() {
                                   <th className="pb-2 text-left">Customer</th>
                                   <th className="pb-2 text-left">Supplier / REP</th>
                                   <th className="pb-2 text-right">Est. kWh</th>
-                                  <th className="pb-2 text-right">Adder ($/kWh)</th>
+                                  <th className="pb-2 text-right">Rate Applied</th>
                                   <th className="pb-2 text-right">Commission</th>
                                   <th className="pb-2 text-left pl-4">Contract Period</th>
                                 </tr>
@@ -511,7 +511,14 @@ export default function CommissionsPage() {
                                     <td className="py-2 pr-4 font-medium text-slate-700">{d.customer_name}</td>
                                     <td className="py-2 pr-4 text-slate-500">{d.supplier}</td>
                                     <td className="py-2 pr-4 text-right text-slate-600">{d.est_kwh.toLocaleString()}</td>
-                                    <td className="py-2 pr-4 text-right text-slate-600">${d.adder.toFixed(4)}</td>
+                                    <td className="py-2 pr-4 text-right text-slate-600">
+                                      {d.applied_type === "excluded"
+                                        ? <span className="text-red-400 font-semibold">Excluded</span>
+                                        : d.applied_type === "flat_monthly"
+                                        ? <span>${(d.applied_rate ?? d.adder).toFixed(4)}/acct</span>
+                                        : <span>${(d.applied_rate ?? d.adder).toFixed(4)}/kWh</span>
+                                      }
+                                    </td>
                                     <td className="py-2 pr-4 text-right font-semibold text-emerald-600">{fmt(d.commission)}</td>
                                     <td className="py-2 pl-4 text-slate-400">
                                       {d.start_date ? d.start_date.slice(0,10) : "—"} → {d.end_date ? d.end_date.slice(0,10) : "—"}

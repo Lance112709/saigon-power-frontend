@@ -69,9 +69,10 @@ export default function AgentsPage() {
   const [editAgent, setEditAgent]   = useState<any | null>(null);
   const [editForm, setEditForm]     = useState(EMPTY);
   const [editRules, setEditRules]   = useState(EMPTY_RULES);
-  const [editError, setEditError]   = useState("");
-  const [editSaving, setEditSaving] = useState(false);
-  const [activeTab, setActiveTab]   = useState<"info" | "commission">("info");
+  const [editError, setEditError]     = useState("");
+  const [editSuccess, setEditSuccess] = useState(false);
+  const [editSaving, setEditSaving]   = useState(false);
+  const [activeTab, setActiveTab]     = useState<"info" | "commission">("info");
 
   const load = async () => {
     try { setAgents(await api.getSalesAgents()); } catch { }
@@ -181,7 +182,8 @@ export default function AgentsPage() {
     try {
       const updated = await (api as any).updateSalesAgent(editAgent.id, { ...editForm, commission_rules });
       setAgents(prev => prev.map(a => a.id === editAgent.id ? { ...a, ...updated } : a));
-      setEditAgent(null);
+      setEditSuccess(true);
+      setTimeout(() => { setEditSuccess(false); setEditAgent(null); }, 1200);
     } catch (err: any) {
       const raw = err?.message || "Failed to save";
       const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
@@ -412,6 +414,11 @@ export default function AgentsPage() {
             {editError && (
               <div className="mx-6 mt-4 flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600 shrink-0">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {editError}
+              </div>
+            )}
+            {editSuccess && (
+              <div className="mx-6 mt-4 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-700 font-semibold shrink-0">
+                ✓ Commission structure saved successfully!
               </div>
             )}
 
