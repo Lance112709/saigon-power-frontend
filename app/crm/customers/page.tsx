@@ -121,7 +121,7 @@ export default function CrmCustomersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {["Name", "Email", "Phone", "City", "Active / Total Deals", "", ...(isAdmin ? [""] : [])].map((h, i) => (
+                  {["Name", "Email", "Phone", "Service Address", "Active / Total Deals", "", ...(isAdmin ? [""] : [])].map((h, i) => (
                     <th key={i} className={`px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider ${i === 4 ? "text-center" : ""}`}>
                       {h}
                     </th>
@@ -138,7 +138,7 @@ export default function CrmCustomersPage() {
                     <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">{c.full_name}</td>
                     <td className="px-5 py-3.5 text-slate-500">{c.email || "—"}</td>
                     <td className="px-5 py-3.5 text-slate-500">{c.phone || "—"}</td>
-                    <td className="px-5 py-3.5 text-slate-500">{c.city || "—"}</td>
+                    <td className="px-5 py-3.5 text-slate-500 max-w-[200px] truncate">{c.service_address || c.city || "—"}</td>
                     <td className="px-5 py-3.5 text-center">
                       <span className="font-semibold text-emerald-600">{c.active_deal_count}</span>
                       <span className="text-slate-400"> / {c.deal_count}</span>
