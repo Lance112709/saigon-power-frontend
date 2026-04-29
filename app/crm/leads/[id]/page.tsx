@@ -277,7 +277,7 @@ const TERM_MONTHS: Record<string, number> = {
 const SUPPLIERS = [
   "Budget Power", "Discount Power", "Heritage Power", "Iron Horse",
   "CleanSky Energy", "Reliant", "Chariot",
-  "Direct Energy", "Cirro Energy", "True Power", "Hudson Energy",
+  "Direct Energy", "Cirro Energy", "True Power", "Hudson Energy", "NRG",
 ];
 
 const DEAL_TYPES = ["New Business", "Renew", "TOS", "TOAO"];
