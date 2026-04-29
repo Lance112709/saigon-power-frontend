@@ -168,28 +168,41 @@ export default function AgentsPage() {
   };
 
   const saveEdit = async () => {
+    setEditError("");
+    setEditSuccess(false);
+
     if (!editForm.name.trim()) { setEditError("Name is required"); setActiveTab("info"); return; }
-    if (!editForm.agent_type)  { setEditError("Agent Type is required"); setActiveTab("info"); return; }
-    setEditSaving(true); setEditError("");
-    const commission_rules = {
-      default_type: editRules.default_type,
-      default_rate: editRules.default_rate !== "" ? parseFloat(editRules.default_rate) : null,
-      overrides: editRules.overrides
-        .filter(o => o.supplier && o.rate !== "")
-        .map(o => ({ supplier: o.supplier, type: o.type, rate: parseFloat(o.rate) })),
-      exclude_plan_types: editRules.exclude_plan_types,
-    };
+    if (!editForm.agent_type)  { setEditError("Agent type is required"); setActiveTab("info"); return; }
+
+    setEditSaving(true);
     try {
-      await (api as any).updateSalesAgent(editAgent.id, { ...editForm, commission_rules });
-      await load(); // reload from DB so table always reflects actual saved state
+      const commission_rules = {
+        default_type:        editRules.default_type || "per_kwh",
+        default_rate:        editRules.default_rate !== "" ? parseFloat(String(editRules.default_rate)) : null,
+        overrides:           (editRules.overrides || [])
+                               .filter(o => o.supplier && o.rate !== "")
+                               .map(o => ({ supplier: o.supplier, type: o.type, rate: parseFloat(String(o.rate)) })),
+        exclude_plan_types:  editRules.exclude_plan_types || [],
+      };
+
+      const res = await api.updateSalesAgent(editAgent.id, { ...editForm, commission_rules });
+      if (!res || (typeof res === "object" && "error" in res)) {
+        throw new Error(String((res as any)?.error || "Save failed"));
+      }
+
+      // Reload agents from DB to guarantee table reflects saved state
+      await load();
       setEditSuccess(true);
-      setTimeout(() => { setEditSuccess(false); setEditAgent(null); }, 1200);
+      setTimeout(() => { setEditSuccess(false); setEditAgent(null); }, 1500);
     } catch (err: any) {
-      const raw = err?.message || "Failed to save";
-      const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
-      try { setEditError(JSON.parse(body)?.detail ?? body); } catch { setEditError(body); }
+      const msg = err?.message || "Failed to save. Please try again.";
+      const body = msg.includes(":") ? msg.slice(msg.indexOf(":") + 1).trim() : msg;
+      let display = body;
+      try { display = JSON.parse(body)?.detail ?? body; } catch {}
+      setEditError(display || "Unknown error — check your connection and try again.");
+    } finally {
+      setEditSaving(false);
     }
-    setEditSaving(false);
   };
 
   const remove = async (id: string) => {
@@ -579,7 +592,7 @@ export default function AgentsPage() {
                 className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors">
                 Cancel
               </button>
-              <button onClick={saveEdit} disabled={editSaving}
+              <button type="button" onClick={saveEdit} disabled={editSaving}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 transition-colors disabled:opacity-50">
                 <Save className="w-4 h-4" />
                 {editSaving ? "Saving..." : "Save Changes"}
