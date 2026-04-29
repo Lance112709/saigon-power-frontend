@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe, Tag, Zap, CalendarClock,
+  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe, Tag, Zap, CalendarClock, DollarSign,
 } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
@@ -154,6 +154,7 @@ export default function Sidebar() {
           <>
             <SectionLabel>Admin</SectionLabel>
             <NavLink href="/admin/users" label="User Management" icon={Shield} />
+            <NavLink href="/admin/commissions" label="Commissions" icon={DollarSign} />
             <NavLink href="/admin/contract-template" label="Contract Template" icon={FileText} />
             <NavLink href="/admin/ai" label="AI Operations" icon={Bot} />
           </>

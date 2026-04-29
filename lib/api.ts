@@ -183,6 +183,24 @@ export const api = {
   acceptProposal: (token: string, data: object) =>
     request(`/api/v1/proposals/accept/${token}`, { method: "POST", body: JSON.stringify(data) }),
 
+  // Agent Commissions (admin only)
+  listAgentCommissions: (params?: Record<string, string>) => {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/agent-commissions${q}`);
+  },
+  calculateAgentCommissions: (data: { month: number; year: number }) =>
+    request("/api/v1/agent-commissions/calculate", { method: "POST", body: JSON.stringify(data) }),
+  approveAgentCommission: (id: string, data?: object) =>
+    request(`/api/v1/agent-commissions/${id}/approve`, { method: "PATCH", body: JSON.stringify(data || {}) }),
+  closeOutAgentCommission: (id: string, data?: object) =>
+    request(`/api/v1/agent-commissions/${id}/close-out`, { method: "PATCH", body: JSON.stringify(data || {}) }),
+  markAgentCommissionPaid: (id: string, data?: object) =>
+    request(`/api/v1/agent-commissions/${id}/mark-paid`, { method: "PATCH", body: JSON.stringify(data || {}) }),
+  getCommissionLogs: (params?: Record<string, string>) => {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/agent-commissions/logs${q}`);
+  },
+
   // Users (admin only)
   getUsers: () => request("/api/v1/users"),
   createUser: (data: object) => request("/api/v1/users", { method: "POST", body: JSON.stringify(data) }),
