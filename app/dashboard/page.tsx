@@ -218,7 +218,7 @@ export default function DashboardPage() {
         {/* Expiring deals + Chart */}
         <div className="grid grid-cols-5 gap-4">
           <div className={showFinance ? "col-span-2" : "col-span-5"}>
-            <Card title="Expiring Within 30 Days" action="Call list" actionHref="/call-list">
+            <Card title="Expiring Within 60 Days" action="Call list" actionHref="/call-list">
               <div className="divide-y divide-slate-50">
                 {expiring.length === 0 ? (
                   <div className="px-5 py-10 text-center">
@@ -233,11 +233,12 @@ export default function DashboardPage() {
                   return (
                     <div key={d.deal_id}
                       className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/crm/leads/${d.lead_id}`)}>
+                      onClick={() => router.push(d.customer_id ? `/crm/customers/${d.customer_id}` : `/crm/leads/${d.lead_id}`)}>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${urgent ? "bg-red-500" : "bg-amber-400"}`} />
                           <p className="text-sm font-semibold text-slate-800 truncate">{d.full_name}</p>
+                          {d.source === "imported" && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-500">Imported</span>}
                         </div>
                         <p className="text-xs text-slate-400 mt-0.5 pl-3.5">{d.supplier || "—"}{d.plan_name ? ` · ${d.plan_name}` : ""}</p>
                       </div>
