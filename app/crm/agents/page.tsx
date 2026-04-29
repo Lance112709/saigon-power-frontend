@@ -180,8 +180,8 @@ export default function AgentsPage() {
       exclude_plan_types: editRules.exclude_plan_types,
     };
     try {
-      const updated = await (api as any).updateSalesAgent(editAgent.id, { ...editForm, commission_rules });
-      setAgents(prev => prev.map(a => a.id === editAgent.id ? { ...a, ...updated } : a));
+      await (api as any).updateSalesAgent(editAgent.id, { ...editForm, commission_rules });
+      await load(); // reload from DB so table always reflects actual saved state
       setEditSuccess(true);
       setTimeout(() => { setEditSuccess(false); setEditAgent(null); }, 1200);
     } catch (err: any) {
@@ -317,7 +317,8 @@ export default function AgentsPage() {
                 <tbody>
                   {agents.map(a => {
                     const rules = a.commission_rules || {};
-                    const hasCommission = rules.default_rate != null && rules.default_rate !== "";
+                    const hasRate = rules.default_rate != null && rules.default_rate !== "";
+                    const hasCommission = hasRate || (rules.exclude_plan_types || []).length > 0 || (rules.overrides || []).length > 0;
                     const exclusions: string[] = rules.exclude_plan_types || [];
                     const isInhouse = a.agent_type === "Inhouse Agent";
                     return (
@@ -336,11 +337,13 @@ export default function AgentsPage() {
                           ) : "—"}
                         </td>
                         <td className="px-4 py-3.5">
-                          {hasCommission ? (
+                          {hasRate ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">
                               <DollarSign className="w-3 h-3" />
                               {commLabel(rules.default_type, rules.default_rate)}
                             </span>
+                          ) : hasCommission ? (
+                            <span className="text-xs text-amber-600 font-semibold">Exclusions only</span>
                           ) : (
                             <span className="text-xs text-slate-300 italic">Not set</span>
                           )}
