@@ -121,7 +121,7 @@ export default function CrmCustomersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {["Name", "Email", "Phone", "Service Address", "Active / Total Deals", "", ...(isAdmin ? [""] : [])].map((h, i) => (
+                  {["Name", "Source", "Phone", "Service Address", "Active / Total Deals", "", ...(isAdmin ? [""] : [])].map((h, i) => (
                     <th key={i} className={`px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider ${i === 4 ? "text-center" : ""}`}>
                       {h}
                     </th>
@@ -136,7 +136,11 @@ export default function CrmCustomersPage() {
                     onClick={() => router.push(`/crm/customers/${c.id}`)}
                   >
                     <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">{c.full_name}</td>
-                    <td className="px-5 py-3.5 text-slate-500">{c.email || "—"}</td>
+                    <td className="px-5 py-3.5">
+                      {c.notes
+                        ? <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-50 text-violet-700">{c.notes}</span>
+                        : <span className="text-slate-400 text-xs">—</span>}
+                    </td>
                     <td className="px-5 py-3.5 text-slate-500">{c.phone || "—"}</td>
                     <td className="px-5 py-3.5 text-slate-500 max-w-[200px] truncate">{c.service_address || c.city || "—"}</td>
                     <td className="px-5 py-3.5 text-center">
