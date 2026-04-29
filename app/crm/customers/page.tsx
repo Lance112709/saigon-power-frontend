@@ -5,11 +5,14 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Search, Users, FileCheck, TrendingUp, ChevronRight, Trash2 } from "lucide-react";
 
-function StatCard({ title, value, sub, icon: Icon, valueColor = "text-[#0F1D5E]" }: {
-  title: string; value: string; sub?: string; icon: any; valueColor?: string;
+function StatCard({ title, value, sub, icon: Icon, valueColor = "text-[#0F1D5E]", onClick }: {
+  title: string; value: string; sub?: string; icon: any; valueColor?: string; onClick?: () => void;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start gap-4">
+    <div
+      className={`bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start gap-4 ${onClick ? "cursor-pointer hover:border-[#0F1D5E]/30 hover:shadow-md transition-all" : ""}`}
+      onClick={onClick}
+    >
       <div className="w-11 h-11 rounded-xl bg-[#EEF1FA] flex items-center justify-center shrink-0">
         <Icon className="w-5 h-5 text-[#0F1D5E]" />
       </div>
@@ -77,9 +80,9 @@ export default function CrmCustomersPage() {
 
       {stats && (
         <div className="grid grid-cols-3 gap-4">
-          <StatCard title="Total Customers" value={stats.total_customers.toLocaleString()} icon={Users} />
-          <StatCard title="Active Deals" value={stats.active_deals.toLocaleString()} icon={FileCheck} valueColor="text-emerald-600" />
-          <StatCard title="Inactive Deals" value={stats.inactive_deals.toLocaleString()} icon={TrendingUp} valueColor="text-slate-400" />
+          <StatCard title="Total Customers" value={stats.total_customers.toLocaleString()} icon={Users} onClick={() => setDealStatus("")} />
+          <StatCard title="Active Deals" value={stats.active_deals.toLocaleString()} icon={FileCheck} valueColor="text-emerald-600" onClick={() => setDealStatus("ACTIVE")} />
+          <StatCard title="Inactive Deals" value={stats.inactive_deals.toLocaleString()} icon={TrendingUp} valueColor="text-slate-400" onClick={() => setDealStatus("INACTIVE")} />
         </div>
       )}
 
