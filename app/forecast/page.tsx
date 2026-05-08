@@ -50,17 +50,27 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function ForecastPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     api.getRevenueForecast()
       .then(setData)
-      .catch(() => setData(null))
+      .catch((e: any) => { setErr(e?.message || String(e)); setData(null); })
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
     <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center text-slate-400 text-sm">
       Building forecast...
+    </div>
+  );
+
+  if (err) return (
+    <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center">
+      <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-8 max-w-lg text-center">
+        <p className="text-red-600 font-semibold mb-2">Forecast failed to load</p>
+        <p className="text-xs text-slate-500 font-mono break-all">{err}</p>
+      </div>
     </div>
   );
 
