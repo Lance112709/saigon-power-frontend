@@ -1120,97 +1120,121 @@ export default function CustomerProfilePage() {
             )}
           </div>
 
-          {/* Deals — card layout, no horizontal scroll */}
+          {/* Deals */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#0F1D5E]">All Deals ({deals.length})</h3>
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-[#0F1D5E]">All Deals</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{deals.length} deal{deals.length !== 1 ? "s" : ""}</p>
+              </div>
               <button onClick={() => setShowAddDeal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0F1D5E] border border-[#0F1D5E]/20 rounded-xl hover:bg-[#EEF1FA] transition-colors">
-                <Plus className="w-3.5 h-3.5" /> Add Deal
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[#0F1D5E] rounded-xl hover:bg-[#0F1D5E]/90 transition-colors shadow-sm">
+                <Plus className="w-4 h-4" /> Add Deal
               </button>
             </div>
             {deals.length === 0 ? (
-              <div className="p-10 text-center">
-                <Zap className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                <p className="text-slate-400 text-sm">No deals yet. Click Add Deal to get started.</p>
+              <div className="p-14 text-center">
+                <Zap className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                <p className="text-slate-400 text-sm font-medium">No deals yet</p>
+                <p className="text-slate-300 text-xs mt-1">Click Add Deal to get started.</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {[...active, ...inactive, ...renewed].map(d => (
-                  <div key={d.id}
-                    className="px-5 py-4 hover:bg-slate-50/60 cursor-pointer transition-colors"
-                    onClick={() => router.push(`/crm/deals/${d.id}`)}>
-                    {/* Row 1: Deal name + provider + status */}
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-semibold text-[#0F1D5E] truncate">{d.deal_name || d.business_name || "Unnamed Deal"}</span>
-                        {d.provider && (
-                          <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">{d.provider}</span>
-                        )}
-                        {DEAL_FLAGS.map(flag => {
-                          const key = DEAL_FLAG_KEYS[flag];
-                          if (!(d as any)[key]) return null;
-                          return (
-                            <span key={flag} className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-bold border ${flag === "DE LINKED" ? "bg-red-100 text-red-600 border-red-200" : "bg-[#EEF1FA] text-[#0F1D5E] border-[#0F1D5E]/20"}`}>
-                              {flag}
-                            </span>
-                          );
-                        })}
-                      </div>
-                      <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                        {d.deal_status === "ACTIVE" && (
-                          <>
-                            <button
-                              onClick={e => { e.stopPropagation(); setRenewDeal(d); }}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-                              title="Renew this deal"
-                            >
-                              <RefreshCw className="w-3 h-3" /> Renew
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); setTerminateDeal(d); }}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                              title="Terminate this deal"
-                            >
-                              <Ban className="w-3 h-3" /> Terminate
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={e => { e.stopPropagation(); setEditDeal(d); }}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                          title="Edit deal"
-                        >
-                          <FileEdit className="w-3 h-3" /> Edit
-                        </button>
-                        <StatusBadge status={d.deal_status} />
-                        {isAdmin && (
-                          <button onClick={e => handleDeleteDeal(e, d.id)} className="text-slate-300 hover:text-red-500 transition-colors" title="Delete deal">
-                            <Trash2 className="w-3.5 h-3.5" />
+                {[...active, ...inactive, ...renewed].map(d => {
+                  const accent = d.deal_status === "ACTIVE" ? "border-l-emerald-400" : d.deal_status === "RENEWED" ? "border-l-indigo-400" : "border-l-slate-300";
+                  return (
+                    <div key={d.id}
+                      className={`px-6 py-5 hover:bg-slate-50/70 cursor-pointer transition-colors border-l-4 ${accent}`}
+                      onClick={() => router.push(`/crm/deals/${d.id}`)}>
+
+                      {/* Row 1: name + provider + flags + actions */}
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <span className="text-base font-bold text-[#0F1D5E]">{d.deal_name || d.business_name || "Unnamed Deal"}</span>
+                          {d.provider && (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{d.provider}</span>
+                          )}
+                          <StatusBadge status={d.deal_status} />
+                          {DEAL_FLAGS.map(flag => {
+                            const key = DEAL_FLAG_KEYS[flag];
+                            if (!(d as any)[key]) return null;
+                            return (
+                              <span key={flag} className={`px-2 py-0.5 rounded-full text-xs font-bold border ${flag === "DE LINKED" ? "bg-red-100 text-red-600 border-red-200" : "bg-[#EEF1FA] text-[#0F1D5E] border-[#0F1D5E]/20"}`}>
+                                {flag}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+                          {d.deal_status === "ACTIVE" && (
+                            <>
+                              <button onClick={e => { e.stopPropagation(); setRenewDeal(d); }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">
+                                <RefreshCw className="w-3 h-3" /> Renew
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); setTerminateDeal(d); }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                                <Ban className="w-3 h-3" /> Terminate
+                              </button>
+                            </>
+                          )}
+                          <button onClick={e => { e.stopPropagation(); setEditDeal(d); }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                            <FileEdit className="w-3 h-3" /> Edit
                           </button>
+                          {isAdmin && (
+                            <button onClick={e => handleDeleteDeal(e, d.id)}
+                              className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Row 2: stat chips */}
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {d.energy_rate != null && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            Rate <span className="font-bold text-slate-700">${parseFloat(d.energy_rate).toFixed(4)}/kWh</span>
+                          </span>
+                        )}
+                        {d.adder != null && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            Adder <span className="font-bold text-slate-700">${parseFloat(d.adder).toFixed(4)}/kWh</span>
+                          </span>
+                        )}
+                        {d.meter_type && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs font-semibold text-slate-600">{d.meter_type}</span>
+                        )}
+                        {d.sales_agent && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            Agent <span className="font-bold text-slate-700">{d.sales_agent}</span>
+                          </span>
+                        )}
+                        {d.contract_start_date && d.contract_end_date && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            {fmtDate(d.contract_start_date)} <span className="text-slate-300 mx-1">→</span> {fmtDate(d.contract_end_date)}
+                          </span>
+                        )}
+                        {d.esiid && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs font-mono text-slate-500">{d.esiid}</span>
+                        )}
+                      </div>
+
+                      {/* Row 3: address + terminated */}
+                      <div className="flex items-center gap-4 text-xs text-slate-400">
+                        {d.service_address && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 shrink-0" />{d.service_address}
+                          </span>
+                        )}
+                        {d.deal_status === "INACTIVE" && d.contract_end_date && (
+                          <span className="text-red-500 font-semibold">Terminated: {fmtDate(d.contract_end_date)}</span>
                         )}
                       </div>
                     </div>
-                    {/* Row 2: key fields in a wrapping flex */}
-                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
-                      {d.esiid && <span><span className="text-slate-400">ESIID:</span> <span className="font-mono">{d.esiid}</span></span>}
-                      {d.energy_rate != null && <span><span className="text-slate-400">Rate:</span> ${parseFloat(d.energy_rate).toFixed(4)}/kWh</span>}
-                      {d.adder != null && <span><span className="text-slate-400">Adder:</span> ${parseFloat(d.adder).toFixed(4)}/kWh</span>}
-                      {d.meter_type && <span><span className="text-slate-400">Type:</span> {d.meter_type}</span>}
-                      {d.sales_agent && <span><span className="text-slate-400">Agent:</span> {d.sales_agent}</span>}
-                      {d.contract_start_date && <span><span className="text-slate-400">Start:</span> {fmtDate(d.contract_start_date)}</span>}
-                      {d.contract_end_date && <span><span className="text-slate-400">End:</span> {fmtDate(d.contract_end_date)}</span>}
-                      {d.deal_status === "INACTIVE" && d.contract_end_date && (
-                        <span className="text-red-500 font-semibold"><span className="text-red-400">Terminated:</span> {fmtDate(d.contract_end_date)}</span>
-                      )}
-                    </div>
-                    {d.service_address && (
-                      <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                        <MapPin className="w-3 h-3 shrink-0" />{d.service_address}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
