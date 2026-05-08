@@ -555,7 +555,7 @@ export default function CustomerProfilePage() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: "", phone: "", email: "", dob: "",
-    mailing_address: "", city: "", state: "", postal_code: "", notes: "",
+    mailing_address: "", city: "", state: "", postal_code: "", notes: "", anxh: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -576,6 +576,8 @@ export default function CustomerProfilePage() {
     const data = await api.getCrmCustomer(id);
     setCustomer(data);
     setDeals(data.deals || []);
+    const deals = data.deals || [];
+    const firstAnxh = deals.map((d: any) => d.anxh).find(Boolean) || "";
     setEditForm({
       full_name: data.full_name || "",
       phone: data.phone || "",
@@ -586,6 +588,7 @@ export default function CustomerProfilePage() {
       state: data.state || "",
       postal_code: data.postal_code || "",
       notes: data.notes || "",
+      anxh: firstAnxh,
     });
   }, [id]);
 
@@ -606,6 +609,7 @@ export default function CustomerProfilePage() {
   }, [id, loadCustomer, loadNotes, loadTasks]);
 
   const cancelEdit = () => {
+    const firstAnxh = deals.map((d: any) => d.anxh).find(Boolean) || "";
     setEditForm({
       full_name: customer.full_name || "",
       phone: customer.phone || "",
@@ -616,6 +620,7 @@ export default function CustomerProfilePage() {
       state: customer.state || "",
       postal_code: customer.postal_code || "",
       notes: customer.notes || "",
+      anxh: firstAnxh,
     });
     setEditing(false);
   };
@@ -889,14 +894,21 @@ export default function CustomerProfilePage() {
                 )}
               </div>
 
-              {/* ANXH — read-only from deals, masked for CSR */}
+              {/* ANXH — editable for non-CSR, masked for CSR */}
               <div className="flex items-start gap-3 text-slate-600">
                 <IconBox icon={Hash} />
                 <div className="pt-2 flex-1">
                   <span className="text-slate-400 text-xs block mb-1">
                     ANXH {isCsr && <span className="text-slate-300">(last 4 only)</span>}
                   </span>
-                  {anxhValues.length > 0 ? (
+                  {editing && !isCsr ? (
+                    <input
+                      className="border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm w-full font-mono"
+                      value={editForm.anxh}
+                      placeholder="Account number"
+                      onChange={e => setEditForm(f => ({ ...f, anxh: e.target.value }))}
+                    />
+                  ) : anxhValues.length > 0 ? (
                     anxhValues.map((a: any) => (
                       <span key={a} className="block font-mono text-xs tracking-wider">{maskAnxh(String(a))}</span>
                     ))
