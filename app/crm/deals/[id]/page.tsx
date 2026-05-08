@@ -93,6 +93,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
     business_name:        deal.business_name         || "",
     anxh:                 deal.anxh                  || "",
   });
+  const [flagDelinked, setFlagDelinked] = useState<boolean>(deal.flag_delinked ?? false);
   const [saving, setSaving] = useState(false);
   const [providers, setProviders] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
@@ -112,6 +113,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
         ...form,
         energy_rate: form.energy_rate ? parseFloat(form.energy_rate) : null,
         adder:       form.adder       ? parseFloat(form.adder)       : null,
+        flag_delinked: flagDelinked,
       });
       onSaved();
     } catch {}
@@ -224,6 +226,22 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Type</label>
               <input className={inputCls} value={form.deal_type} onChange={e => set("deal_type", e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-2 block">Flags</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFlagDelinked(v => !v)}
+                className={flagDelinked
+                  ? "px-3 py-1.5 rounded-lg border text-xs font-semibold bg-red-600 text-white border-red-600"
+                  : "px-3 py-1.5 rounded-lg border text-xs font-semibold bg-white text-red-600 border-red-300 hover:border-red-400"
+                }
+              >
+                DE LINKED
+              </button>
             </div>
           </div>
 
@@ -383,7 +401,12 @@ export default function DealDetailPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-[#0F1D5E]">{deal.deal_name || deal.business_name || "Deal"}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold text-[#0F1D5E]">{deal.deal_name || deal.business_name || "Deal"}</h1>
+              {deal.flag_delinked && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 border border-red-200">DE LINKED</span>
+              )}
+            </div>
             {customer?.full_name && <p className="text-sm text-slate-500 mt-0.5">{customer.full_name}</p>}
             {customer?.email && <p className="text-xs text-slate-400">{customer.email}</p>}
             {deal.deal_status === "INACTIVE" && deal.contract_end_date && (

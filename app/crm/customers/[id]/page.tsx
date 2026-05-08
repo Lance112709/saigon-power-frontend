@@ -250,6 +250,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
     business_name:       deal.business_name        || "",
     anxh:                deal.anxh                 || "",
   });
+  const [flagDelinked, setFlagDelinked] = useState<boolean>(deal.flag_delinked ?? false);
   const [saving, setSaving] = useState(false);
   const [providers, setProviders] = useState<string[]>([]);
   const [agents, setAgents]     = useState<string[]>([]);
@@ -269,6 +270,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
         ...form,
         energy_rate: form.energy_rate ? parseFloat(form.energy_rate) : null,
         adder:       form.adder       ? parseFloat(form.adder)       : null,
+        flag_delinked: flagDelinked,
       });
       onSaved();
     } catch {}
@@ -377,6 +379,22 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-1 block">ANXH</label>
             <input className={inputCls} value={form.anxh} onChange={e => set("anxh", e.target.value)} />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-2 block">Flags</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFlagDelinked(v => !v)}
+                className={flagDelinked
+                  ? "px-3 py-1.5 rounded-lg border text-xs font-semibold bg-red-600 text-white border-red-600"
+                  : "px-3 py-1.5 rounded-lg border text-xs font-semibold bg-white text-red-600 border-red-300 hover:border-red-400"
+                }
+              >
+                DE LINKED
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -1107,6 +1125,9 @@ export default function CustomerProfilePage() {
                         <span className="font-semibold text-[#0F1D5E] truncate">{d.deal_name || d.business_name || "Unnamed Deal"}</span>
                         {d.provider && (
                           <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">{d.provider}</span>
+                        )}
+                        {d.flag_delinked && (
+                          <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 border border-red-200">DE LINKED</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
