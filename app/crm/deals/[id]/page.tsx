@@ -7,6 +7,18 @@ import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit } f
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 
+const DEAL_FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "DE LINKED"] as const;
+type DealFlag = typeof DEAL_FLAGS[number];
+const DEAL_FLAG_KEYS: Record<DealFlag, string> = {
+  "TOS": "flag_tos",
+  "TOAO": "flag_toao",
+  "Deposit": "flag_deposit",
+  "Special Deal": "flag_special_deal",
+  "10% Promo": "flag_promo_10",
+  "DE LINKED": "flag_delinked",
+};
+const EMPTY_FLAGS = { flag_tos: false, flag_toao: false, flag_deposit: false, flag_special_deal: false, flag_promo_10: false, flag_delinked: false };
+
 function StatusBadge({ status }: { status: string }) {
   const styles =
     status === "ACTIVE"  ? "bg-emerald-100 text-emerald-700" :
@@ -93,7 +105,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
     business_name:        deal.business_name         || "",
     anxh:                 deal.anxh                  || "",
   });
-  const [flagDelinked, setFlagDelinked] = useState<boolean>(deal.flag_delinked ?? false);
+  const [flags, setFlags] = useState({ ...EMPTY_FLAGS, flag_tos: deal.flag_tos ?? false, flag_toao: deal.flag_toao ?? false, flag_deposit: deal.flag_deposit ?? false, flag_special_deal: deal.flag_special_deal ?? false, flag_promo_10: deal.flag_promo_10 ?? false, flag_delinked: deal.flag_delinked ?? false });
   const [saving, setSaving] = useState(false);
   const [providers, setProviders] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
@@ -104,6 +116,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
   }, []);
 
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const toggleFlag = (key: string) => setFlags(f => ({ ...f, [key]: !(f as any)[key] }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +126,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
         ...form,
         energy_rate: form.energy_rate ? parseFloat(form.energy_rate) : null,
         adder:       form.adder       ? parseFloat(form.adder)       : null,
-        flag_delinked: flagDelinked,
+        ...flags,
       });
       onSaved();
     } catch {}
@@ -232,16 +245,24 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-2 block">Flags</label>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setFlagDelinked(v => !v)}
-                className={flagDelinked
-                  ? "px-3 py-1.5 rounded-lg border text-xs font-semibold bg-red-600 text-white border-red-600"
-                  : "px-3 py-1.5 rounded-lg border text-xs font-semibold bg-white text-red-600 border-red-300 hover:border-red-400"
-                }
-              >
-                DE LINKED
-              </button>
+              {DEAL_FLAGS.map(flag => {
+                const key = DEAL_FLAG_KEYS[flag];
+                const active = (flags as any)[key];
+                return (
+                  <button
+                    key={flag}
+                    type="button"
+                    onClick={() => toggleFlag(key)}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                      flag === "DE LINKED"
+                        ? active ? "bg-red-600 text-white border-red-600" : "bg-white text-red-600 border-red-300 hover:border-red-400"
+                        : active ? "bg-[#0F1D5E] text-white border-[#0F1D5E]" : "bg-white text-slate-700 border-slate-300 hover:border-[#0F1D5E]/40"
+                    }`}
+                  >
+                    {flag}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -403,9 +424,15 @@ export default function DealDetailPage() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-[#0F1D5E]">{deal.deal_name || deal.business_name || "Deal"}</h1>
-              {deal.flag_delinked && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 border border-red-200">DE LINKED</span>
-              )}
+              {DEAL_FLAGS.map(flag => {
+                const key = DEAL_FLAG_KEYS[flag];
+                if (!(deal as any)[key]) return null;
+                return (
+                  <span key={flag} className={`px-2 py-0.5 rounded-full text-xs font-bold border ${flag === "DE LINKED" ? "bg-red-100 text-red-600 border-red-200" : "bg-[#EEF1FA] text-[#0F1D5E] border-[#0F1D5E]/20"}`}>
+                    {flag}
+                  </span>
+                );
+              })}
             </div>
             {customer?.full_name && <p className="text-sm text-slate-500 mt-0.5">{customer.full_name}</p>}
             {customer?.email && <p className="text-xs text-slate-400">{customer.email}</p>}
