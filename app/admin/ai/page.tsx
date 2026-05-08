@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import {
   Bot, RefreshCw, AlertTriangle, CheckCircle2,
   TrendingUp, Users, FileText, Zap, BarChart3, ChevronRight,
-  Trophy, DollarSign, Clock, ShieldAlert,
+  Trophy, DollarSign, Clock, ShieldAlert, MessageSquare, Send, Trash2,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -38,7 +38,8 @@ const AGENT_HEX = ["#0F1D5E","#16a34a","#9333ea","#f59e0b","#f43f5e","#0891b2","
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "leaderboard" | "pipeline" | "performance" | "recon" | "commission" | "alerts" | "reports";
+type Tab = "overview" | "leaderboard" | "pipeline" | "performance" | "recon" | "commission" | "alerts" | "reports" | "chat";
+interface ChatMessage { role: "user" | "assistant"; content: string; }
 
 export default function AiOperationsPage() {
   const { user } = useAuth();
@@ -66,6 +67,10 @@ export default function AiOperationsPage() {
   const [commTracker,  setCommTracker]  = useState<any>(null);
   const [commLoading,  setCommLoading]  = useState(false);
   const [commMonths,   setCommMonths]   = useState(12);
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput,    setChatInput]    = useState("");
+  const [chatLoading,  setChatLoading]  = useState(false);
 
   useEffect(() => {
     if (user && user.role !== "admin") router.push("/dashboard");
@@ -127,6 +132,24 @@ export default function AiOperationsPage() {
     try { await api.resolveAiAlert(id); await loadDashboard(); } finally { setResolving(null); }
   };
 
+  const handleChat = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const msg = chatInput.trim();
+    if (!msg || chatLoading) return;
+    const userMsg: ChatMessage = { role: "user", content: msg };
+    const next = [...chatMessages, userMsg];
+    setChatMessages(next);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const { reply } = await api.sendAiChat(msg, next.slice(-10));
+      setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
+    } catch {
+      setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, I couldn't get a response. Please try again." }]);
+    }
+    setChatLoading(false);
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="flex items-center gap-3 text-gray-500">
@@ -139,6 +162,7 @@ export default function AiOperationsPage() {
   const totalAlerts = (dashboard?.alerts.critical.length||0) + (dashboard?.alerts.warnings.length||0) + (dashboard?.alerts.info.length||0);
 
   const TABS: { key: Tab; label: string }[] = [
+    { key: "chat",         label: "💬 AI Chat"            },
     { key: "overview",     label: "Overview"              },
     { key: "leaderboard",  label: "Agent Leaderboard"     },
     { key: "pipeline",     label: "Pipeline & Revenue"    },
@@ -233,8 +257,127 @@ export default function AiOperationsPage() {
               onTriggerDaily={async () => { await api.triggerDailyReport(); loadReports(); }}
               onTriggerMonthly={async () => { await api.triggerMonthlyReport(); loadReports(); }} />
           )}
+          {activeTab === "chat" && (
+            <ChatTab
+              messages={chatMessages}
+              input={chatInput}
+              loading={chatLoading}
+              onInputChange={setChatInput}
+              onSend={handleChat}
+              onClear={() => setChatMessages([])}
+            />
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Chat Tab ───────────────────────────────────────────────────────────────────
+
+function ChatTab({
+  messages, input, loading, onInputChange, onSend, onClear,
+}: {
+  messages: ChatMessage[];
+  input: string;
+  loading: boolean;
+  onInputChange: (v: string) => void;
+  onSend: (e?: React.FormEvent) => void;
+  onClear: () => void;
+}) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  return (
+    <div className="flex flex-col" style={{ height: "560px" }}>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-[#0F1D5E]" />
+          <span className="text-sm font-semibold text-slate-700">Ask anything about your business</span>
+        </div>
+        {messages.length > 0 && (
+          <button onClick={onClear}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors">
+            <Trash2 className="w-3.5 h-3.5" /> Clear
+          </button>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center gap-4 text-slate-400">
+            <div className="p-4 bg-[#EEF1FA] rounded-2xl">
+              <Bot className="w-8 h-8 text-[#0F1D5E]" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-600 text-sm">Hi! I know your entire business.</p>
+              <p className="text-xs mt-1">Ask me about leads, deals, commissions, agents, or anything in the CRM.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 w-full max-w-md">
+              {[
+                "How many active deals do we have?",
+                "Which agents closed deals this month?",
+                "What were our commissions last month?",
+                "Are there any urgent alerts I should know about?",
+              ].map(q => (
+                <button key={q} onClick={() => { onInputChange(q); }}
+                  className="text-left text-xs px-3 py-2 rounded-xl border border-slate-200 hover:border-[#0F1D5E] hover:text-[#0F1D5E] text-slate-500 transition-colors bg-slate-50">
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            {msg.role === "assistant" && (
+              <div className="w-7 h-7 rounded-full bg-[#0F1D5E] flex items-center justify-center mr-2 mt-0.5 shrink-0">
+                <Bot className="w-3.5 h-3.5 text-green-400" />
+              </div>
+            )}
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap leading-relaxed ${
+              msg.role === "user"
+                ? "bg-[#0F1D5E] text-white rounded-br-sm"
+                : "bg-slate-100 text-slate-800 rounded-bl-sm"
+            }`}>
+              {msg.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="w-7 h-7 rounded-full bg-[#0F1D5E] flex items-center justify-center mr-2 shrink-0">
+              <Bot className="w-3.5 h-3.5 text-green-400" />
+            </div>
+            <div className="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1.5 items-center">
+              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <form onSubmit={onSend} className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
+        <input
+          value={input}
+          onChange={e => onInputChange(e.target.value)}
+          placeholder="Ask about your leads, deals, commissions..."
+          disabled={loading}
+          className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 disabled:opacity-50"
+        />
+        <button type="submit" disabled={loading || !input.trim()}
+          className="px-4 py-2.5 bg-[#0F1D5E] text-white rounded-xl hover:bg-[#1a2d7c] transition disabled:opacity-40 flex items-center gap-2 text-sm font-medium">
+          <Send className="w-4 h-4" />
+        </button>
+      </form>
     </div>
   );
 }
@@ -244,13 +387,40 @@ export default function AiOperationsPage() {
 function OverviewTab({ m, dashboard }: { m: any; dashboard: Dashboard | null }) {
   return (
     <div className="space-y-5">
+      {m?.health && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Business Health</p>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Expired but still Active */}
+            <div className={`rounded-xl p-4 border ${m.health.expired_active > 0 ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"}`}>
+              <p className={`text-2xl font-bold ${m.health.expired_active > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                {m.health.expired_active}
+              </p>
+              <p className={`text-xs font-semibold mt-1 ${m.health.expired_active > 0 ? "text-red-500" : "text-emerald-500"}`}>
+                Expired but Still Active
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Past end date, status not updated</p>
+            </div>
+            {/* Revenue at Risk */}
+            <div className={`rounded-xl p-4 border ${m.health.revenue_at_risk > 0 ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200"}`}>
+              <p className={`text-2xl font-bold ${m.health.revenue_at_risk > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                ${m.health.revenue_at_risk.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </p>
+              <p className={`text-xs font-semibold mt-1 ${m.health.revenue_at_risk > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                Revenue at Risk
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{m.health.deals_at_risk} deal{m.health.deals_at_risk !== 1 ? "s" : ""} expiring within 60 days</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {m?.data_quality && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Data Quality</p>
-          <div className="grid grid-cols-3 gap-3">
-            <QualityCard label="Missing Rate"     count={m.data_quality.missing_rate}   severity="high"   />
-            <QualityCard label="Missing ESIID"    count={m.data_quality.missing_esiid}  severity="high"   />
-            <QualityCard label="Unassigned Agent" count={m.data_quality.missing_agent}  severity="medium" />
+          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Deal Quality</p>
+          <div className="grid grid-cols-2 gap-3">
+            <QualityCard label="Duplicate ESI IDs"        count={m.data_quality.dup_esiid}    severity="high"   />
+            <QualityCard label="Duplicate Service Address" count={m.data_quality.dup_address}  severity="medium" />
           </div>
         </div>
       )}

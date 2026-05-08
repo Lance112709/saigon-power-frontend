@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ const statusColor: Record<string, string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
+  customer_name:       "Customer Full Name",
   customer_first_name: "Customer First Name",
   customer_last_name:  "Customer Last Name",
   esiid:               "ESI ID",
@@ -77,6 +78,11 @@ export default function UploadsPage() {
     const data = await api.getSuppliers();
     setSuppliers(data);
   };
+
+  useEffect(() => {
+    loadUploads();
+    loadSuppliers();
+  }, []);
 
   const openEdit = (u: any) => {
     setEditingUpload(u);

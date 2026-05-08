@@ -116,7 +116,7 @@ export default function UploadDetailPage() {
     setMatchSaving(false);
   };
 
-  const isMatched = (r: any) => !!r.service_point_id;
+  const isMatched = (r: any) => !!r.service_point_id || !!r.lead_deal_matched;
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6">
@@ -189,7 +189,7 @@ export default function UploadDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
-                      {["Customer", "ESI ID", "Service Address", "Amount", "Rate", "Usage", "Bill Start", "Bill End", "Match"].map(h => (
+                      {["Customer", "ESI ID", "REP", "Service Address", "Amount", "Rate", "Usage", "Bill Start", "Bill End", "Match"].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -202,6 +202,11 @@ export default function UploadDetailPage() {
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
                           {fmt(r.resolved_esiid || r.raw_esiid)}
+                        </td>
+                        <td className="px-4 py-3 text-xs whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded-full bg-[#EEF1FA] text-[#0F1D5E] font-semibold">
+                            {batch?.suppliers?.name || "—"}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-slate-500 text-xs max-w-[180px] truncate">
                           {fmt(r.raw_row_data?.["Premise Address"] || r.raw_row_data?.["Service Address"] || r.raw_row_data?.["service_address"])}
@@ -216,13 +221,25 @@ export default function UploadDetailPage() {
                           {fmt(r.raw_row_data?.["Cust Contract End Date"] || r.raw_row_data?.["Bill End Date"] || r.raw_row_data?.["bill_end_date"])}
                         </td>
                         <td className="px-4 py-3">
-                          {isMatched(r)
-                            ? <span className="inline-flex items-center gap-1 text-xs text-green-700 font-semibold bg-green-100 px-2 py-1 rounded-full"><CheckCircle className="w-3 h-3" /> Matched</span>
-                            : <button onClick={() => openMatch(r)}
-                                className="inline-flex items-center gap-1 text-xs text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full transition-colors">
-                                <Link2 className="w-3 h-3" /> Match
-                              </button>
-                          }
+                          {isMatched(r) ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="inline-flex items-center gap-1 text-xs text-green-700 font-semibold bg-green-100 px-2 py-1 rounded-full w-fit">
+                                <CheckCircle className="w-3 h-3" /> Matched
+                              </span>
+                              {r.lead_match?.lead_name && (
+                                <a href={`/crm/leads/${r.lead_match.lead_id}`}
+                                  className="text-[10px] text-[#0F1D5E] hover:underline truncate max-w-[120px]"
+                                  title={r.lead_match.lead_name}>
+                                  {r.lead_match.lead_name}
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <button onClick={() => openMatch(r)}
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full transition-colors">
+                              <Link2 className="w-3 h-3" /> Match
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

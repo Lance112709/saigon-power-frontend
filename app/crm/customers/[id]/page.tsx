@@ -5,11 +5,12 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, User, MapPin, Phone, Mail, Calendar, Hash,
-  Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare,
+  Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare, RefreshCw, Ban, FileEdit,
 } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
+const fmtDate = (s: string) => { const [y, m, d] = s.slice(0, 10).split("-"); return `${m}-${d}-${y}`; };
 
 function IconBox({ icon: Icon }: { icon: any }) {
   return (
@@ -19,24 +20,378 @@ function IconBox({ icon: Icon }: { icon: any }) {
   );
 }
 
-function StatusBadge({ status, dealId, onUpdate }: { status: string; dealId: string; onUpdate: (id: string, s: string) => void }) {
+function StatusBadge({ status }: { status: string }) {
+  const styles =
+    status === "ACTIVE"   ? "bg-emerald-100 text-emerald-700" :
+    status === "RENEWED"  ? "bg-indigo-100 text-indigo-700" :
+                            "bg-slate-100 text-slate-500";
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${styles}`}>
+      {status}
+    </span>
+  );
+}
+
+const EMPTY_RENEW = {
+  provider: "", energy_rate: "", adder: "", contract_term: "",
+  contract_start_date: "", contract_end_date: "", contract_signed_date: "",
+  sales_agent: "", product_type: "", meter_type: "Residential",
+};
+
+function RenewDealModal({ deal, customerId, onClose, onSaved }: {
+  deal: any; customerId: string; onClose: () => void; onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    ...EMPTY_RENEW,
+    provider: deal.provider || "",
+    sales_agent: deal.sales_agent || "",
+    product_type: deal.product_type || "",
+    meter_type: deal.meter_type || "Residential",
+    contract_term: deal.contract_term || "",
+  });
   const [saving, setSaving] = useState(false);
-  const isActive = status === "ACTIVE";
-  const toggle = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const next = isActive ? "INACTIVE" : "ACTIVE";
+  const [error, setError] = useState("");
+  const [providers, setProviders] = useState<string[]>([]);
+  const [agents, setAgents] = useState<string[]>([]);
+
+  useEffect(() => {
+    api.getCrmProviders().then(setProviders).catch(() => {});
+    api.getCrmAgents().then(setAgents).catch(() => {});
+  }, []);
+
+  const set = (k: keyof typeof EMPTY_RENEW, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSaving(true);
-    try { await api.updateCrmDeal(dealId, { deal_status: next }); onUpdate(dealId, next); } catch {}
+    setError("");
+    try {
+      await api.renewCrmDeal(deal.id, form);
+      onSaved();
+    } catch (err: any) {
+      const raw = err?.message || "Failed";
+      const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
+      try { setError(JSON.parse(body)?.detail ?? body); } catch { setError(body); }
+    }
     setSaving(false);
   };
+
   return (
-    <button onClick={toggle} disabled={saving}
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer
-        ${isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}
-        ${saving ? "opacity-50" : ""}`}>
-      {saving ? "..." : status}
-      <ChevronDown className="w-3 h-3 opacity-60" />
-    </button>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white">
+          <div>
+            <h2 className="text-base font-bold text-[#0F1D5E]">Renew Deal</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              ESIID: <span className="font-mono">{deal.esiid || "—"}</span>
+              {deal.service_address && <> · {deal.service_address}</>}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={submit} className="px-6 py-5 space-y-4">
+          {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
+
+          <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700">
+            The current deal will be marked <strong>RENEWED</strong> and a new Active deal will be created with the same ESIID and address.
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Provider (REP)</label>
+              <select className={inputCls} value={form.provider} onChange={e => set("provider", e.target.value)}>
+                <option value="">Select provider…</option>
+                {providers.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Sales Agent</label>
+              <select className={inputCls} value={form.sales_agent} onChange={e => set("sales_agent", e.target.value)}>
+                <option value="">Select agent…</option>
+                {agents.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Meter Type</label>
+              <select className={inputCls} value={form.meter_type} onChange={e => set("meter_type", e.target.value)}>
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Small Commercial">Small Commercial</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Energy Rate ($/kWh)</label>
+              <input type="number" step="0.0001" className={inputCls} placeholder="0.0850" value={form.energy_rate} onChange={e => set("energy_rate", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh)</label>
+              <input type="number" step="0.0001" className={inputCls} placeholder="0.0070" value={form.adder} onChange={e => set("adder", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Term</label>
+              <input className={inputCls} placeholder="12 Months" value={form.contract_term} onChange={e => set("contract_term", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Start Date</label>
+              <input type="date" className={inputCls} value={form.contract_start_date} onChange={e => set("contract_start_date", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">End Date</label>
+              <input type="date" className={inputCls} value={form.contract_end_date} onChange={e => set("contract_end_date", e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">Signed Date</label>
+            <input type="date" className={inputCls} value={form.contract_signed_date} onChange={e => set("contract_signed_date", e.target.value)} />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? "Renewing…" : "Confirm Renewal"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TerminateDealModal({ deal, onClose, onSaved }: {
+  deal: any; onClose: () => void; onSaved: () => void;
+}) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+
+  const handleTerminate = async () => {
+    setSaving(true);
+    try {
+      await api.updateCrmDeal(deal.id, {
+        deal_status: "INACTIVE",
+        contract_end_date: date,
+      });
+      onSaved();
+    } catch {}
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center">
+              <Ban className="w-4 h-4 text-red-500" />
+            </div>
+            <h2 className="text-base font-bold text-slate-800">Terminate Deal</h2>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm">
+          <p className="font-semibold text-slate-700 truncate">{deal.deal_name || deal.business_name || "Unnamed Deal"}</p>
+          {deal.service_address && <p className="text-slate-400 text-xs mt-0.5 truncate">{deal.service_address}</p>}
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-slate-500 block mb-1.5">Termination Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400"
+          />
+        </div>
+
+        <div className="flex gap-3 pt-1">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
+            Cancel
+          </button>
+          <button
+            onClick={handleTerminate}
+            disabled={saving || !date}
+            className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
+          >
+            {saving ? "Terminating…" : "Terminate"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    deal_name:           deal.deal_name           || "",
+    provider:            deal.provider            || "",
+    service_address:     deal.service_address     || "",
+    meter_type:          deal.meter_type          || "Residential",
+    deal_type:           deal.deal_type           || "",
+    energy_rate:         deal.energy_rate != null  ? String(deal.energy_rate) : "",
+    adder:               deal.adder       != null  ? String(deal.adder)       : "",
+    contract_term:       deal.contract_term        || "",
+    contract_start_date: (deal.contract_start_date || "").slice(0, 10),
+    contract_end_date:   (deal.contract_end_date   || "").slice(0, 10),
+    contract_signed_date:(deal.contract_signed_date|| "").slice(0, 10),
+    sales_agent:         deal.sales_agent          || "",
+    deal_status:         deal.deal_status          || "ACTIVE",
+    business_name:       deal.business_name        || "",
+    anxh:                deal.anxh                 || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [providers, setProviders] = useState<string[]>([]);
+  const [agents, setAgents]     = useState<string[]>([]);
+
+  useEffect(() => {
+    api.getCrmProviders().then(setProviders).catch(() => {});
+    api.getCrmAgents().then(setAgents).catch(() => {});
+  }, []);
+
+  const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.updateCrmDeal(deal.id, {
+        ...form,
+        energy_rate: form.energy_rate ? parseFloat(form.energy_rate) : null,
+        adder:       form.adder       ? parseFloat(form.adder)       : null,
+      });
+      onSaved();
+    } catch {}
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-2">
+            <FileEdit className="w-4 h-4 text-[#0F1D5E]" />
+            <h2 className="text-base font-bold text-[#0F1D5E]">Edit Deal</h2>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={submit} className="px-6 py-5 space-y-4">
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Name</label>
+              <input className={inputCls} value={form.deal_name} onChange={e => set("deal_name", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Business Name</label>
+              <input className={inputCls} value={form.business_name} onChange={e => set("business_name", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Provider (REP)</label>
+              <select className={inputCls} value={form.provider} onChange={e => set("provider", e.target.value)}>
+                <option value="">Select provider…</option>
+                {providers.map(p => <option key={p} value={p}>{p}</option>)}
+                {form.provider && !providers.includes(form.provider) && (
+                  <option value={form.provider}>{form.provider}</option>
+                )}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Service Address</label>
+              <input className={inputCls} value={form.service_address} onChange={e => set("service_address", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Meter Type</label>
+              <select className={inputCls} value={form.meter_type} onChange={e => set("meter_type", e.target.value)}>
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Small Commercial">Small Commercial</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Energy Rate ($/kWh)</label>
+              <input type="number" step="0.0001" className={inputCls} value={form.energy_rate} onChange={e => set("energy_rate", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh)</label>
+              <input type="number" step="0.0001" className={inputCls} value={form.adder} onChange={e => set("adder", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Term</label>
+              <input className={inputCls} placeholder="e.g. 36" value={form.contract_term} onChange={e => set("contract_term", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Start Date</label>
+              <input type="date" className={inputCls} value={form.contract_start_date} onChange={e => set("contract_start_date", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">End Date</label>
+              <input type="date" className={inputCls} value={form.contract_end_date} onChange={e => set("contract_end_date", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Signed Date</label>
+              <input type="date" className={inputCls} value={form.contract_signed_date} onChange={e => set("contract_signed_date", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Sales Agent</label>
+              <select className={inputCls} value={form.sales_agent} onChange={e => set("sales_agent", e.target.value)}>
+                <option value="">Select agent…</option>
+                {agents.map(a => <option key={a} value={a}>{a}</option>)}
+                {form.sales_agent && !agents.includes(form.sales_agent) && (
+                  <option value={form.sales_agent}>{form.sales_agent}</option>
+                )}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Status</label>
+              <select className={inputCls} value={form.deal_status} onChange={e => set("deal_status", e.target.value)}>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="RENEWED">Renewed</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">ANXH</label>
+            <input className={inputCls} value={form.anxh} onChange={e => set("anxh", e.target.value)} />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2.5 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -51,6 +406,13 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
   const [form, setForm] = useState(EMPTY_DEAL);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [providers, setProviders] = useState<string[]>([]);
+  const [agents, setAgents] = useState<string[]>([]);
+
+  useEffect(() => {
+    api.getCrmProviders().then(setProviders).catch(() => {});
+    api.getCrmAgents().then(setAgents).catch(() => {});
+  }, []);
 
   const set = (k: keyof typeof EMPTY_DEAL, v: string) => setForm(f => ({ ...f, [k]: v }));
 
@@ -86,7 +448,10 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">Provider (REP)</label>
-              <input className={inputCls} placeholder="e.g. DISCOUNT POWER" value={form.provider} onChange={e => set("provider", e.target.value)} />
+              <select className={inputCls} value={form.provider} onChange={e => set("provider", e.target.value)}>
+                <option value="">Select provider…</option>
+                {providers.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
           </div>
 
@@ -138,7 +503,10 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">Sales Agent</label>
-              <input className={inputCls} placeholder="Agent name" value={form.sales_agent} onChange={e => set("sales_agent", e.target.value)} />
+              <select className={inputCls} value={form.sales_agent} onChange={e => set("sales_agent", e.target.value)}>
+                <option value="">Select agent…</option>
+                {agents.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">Status</label>
@@ -168,7 +536,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
 export default function CustomerProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const canDeleteNotes = user?.role === "admin";
   const isAdmin = user?.role === "admin" || user?.role === "manager";
   const id = params.id as string;
@@ -179,10 +547,16 @@ export default function CustomerProfilePage() {
   const [error, setError] = useState("");
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [showSms, setShowSms] = useState(false);
+  const [renewDeal, setRenewDeal] = useState<any>(null);
+  const [terminateDeal, setTerminateDeal] = useState<any>(null);
+  const [editDeal, setEditDeal] = useState<any>(null);
 
   // Edit state
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ full_name: "", phone: "", notes: "" });
+  const [editForm, setEditForm] = useState({
+    full_name: "", phone: "", email: "", dob: "",
+    mailing_address: "", city: "", state: "", postal_code: "", notes: "",
+  });
   const [saving, setSaving] = useState(false);
 
   // Notes state
@@ -202,7 +576,17 @@ export default function CustomerProfilePage() {
     const data = await api.getCrmCustomer(id);
     setCustomer(data);
     setDeals(data.deals || []);
-    setEditForm({ full_name: data.full_name || "", phone: data.phone || "", notes: data.notes || "" });
+    setEditForm({
+      full_name: data.full_name || "",
+      phone: data.phone || "",
+      email: data.email || "",
+      dob: data.dob || "",
+      mailing_address: data.mailing_address || "",
+      city: data.city || "",
+      state: data.state || "",
+      postal_code: data.postal_code || "",
+      notes: data.notes || "",
+    });
   }, [id]);
 
   const loadNotes = useCallback(async () => {
@@ -222,7 +606,17 @@ export default function CustomerProfilePage() {
   }, [id, loadCustomer, loadNotes, loadTasks]);
 
   const cancelEdit = () => {
-    setEditForm({ full_name: customer.full_name || "", phone: customer.phone || "", notes: customer.notes || "" });
+    setEditForm({
+      full_name: customer.full_name || "",
+      phone: customer.phone || "",
+      email: customer.email || "",
+      dob: customer.dob || "",
+      mailing_address: customer.mailing_address || "",
+      city: customer.city || "",
+      state: customer.state || "",
+      postal_code: customer.postal_code || "",
+      notes: customer.notes || "",
+    });
     setEditing(false);
   };
 
@@ -299,15 +693,18 @@ export default function CustomerProfilePage() {
     setTasks(prev => prev.filter(t => t.id !== taskId));
   };
 
-  if (loading) return (
+  if (loading || authLoading) return (
     <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center text-slate-400 text-sm">Loading...</div>
   );
   if (error) return <div className="p-8 text-red-500">{error}</div>;
   if (!customer) return null;
 
   const active = deals.filter(d => d.deal_status === "ACTIVE");
-  const inactive = deals.filter(d => d.deal_status !== "ACTIVE");
+  const renewed = deals.filter(d => d.deal_status === "RENEWED");
+  const inactive = deals.filter(d => d.deal_status !== "ACTIVE" && d.deal_status !== "RENEWED");
   const anxhValues = [...new Set(deals.map((d: any) => d.anxh).filter(Boolean))];
+  const isCsr = user?.role === "csr";
+  const maskAnxh = (val: string) => user?.role === "csr" ? "****" + String(val).slice(-4) : val;
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-5">
@@ -316,6 +713,31 @@ export default function CustomerProfilePage() {
           customerId={id}
           onClose={() => setShowAddDeal(false)}
           onSaved={async () => { setShowAddDeal(false); await loadCustomer(); }}
+        />
+      )}
+
+      {renewDeal && (
+        <RenewDealModal
+          deal={renewDeal}
+          customerId={id}
+          onClose={() => setRenewDeal(null)}
+          onSaved={async () => { setRenewDeal(null); await loadCustomer(); }}
+        />
+      )}
+
+      {terminateDeal && (
+        <TerminateDealModal
+          deal={terminateDeal}
+          onClose={() => setTerminateDeal(null)}
+          onSaved={async () => { setTerminateDeal(null); await loadCustomer(); }}
+        />
+      )}
+
+      {editDeal && (
+        <EditDealModal
+          deal={editDeal}
+          onClose={() => setEditDeal(null)}
+          onSaved={async () => { setEditDeal(null); await loadCustomer(); }}
         />
       )}
 
@@ -380,12 +802,22 @@ export default function CustomerProfilePage() {
             </div>
 
             <div className="space-y-3 text-sm">
-              {customer.email && (
-                <div className="flex items-start gap-3 text-slate-600">
-                  <IconBox icon={Mail} />
-                  <span className="break-all pt-2">{customer.email}</span>
-                </div>
-              )}
+              {/* Email */}
+              <div className="flex items-start gap-3 text-slate-600">
+                <IconBox icon={Mail} />
+                {editing ? (
+                  <input
+                    className="border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm flex-1 pt-1"
+                    value={editForm.email}
+                    placeholder="Email address"
+                    onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                  />
+                ) : (
+                  <span className="break-all pt-2">{customer.email || "—"}</span>
+                )}
+              </div>
+
+              {/* Phone */}
               <div className="flex items-center gap-3 text-slate-600">
                 <IconBox icon={Phone} />
                 {editing ? (
@@ -399,32 +831,82 @@ export default function CustomerProfilePage() {
                   <span>{customer.phone || "—"}</span>
                 )}
               </div>
-              {customer.dob && (
-                <div className="flex items-center gap-3 text-slate-600">
-                  <IconBox icon={Calendar} />
-                  <span>DOB: {customer.dob}</span>
-                </div>
-              )}
-              {(customer.mailing_address || customer.city) && (
-                <div className="flex items-start gap-3 text-slate-600">
-                  <IconBox icon={MapPin} />
-                  <div className="pt-2">
-                    {customer.mailing_address && <div>{customer.mailing_address}</div>}
-                    {customer.city && <div>{customer.city}, {customer.state} {customer.postal_code}</div>}
+
+              {/* DOB */}
+              <div className="flex items-center gap-3 text-slate-600">
+                <IconBox icon={Calendar} />
+                {editing ? (
+                  <input
+                    type="date"
+                    className="border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm flex-1"
+                    value={editForm.dob}
+                    onChange={e => setEditForm(f => ({ ...f, dob: e.target.value }))}
+                  />
+                ) : (
+                  <span>{customer.dob ? `DOB: ${customer.dob}` : "—"}</span>
+                )}
+              </div>
+
+              {/* Address */}
+              <div className="flex items-start gap-3 text-slate-600">
+                <IconBox icon={MapPin} />
+                {editing ? (
+                  <div className="flex-1 space-y-1.5">
+                    <input
+                      className="w-full border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm"
+                      value={editForm.mailing_address}
+                      placeholder="Street address"
+                      onChange={e => setEditForm(f => ({ ...f, mailing_address: e.target.value }))}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm"
+                        value={editForm.city}
+                        placeholder="City"
+                        onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
+                      />
+                      <input
+                        className="w-14 border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm"
+                        value={editForm.state}
+                        placeholder="TX"
+                        onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))}
+                      />
+                      <input
+                        className="w-20 border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm"
+                        value={editForm.postal_code}
+                        placeholder="ZIP"
+                        onChange={e => setEditForm(f => ({ ...f, postal_code: e.target.value }))}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
-              {anxhValues.length > 0 && (
-                <div className="flex items-start gap-3 text-slate-600">
-                  <IconBox icon={Hash} />
+                ) : (
                   <div className="pt-2">
-                    <span className="text-slate-400 text-xs block mb-1">ANXH</span>
-                    {anxhValues.map((a: any) => (
-                      <span key={a} className="block font-mono text-xs">{a}</span>
-                    ))}
+                    {customer.mailing_address
+                      ? <><div>{customer.mailing_address}</div>{customer.city && <div>{customer.city}, {customer.state} {customer.postal_code}</div>}</>
+                      : <span className="text-slate-400">—</span>
+                    }
                   </div>
+                )}
+              </div>
+
+              {/* ANXH — read-only from deals, masked for CSR */}
+              <div className="flex items-start gap-3 text-slate-600">
+                <IconBox icon={Hash} />
+                <div className="pt-2 flex-1">
+                  <span className="text-slate-400 text-xs block mb-1">
+                    ANXH {isCsr && <span className="text-slate-300">(last 4 only)</span>}
+                  </span>
+                  {anxhValues.length > 0 ? (
+                    anxhValues.map((a: any) => (
+                      <span key={a} className="block font-mono text-xs tracking-wider">{maskAnxh(String(a))}</span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 text-xs">—</span>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Notes */}
               <div className="pt-2 border-t border-slate-100">
                 {editing ? (
                   <textarea
@@ -443,10 +925,14 @@ export default function CustomerProfilePage() {
 
           {/* Deal count card */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <div className="grid grid-cols-2 gap-4 text-center">
+            <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-emerald-600">{active.length}</p>
-                <p className="text-xs text-slate-500 mt-1">Active Deals</p>
+                <p className="text-xs text-slate-500 mt-1">Active</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-indigo-500">{renewed.length}</p>
+                <p className="text-xs text-slate-500 mt-1">Renewed</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-400">{inactive.length}</p>
@@ -599,7 +1085,7 @@ export default function CustomerProfilePage() {
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {[...active, ...inactive].map(d => (
+                {[...active, ...inactive, ...renewed].map(d => (
                   <div key={d.id}
                     className="px-5 py-4 hover:bg-slate-50/60 cursor-pointer transition-colors"
                     onClick={() => router.push(`/crm/deals/${d.id}`)}>
@@ -612,7 +1098,32 @@ export default function CustomerProfilePage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                        <StatusBadge status={d.deal_status} dealId={d.id} onUpdate={handleDealStatusUpdate} />
+                        {d.deal_status === "ACTIVE" && (
+                          <>
+                            <button
+                              onClick={e => { e.stopPropagation(); setRenewDeal(d); }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                              title="Renew this deal"
+                            >
+                              <RefreshCw className="w-3 h-3" /> Renew
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); setTerminateDeal(d); }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                              title="Terminate this deal"
+                            >
+                              <Ban className="w-3 h-3" /> Terminate
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={e => { e.stopPropagation(); setEditDeal(d); }}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                          title="Edit deal"
+                        >
+                          <FileEdit className="w-3 h-3" /> Edit
+                        </button>
+                        <StatusBadge status={d.deal_status} />
                         {isAdmin && (
                           <button onClick={e => handleDeleteDeal(e, d.id)} className="text-slate-300 hover:text-red-500 transition-colors" title="Delete deal">
                             <Trash2 className="w-3.5 h-3.5" />
@@ -627,8 +1138,11 @@ export default function CustomerProfilePage() {
                       {d.adder != null && <span><span className="text-slate-400">Adder:</span> ${parseFloat(d.adder).toFixed(4)}/kWh</span>}
                       {d.meter_type && <span><span className="text-slate-400">Type:</span> {d.meter_type}</span>}
                       {d.sales_agent && <span><span className="text-slate-400">Agent:</span> {d.sales_agent}</span>}
-                      {d.contract_start_date && <span><span className="text-slate-400">Start:</span> {d.contract_start_date.slice(0, 10)}</span>}
-                      {d.contract_end_date && <span><span className="text-slate-400">End:</span> {d.contract_end_date.slice(0, 10)}</span>}
+                      {d.contract_start_date && <span><span className="text-slate-400">Start:</span> {fmtDate(d.contract_start_date)}</span>}
+                      {d.contract_end_date && <span><span className="text-slate-400">End:</span> {fmtDate(d.contract_end_date)}</span>}
+                      {d.deal_status === "INACTIVE" && d.contract_end_date && (
+                        <span className="text-red-500 font-semibold"><span className="text-red-400">Terminated:</span> {fmtDate(d.contract_end_date)}</span>
+                      )}
                     </div>
                     {d.service_address && (
                       <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">

@@ -3,36 +3,243 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown } from "lucide-react";
+import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit } from "lucide-react";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 
-function StatusBadge({ status, dealId, onUpdate }: { status: string; dealId: string; onUpdate: (s: string) => void }) {
-  const [saving, setSaving] = useState(false);
-  const isActive = status === "ACTIVE";
+function StatusBadge({ status }: { status: string }) {
+  const styles =
+    status === "ACTIVE"  ? "bg-emerald-100 text-emerald-700" :
+    status === "RENEWED" ? "bg-indigo-100 text-indigo-700" :
+                           "bg-slate-100 text-slate-500";
+  return (
+    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${styles}`}>
+      {status}
+    </span>
+  );
+}
 
-  const toggle = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const next = isActive ? "INACTIVE" : "ACTIVE";
+function TerminateDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => void; onSaved: () => void }) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+
+  const handleTerminate = async () => {
     setSaving(true);
     try {
-      await api.updateCrmDeal(dealId, { deal_status: next });
-      onUpdate(next);
+      await api.updateCrmDeal(deal.id, { deal_status: "INACTIVE", contract_end_date: date });
+      onSaved();
     } catch {}
     setSaving(false);
   };
 
   return (
-    <button
-      onClick={toggle}
-      disabled={saving}
-      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold transition-colors
-        ${isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}
-        ${saving ? "opacity-50" : ""}`}
-    >
-      {saving ? "..." : status}
-      <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-    </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center">
+              <Ban className="w-4 h-4 text-red-500" />
+            </div>
+            <h2 className="text-base font-bold text-slate-800">Terminate Deal</h2>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm">
+          <p className="font-semibold text-slate-700 truncate">{deal.deal_name || deal.business_name || "Unnamed Deal"}</p>
+          {deal.service_address && <p className="text-slate-400 text-xs mt-0.5 truncate">{deal.service_address}</p>}
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500 block mb-1.5">Termination Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400"
+          />
+        </div>
+        <div className="flex gap-3 pt-1">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
+            Cancel
+          </button>
+          <button
+            onClick={handleTerminate}
+            disabled={saving || !date}
+            className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
+          >
+            {saving ? "Terminating…" : "Terminate"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    deal_name:            deal.deal_name            || "",
+    provider:             deal.provider             || "",
+    service_address:      deal.service_address      || "",
+    meter_type:           deal.meter_type           || "Residential",
+    deal_type:            deal.deal_type            || "",
+    energy_rate:          deal.energy_rate != null   ? String(deal.energy_rate) : "",
+    adder:                deal.adder       != null   ? String(deal.adder)       : "",
+    contract_term:        deal.contract_term         || "",
+    contract_start_date:  (deal.contract_start_date  || "").slice(0, 10),
+    contract_end_date:    (deal.contract_end_date    || "").slice(0, 10),
+    contract_signed_date: (deal.contract_signed_date || "").slice(0, 10),
+    sales_agent:          deal.sales_agent           || "",
+    deal_status:          deal.deal_status           || "ACTIVE",
+    business_name:        deal.business_name         || "",
+    anxh:                 deal.anxh                  || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [providers, setProviders] = useState<string[]>([]);
+  const [agents, setAgents] = useState<string[]>([]);
+
+  useEffect(() => {
+    api.getCrmProviders().then(setProviders).catch(() => {});
+    api.getCrmAgents().then(setAgents).catch(() => {});
+  }, []);
+
+  const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.updateCrmDeal(deal.id, {
+        ...form,
+        energy_rate: form.energy_rate ? parseFloat(form.energy_rate) : null,
+        adder:       form.adder       ? parseFloat(form.adder)       : null,
+      });
+      onSaved();
+    } catch {}
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-2">
+            <FileEdit className="w-4 h-4 text-[#0F1D5E]" />
+            <h2 className="text-base font-bold text-[#0F1D5E]">Edit Deal</h2>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={submit} className="px-6 py-5 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Name</label>
+              <input className={inputCls} value={form.deal_name} onChange={e => set("deal_name", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Business Name</label>
+              <input className={inputCls} value={form.business_name} onChange={e => set("business_name", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Provider (REP)</label>
+              <select className={inputCls} value={form.provider} onChange={e => set("provider", e.target.value)}>
+                <option value="">Select provider…</option>
+                {providers.map(p => <option key={p} value={p}>{p}</option>)}
+                {form.provider && !providers.includes(form.provider) && (
+                  <option value={form.provider}>{form.provider}</option>
+                )}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Service Address</label>
+              <input className={inputCls} value={form.service_address} onChange={e => set("service_address", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Meter Type</label>
+              <select className={inputCls} value={form.meter_type} onChange={e => set("meter_type", e.target.value)}>
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Small Commercial">Small Commercial</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Energy Rate ($/kWh)</label>
+              <input type="number" step="0.0001" className={inputCls} value={form.energy_rate} onChange={e => set("energy_rate", e.target.value)} placeholder="0.0000" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh)</label>
+              <input type="number" step="0.0001" className={inputCls} value={form.adder} onChange={e => set("adder", e.target.value)} placeholder="0.0000" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Start</label>
+              <input type="date" className={inputCls} value={form.contract_start_date} onChange={e => set("contract_start_date", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract End</label>
+              <input type="date" className={inputCls} value={form.contract_end_date} onChange={e => set("contract_end_date", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Signed Date</label>
+              <input type="date" className={inputCls} value={form.contract_signed_date} onChange={e => set("contract_signed_date", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Sales Agent</label>
+              <select className={inputCls} value={form.sales_agent} onChange={e => set("sales_agent", e.target.value)}>
+                <option value="">Select agent…</option>
+                {agents.map(a => <option key={a} value={a}>{a}</option>)}
+                {form.sales_agent && !agents.includes(form.sales_agent) && (
+                  <option value={form.sales_agent}>{form.sales_agent}</option>
+                )}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Term</label>
+              <input className={inputCls} value={form.contract_term} onChange={e => set("contract_term", e.target.value)} placeholder="e.g. 12 months" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">ANXH</label>
+              <input className={inputCls} value={form.anxh} onChange={e => set("anxh", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Status</label>
+              <select className={inputCls} value={form.deal_status} onChange={e => set("deal_status", e.target.value)}>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="INACTIVE">INACTIVE</option>
+                <option value="RENEWED">RENEWED</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Type</label>
+              <input className={inputCls} value={form.deal_type} onChange={e => set("deal_type", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}
+              className="px-5 py-2 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50 transition-colors">
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -46,6 +253,8 @@ export default function DealDetailPage() {
   const [deal, setDeal] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showTerminate, setShowTerminate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   // Notes state
   const [notes, setNotes] = useState<any[]>([]);
@@ -60,6 +269,11 @@ export default function DealDetailPage() {
   const [taskError, setTaskError] = useState("");
   const [newTask, setNewTask] = useState({ title: "", task_type: "call", due_date: "", priority: "medium", description: "" });
 
+  const loadDeal = useCallback(async () => {
+    const data = await api.getCrmDeal(id);
+    setDeal(data);
+  }, [id]);
+
   const loadNotes = useCallback(async () => {
     try { setNotes(await api.getCrmDealNotes(id)); } catch {}
   }, [id]);
@@ -69,13 +283,12 @@ export default function DealDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    api.getCrmDeal(id)
-      .then(data => setDeal(data))
+    loadDeal()
       .catch(() => setError("Deal not found"))
       .finally(() => setLoading(false));
     loadNotes();
     loadTasks();
-  }, [id, loadNotes, loadTasks]);
+  }, [id, loadDeal, loadNotes, loadTasks]);
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
@@ -131,9 +344,27 @@ export default function DealDetailPage() {
   if (error || !deal) return <div className="p-8 text-red-500">{error || "Not found"}</div>;
 
   const customer = deal.crm_customers;
+  const fmtDate = (s: string) => { const [y, m, d] = s.slice(0, 10).split("-"); return `${m}-${d}-${y}`; };
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-5">
+
+      {showTerminate && (
+        <TerminateDealModal
+          deal={deal}
+          onClose={() => setShowTerminate(false)}
+          onSaved={async () => { setShowTerminate(false); await loadDeal(); }}
+        />
+      )}
+
+      {showEdit && (
+        <EditDealModal
+          deal={deal}
+          onClose={() => setShowEdit(false)}
+          onSaved={async () => { setShowEdit(false); await loadDeal(); }}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1D5E] transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
@@ -155,8 +386,29 @@ export default function DealDetailPage() {
             <h1 className="text-xl font-bold text-[#0F1D5E]">{deal.deal_name || deal.business_name || "Deal"}</h1>
             {customer?.full_name && <p className="text-sm text-slate-500 mt-0.5">{customer.full_name}</p>}
             {customer?.email && <p className="text-xs text-slate-400">{customer.email}</p>}
+            {deal.deal_status === "INACTIVE" && deal.contract_end_date && (
+              <p className="text-xs text-red-500 font-semibold mt-1">
+                Terminated: {fmtDate(deal.contract_end_date)}
+              </p>
+            )}
           </div>
-          <StatusBadge status={deal.deal_status} dealId={id} onUpdate={s => setDeal((d: any) => ({ ...d, deal_status: s }))} />
+          <div className="flex items-center gap-2 shrink-0">
+            {deal.deal_status === "ACTIVE" && (
+              <button
+                onClick={() => setShowTerminate(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+              >
+                <Ban className="w-4 h-4" /> Terminate
+              </button>
+            )}
+            <button
+              onClick={() => setShowEdit(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              <FileEdit className="w-4 h-4" /> Edit
+            </button>
+            <StatusBadge status={deal.deal_status} />
+          </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-slate-100">
@@ -164,8 +416,8 @@ export default function DealDetailPage() {
             ["Provider", deal.provider || "—"],
             ["ESIID", deal.esiid || "—"],
             ["Type", deal.meter_type || "—"],
-            ["Rate", deal.energy_rate != null ? parseFloat(deal.energy_rate).toFixed(4) : "—"],
-            ["Adder", deal.adder != null ? parseFloat(deal.adder).toFixed(4) : "—"],
+            ["Rate", deal.energy_rate != null ? `$${parseFloat(deal.energy_rate).toFixed(4)}/kWh` : "—"],
+            ["Adder", deal.adder != null ? `$${parseFloat(deal.adder).toFixed(4)}/kWh` : "—"],
             ["Term", deal.contract_term || "—"],
             ["Agent", deal.sales_agent || "—"],
             ["Service Address", deal.service_address || "—"],
@@ -179,9 +431,9 @@ export default function DealDetailPage() {
 
         <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
           {[
-            ["Contract Start", deal.contract_start_date ? deal.contract_start_date.slice(0, 10) : "—"],
-            ["Contract End", deal.contract_end_date ? deal.contract_end_date.slice(0, 10) : "—"],
-            ["ANXH", deal.anxh || "—"],
+            ["Contract Start", deal.contract_start_date ? fmtDate(deal.contract_start_date) : "—"],
+            ["Contract End",   deal.contract_end_date   ? fmtDate(deal.contract_end_date)   : "—"],
+            ["ANXH",           deal.anxh || "—"],
           ].map(([label, value]) => (
             <div key={label}>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>

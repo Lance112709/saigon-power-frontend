@@ -96,6 +96,8 @@ export const api = {
     request(`/api/v1/crm/deals/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   getCrmDeal: (id: string) => request(`/api/v1/crm/deals/${id}`),
   deleteCrmDeal: (id: string) => request(`/api/v1/crm/deals/${id}`, { method: "DELETE" }),
+  renewCrmDeal: (id: string, data: object) =>
+    request(`/api/v1/crm/deals/${id}/renew`, { method: "POST", body: JSON.stringify(data) }),
   getCrmCustomerNotes: (id: string) => request(`/api/v1/crm/customers/${id}/notes`),
   createCrmCustomerNote: (id: string, data: object) =>
     request(`/api/v1/crm/customers/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
@@ -110,6 +112,34 @@ export const api = {
   getCrmAgents: () => request("/api/v1/crm/agents"),
   importCrmDeals: (file_path: string) =>
     request("/api/v1/crm/import", { method: "POST", body: JSON.stringify({ file_path }) }),
+  getCrmImportTemplate: async () => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const res = await fetch(`${API_URL}/api/v1/crm/import-template`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error("Failed to download template");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "crm_import_template.xlsx"; a.click();
+    URL.revokeObjectURL(url);
+  },
+  importCrmExcel: async (file: File) => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API_URL}/api/v1/crm/import-upload`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!res.ok) { const b = await res.text(); throw new Error(b); }
+    return res.json();
+  },
+  clearCrmData: () => request("/api/v1/crm/clear", { method: "DELETE" }),
+  deduplicateCrmDeals: () => request("/api/v1/crm/deduplicate-deals", { method: "POST" }),
 
   // Leads
   getAllLeadDeals: (params?: Record<string, string>) => {
@@ -240,12 +270,23 @@ export const api = {
   // Reconciliation
   getRuns: () => request("/api/v1/reconciliation/runs"),
   getRun: (id: string) => request(`/api/v1/reconciliation/runs/${id}`),
-  getRunItems: (id: string, status?: string) =>
-    request(`/api/v1/reconciliation/runs/${id}/items${status ? `?status=${status}` : ""}`),
+  getRunItems: (id: string, status?: string, severity?: string, isResolved?: boolean) => {
+    const p = new URLSearchParams();
+    if (status) p.set("status", status);
+    if (severity) p.set("severity", severity);
+    if (isResolved !== undefined) p.set("is_resolved", String(isResolved));
+    const qs = p.toString();
+    return request(`/api/v1/reconciliation/runs/${id}/items${qs ? `?${qs}` : ""}`);
+  },
   triggerReconciliation: (billing_month: string, supplier_id?: string) =>
     request(`/api/v1/reconciliation/run?billing_month=${billing_month}${supplier_id ? `&supplier_id=${supplier_id}` : ""}`, { method: "POST" }),
   resolveItem: (id: string, notes: string) =>
     request(`/api/v1/reconciliation/items/${id}?resolution_notes=${encodeURIComponent(notes)}&is_resolved=true`, { method: "PATCH" }),
+  bulkResolveItems: (itemIds: string[], notes: string) =>
+    request("/api/v1/reconciliation/items/bulk-resolve", {
+      method: "POST",
+      body: JSON.stringify({ item_ids: itemIds, resolution_notes: notes }),
+    }),
 
   // AI Operations Agent (admin only)
   getAiDashboard: () => request("/api/v1/ai-agent/dashboard"),
@@ -261,6 +302,8 @@ export const api = {
   getPipeline: () => request("/api/v1/ai-agent/pipeline"),
   getReconciliationGap: () => request("/api/v1/ai-agent/reconciliation-gap"),
   getCommissionTracker: (monthsBack = 12) => request(`/api/v1/ai-agent/commission-tracker?months_back=${monthsBack}`),
+  sendAiChat: (message: string, history: { role: string; content: string }[]) =>
+    request("/api/v1/ai-agent/chat", { method: "POST", body: JSON.stringify({ message, history }) }),
 
   // SMS
   sendSms: (data: object) => request("/api/v1/sms/send", { method: "POST", body: JSON.stringify(data) }),

@@ -33,7 +33,7 @@ const crmLinks: NavItem[] = [
   { href: "/crm/leads",           label: "Leads",              icon: UserPlus,      perm: "view_all_leads" },
   { href: "/crm/converted",       label: "Customers",          icon: UserCheck,     perm: "view_all_leads" },
   { href: "/proposals",           label: "Proposals",          icon: FileSignature, perm: "view_proposals" },
-  { href: "/crm/agents",          label: "Sales Agents",       icon: UserCog,       roles: ["admin", "manager"] },
+  { href: "/crm/agents",          label: "Sales Agents",       icon: UserCog,       roles: ["admin"] },
   { href: "/crm/customers",       label: "Imported Customers", icon: Users,         perm: "view_all_customers" },
   { href: "/renewals",            label: "Renewals",           icon: CalendarClock, perm: "view_all_customers" },
   { href: "/crm/deals",           label: "All Deals",          icon: FileText,      perm: "view_all_deals" },
@@ -157,6 +157,7 @@ export default function Sidebar() {
             <NavLink href="/admin/commissions" label="Commissions" icon={DollarSign} />
             <NavLink href="/admin/contract-template" label="Contract Template" icon={FileText} />
             <NavLink href="/admin/ai" label="AI Operations" icon={Bot} />
+            <NavLink href="/admin/ai/chat" label="AI Chat Bot" icon={MessageSquare} />
           </>
         )}
       </nav>

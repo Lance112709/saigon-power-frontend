@@ -82,13 +82,11 @@ export default function ForecastPage() {
       <div>
         <h1 className="text-2xl font-bold text-[#0F1D5E]">Revenue Forecast</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Projected commission based on {data?.contributing_deals ?? 0} active/future deals · up to 24 months out
+          Projected commission from {data?.contributing_deals ?? 0} active deals · up to 24 months out
         </p>
-        {(data?.total_in_report ?? 0) > 0 && (
-          <p className="text-xs text-slate-400 mt-1">
-            Using actual kWh from {data.total_in_report.toLocaleString()} commission report rows · projected forward to each contract's end date
-          </p>
-        )}
+        <p className="text-xs text-slate-400 mt-1">
+          Lead deals use est. kWh × adder · Imported deals use TX avg kWh (Residential 1,100 / Commercial 2,500) × adder
+        </p>
       </div>
 
       {/* Stat cards */}
@@ -119,7 +117,7 @@ export default function ForecastPage() {
           iconBg="bg-amber-50"
           label="Contributing Deals"
           value={String(data?.contributing_deals ?? 0)}
-          sub={`From ${(data?.total_in_report ?? 0).toLocaleString()} report rows`}
+          sub="Lead deals + imported deals"
         />
       </div>
 

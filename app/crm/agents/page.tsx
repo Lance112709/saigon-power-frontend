@@ -175,6 +175,7 @@ export default function AgentsPage() {
     if (!editForm.agent_type)  { setEditError("Agent type is required"); setActiveTab("info"); return; }
 
     setEditSaving(true);
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     try {
       const commission_rules = {
         default_type:        editRules.default_type || "per_kwh",
@@ -190,16 +191,28 @@ export default function AgentsPage() {
         throw new Error(String((res as any)?.error || "Save failed"));
       }
 
-      // Reload agents from DB to guarantee table reflects saved state
-      await load();
+      // Verify the save actually persisted by reading back from DB
+      const freshAgents: any[] = await api.getSalesAgents();
+      const saved = freshAgents.find((a: any) => a.id === editAgent.id);
+      const savedRate = saved?.commission_rules?.default_rate ?? null;
+      const sentRate  = commission_rules.default_rate;
+      if (sentRate !== null && savedRate !== sentRate) {
+        throw new Error(
+          `Save did not persist! API: ${apiUrl} | Sent rate: ${sentRate} | DB has: ${savedRate}. ` +
+          `The backend may have old code — redeploy Railway.`
+        );
+      }
+
+      // Update agents list with verified DB data
+      setAgents(freshAgents);
       setEditSuccess(true);
-      setTimeout(() => { setEditSuccess(false); setEditAgent(null); }, 1500);
+      setTimeout(() => { setEditSuccess(false); setEditAgent(null); }, 2000);
     } catch (err: any) {
       const msg = err?.message || "Failed to save. Please try again.";
       const body = msg.includes(":") ? msg.slice(msg.indexOf(":") + 1).trim() : msg;
       let display = body;
       try { display = JSON.parse(body)?.detail ?? body; } catch {}
-      setEditError(display || "Unknown error — check your connection and try again.");
+      setEditError(`[API: ${apiUrl}] ${display || "Unknown error"}`);
     } finally {
       setEditSaving(false);
     }
