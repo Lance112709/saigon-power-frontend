@@ -253,7 +253,7 @@ function fmtDate(d?: string | null) {
   return `${m}/${day}/${y}`;
 }
 
-const FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "De Linked"] as const;
+const FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "DE LINKED"] as const;
 type Flag = typeof FLAGS[number];
 
 const FLAG_KEYS: Record<Flag, string> = {
@@ -262,7 +262,7 @@ const FLAG_KEYS: Record<Flag, string> = {
   "Deposit": "flag_deposit",
   "Special Deal": "flag_special_deal",
   "10% Promo": "flag_promo_10",
-  "De Linked": "flag_delinked",
+  "DE LINKED": "flag_delinked",
 };
 
 const CONTRACT_TERMS = [
