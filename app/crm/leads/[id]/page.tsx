@@ -435,10 +435,15 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
                     key={flag}
                     type="button"
                     onClick={() => toggleFlag(key)}
-                    className={`px-4 py-1.5 rounded-full border text-sm font-medium transition-colors ${active
-                        ? "bg-[#0F1D5E] text-white border-[#0F1D5E]"
-                        : "bg-white text-slate-700 border-slate-300 hover:border-[#0F1D5E]/40"
-                      }`}
+                    className={`px-4 py-1.5 rounded-full border text-sm font-medium transition-colors ${
+                      flag === "DE LINKED"
+                        ? active
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-white text-red-600 border-red-300 hover:border-red-400"
+                        : active
+                          ? "bg-[#0F1D5E] text-white border-[#0F1D5E]"
+                          : "bg-white text-slate-700 border-slate-300 hover:border-[#0F1D5E]/40"
+                    }`}
                   >
                     {flag}
                   </button>
@@ -1171,6 +1176,11 @@ export default function LeadDetailPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-[#0F1D5E] text-sm">{d.supplier || "—"}</span>
+                    {d.flag_delinked && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 border border-red-200">
+                        DE LINKED
+                      </span>
+                    )}
                     {d.plan_name && <span className="text-xs text-slate-400">{d.plan_name}</span>}
                   </div>
                   <div className="flex items-center gap-2">
