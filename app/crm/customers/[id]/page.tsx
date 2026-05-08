@@ -809,7 +809,7 @@ export default function CustomerProfilePage() {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-4 gap-5">
         {/* Left column */}
         <div className="col-span-1 space-y-4">
           {/* Customer info card */}
@@ -994,7 +994,7 @@ export default function CustomerProfilePage() {
         </div>
 
         {/* Right column */}
-        <div className="col-span-2 space-y-5">
+        <div className="col-span-3 space-y-5">
 
           {/* Account Notes */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
