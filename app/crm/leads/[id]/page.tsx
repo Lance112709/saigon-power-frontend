@@ -287,7 +287,7 @@ const RENEW_SERVICE_ORDER_TYPES = ["PMVI", "MVI", "SWI", "Renewed with same REP"
 
 const EMPTY_DEAL = {
   // Flags
-  flag_tos: false, flag_toao: false, flag_deposit: false, flag_special_deal: false, flag_promo_10: false,
+  flag_tos: false, flag_toao: false, flag_deposit: false, flag_special_deal: false, flag_promo_10: false, flag_delinked: false,
   // Contract
   status: "Future", supplier: "", plan_name: "", product_type: "", rate_type: "",
   deal_type: "", service_order_type: "",
@@ -310,6 +310,7 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
     flag_deposit: existing.flag_deposit ?? false,
     flag_special_deal: existing.flag_special_deal ?? false,
     flag_promo_10: existing.flag_promo_10 ?? false,
+    flag_delinked: existing.flag_delinked ?? false,
     status: existing.status ?? "Future",
     supplier: existing.supplier ?? "",
     plan_name: existing.plan_name ?? "",
