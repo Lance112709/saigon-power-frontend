@@ -12,9 +12,9 @@ const labelCls = "block text-sm text-slate-700 mb-1";
 const sectionLabelCls = "text-xs font-bold text-slate-400 uppercase tracking-wider mb-3";
 
 // ── Module-level field components ─────────────────────────────────────────────
-function FormInput({ label, error, type = "text", value, onChange, placeholder }: {
+function FormInput({ label, error, type = "text", value, onChange, onBlur, placeholder }: {
   label: string; error?: string; type?: string;
-  value: string; onChange: (v: string) => void; placeholder?: string;
+  value: string; onChange: (v: string) => void; onBlur?: () => void; placeholder?: string;
 }) {
   return (
     <div>
@@ -25,6 +25,7 @@ function FormInput({ label, error, type = "text", value, onChange, placeholder }
         placeholder={placeholder}
         value={value}
         onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
       />
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
@@ -337,10 +338,19 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
   const [apiError, setApiError] = useState("");
   const [saving, setSaving] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
+  const [dupWarnings, setDupWarnings] = useState<any[]>([]);
 
   useEffect(() => {
     api.getSalesAgents().then(setAgents).catch(() => { });
   }, []);
+
+  const checkDup = async (value: string) => {
+    if (!value.trim() || existing) return;
+    try {
+      const res = await api.checkDuplicateDeal({ esiid: value.trim() });
+      if (res.matches?.length) setDupWarnings(res.matches);
+    } catch {}
+  };
 
   useEffect(() => {
     const months = TERM_MONTHS[form.contract_term];
@@ -420,6 +430,21 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
           {apiError && (
             <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {apiError}
+            </div>
+          )}
+
+          {dupWarnings.length > 0 && (
+            <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 space-y-1.5">
+              <p className="text-xs font-bold text-amber-700">⚠️ Active deal already exists for this ESI ID:</p>
+              {dupWarnings.map((m, i) => (
+                <p key={i} className="text-xs text-amber-700">
+                  <span className="font-semibold">{m.customer_name || "Unknown"}</span>
+                  {m.provider ? ` · ${m.provider}` : ""}
+                  {m.esiid ? ` · ${m.esiid}` : ""}
+                  <span className="ml-1 text-amber-500">({m.source === "lead" ? "Pipeline" : "Imported"})</span>
+                </p>
+              ))}
+              <p className="text-xs text-amber-600 mt-1">You can still proceed if this is intentional.</p>
             </div>
           )}
 
@@ -555,7 +580,9 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
               </div>
               <div className="max-w-xs">
                 <FormInput label="ESI ID *" placeholder="10089010238183693001" error={errors.esiid}
-                  value={form.esiid} onChange={v => setStr("esiid", v)} />
+                  value={form.esiid}
+                  onChange={v => { setStr("esiid", v); setDupWarnings([]); }}
+                  onBlur={() => checkDup(form.esiid)} />
               </div>
             </div>
           </div>

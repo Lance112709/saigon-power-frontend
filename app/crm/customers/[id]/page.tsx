@@ -445,6 +445,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
   const [form, setForm] = useState(EMPTY_DEAL);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [dupWarnings, setDupWarnings] = useState<any[]>([]);
   const [providers, setProviders] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
 
@@ -454,6 +455,14 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
   }, []);
 
   const set = (k: keyof typeof EMPTY_DEAL, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const checkDup = async (field: "esiid" | "service_address", value: string) => {
+    if (!value.trim()) return;
+    try {
+      const res = await api.checkDuplicateDeal({ [field]: value.trim() });
+      if (res.matches?.length) setDupWarnings(res.matches);
+    } catch {}
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -480,6 +489,22 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
         <form onSubmit={submit} className="px-6 py-5 space-y-4">
           {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
 
+          {dupWarnings.length > 0 && (
+            <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 space-y-1.5">
+              <p className="text-xs font-bold text-amber-700">⚠️ Active deal already exists for this ESIID / address:</p>
+              {dupWarnings.map((m, i) => (
+                <p key={i} className="text-xs text-amber-700">
+                  <span className="font-semibold">{m.customer_name || "Unknown"}</span>
+                  {m.provider ? ` · ${m.provider}` : ""}
+                  {m.esiid ? ` · ${m.esiid}` : ""}
+                  {m.service_address ? ` · ${m.service_address}` : ""}
+                  <span className="ml-1 text-amber-500">({m.source === "lead" ? "Pipeline" : "Imported"})</span>
+                </p>
+              ))}
+              <p className="text-xs text-amber-600 mt-1">You can still proceed if this is intentional.</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Name</label>
@@ -497,11 +522,15 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">ESIID</label>
-              <input className={inputCls} placeholder="17-digit ESIID" value={form.esiid} onChange={e => set("esiid", e.target.value)} />
+              <input className={inputCls} placeholder="17-digit ESIID" value={form.esiid}
+                onChange={e => { set("esiid", e.target.value); setDupWarnings([]); }}
+                onBlur={e => checkDup("esiid", e.target.value)} />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">Service Address</label>
-              <input className={inputCls} placeholder="123 Main St, Houston TX" value={form.service_address} onChange={e => set("service_address", e.target.value)} />
+              <input className={inputCls} placeholder="123 Main St, Houston TX" value={form.service_address}
+                onChange={e => { set("service_address", e.target.value); setDupWarnings([]); }}
+                onBlur={e => checkDup("service_address", e.target.value)} />
             </div>
           </div>
 
