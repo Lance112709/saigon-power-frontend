@@ -491,13 +491,13 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
 
           {dupWarnings.length > 0 && (
             <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 space-y-1.5">
-              <p className="text-xs font-bold text-amber-700">⚠️ Active deal already exists for this ESIID / address:</p>
+              <p className="text-xs font-bold text-amber-700">⚠️ This ESIID / address already exists in the system:</p>
               {dupWarnings.map((m, i) => (
                 <p key={i} className="text-xs text-amber-700">
                   <span className="font-semibold">{m.customer_name || "Unknown"}</span>
                   {m.provider ? ` · ${m.provider}` : ""}
                   {m.esiid ? ` · ${m.esiid}` : ""}
-                  {m.service_address ? ` · ${m.service_address}` : ""}
+                  {m.deal_status ? <span className="ml-1 font-semibold">[{m.deal_status}]</span> : ""}
                   <span className="ml-1 text-amber-500">({m.source === "lead" ? "Pipeline" : "Imported"})</span>
                 </p>
               ))}
