@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   UserPlus, Zap, DollarSign, AlertTriangle, TrendingUp,
-  ArrowUpRight, FileText, Clock, Activity, Users,
+  ArrowUpRight, FileText, Clock, Activity, Users, Search, X,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -91,6 +91,134 @@ function ChartTooltip({ active, payload, label }: any) {
   );
 }
 
+// ── Global Search ──────────────────────────────────────────────────────────────
+function GlobalSearch() {
+  const router = useRouter();
+  const [query, setQuery]       = useState("");
+  const [results, setResults]   = useState<any[]>([]);
+  const [open, setOpen]         = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [cursor, setCursor]     = useState(-1);
+  const inputRef  = useRef<HTMLInputElement>(null);
+  const wrapRef   = useRef<HTMLDivElement>(null);
+  const debounce  = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const search = useCallback(async (q: string) => {
+    if (q.trim().length < 2) { setResults([]); setOpen(false); return; }
+    setLoading(true);
+    try {
+      const data = await api.globalSearch(q.trim());
+      setResults(data || []);
+      setOpen(true);
+      setCursor(-1);
+    } catch { setResults([]); }
+    setLoading(false);
+  }, []);
+
+  const handleChange = (v: string) => {
+    setQuery(v);
+    if (debounce.current) clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => search(v), 300);
+  };
+
+  const go = (url: string) => {
+    setOpen(false);
+    setQuery("");
+    setResults([]);
+    router.push(url);
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (!open) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setCursor(c => Math.min(c + 1, results.length - 1)); }
+    if (e.key === "ArrowUp")   { e.preventDefault(); setCursor(c => Math.max(c - 1, -1)); }
+    if (e.key === "Enter" && cursor >= 0) go(results[cursor].url);
+    if (e.key === "Escape") { setOpen(false); inputRef.current?.blur(); }
+  };
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const leads    = results.filter(r => r.type === "lead");
+  const customers = results.filter(r => r.type === "customer");
+
+  return (
+    <div ref={wrapRef} className="relative w-full max-w-2xl mx-auto">
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${open ? "bg-white border-white/30 shadow-2xl" : "bg-white/10 border-white/20 hover:bg-white/15"}`}>
+        {loading
+          ? <div className="w-4 h-4 border-2 border-white/40 border-t-white/80 rounded-full animate-spin shrink-0" />
+          : <Search className="w-4 h-4 text-white/50 shrink-0" />
+        }
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => handleChange(e.target.value)}
+          onKeyDown={handleKey}
+          onFocus={() => { if (results.length) setOpen(true); }}
+          placeholder="Search by name, phone, ESI ID, address…"
+          className="flex-1 bg-transparent text-sm text-white placeholder:text-white/40 outline-none"
+        />
+        {query && (
+          <button onClick={() => { setQuery(""); setResults([]); setOpen(false); }} className="text-white/40 hover:text-white/70">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {open && results.length > 0 && (
+        <div className="absolute top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 max-h-[420px] overflow-y-auto">
+          {[{ label: "Pipeline Leads", items: leads, color: "text-violet-600", badge: "bg-violet-50 text-violet-600" },
+            { label: "Imported Customers", items: customers, color: "text-blue-600", badge: "bg-blue-50 text-blue-700" }]
+            .filter(g => g.items.length > 0)
+            .map(group => (
+              <div key={group.label}>
+                <p className="px-4 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{group.label}</p>
+                {group.items.map(r => {
+                  const idx = results.indexOf(r);
+                  return (
+                    <button key={r.id} onMouseDown={() => go(r.url)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors ${cursor === idx ? "bg-slate-50" : ""}`}>
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-slate-500">
+                          {(r.name || "?").slice(0, 1).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-800 truncate">{r.name}</span>
+                          {r.status && r.status !== "Imported" && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500">{r.status}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {r.sub && <span className="text-xs text-slate-400 truncate">{r.sub}</span>}
+                          {r.sub && r.detail && <span className="text-slate-200">·</span>}
+                          {r.detail && <span className="text-xs text-slate-400 truncate">{r.detail}</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          }
+        </div>
+      )}
+
+      {open && query.length >= 2 && results.length === 0 && !loading && (
+        <div className="absolute top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-100 px-4 py-6 text-center z-50">
+          <p className="text-sm text-slate-400">No accounts found for <span className="font-semibold text-slate-600">"{query}"</span></p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
@@ -158,8 +286,13 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* Global search */}
+          <div className="mt-5">
+            <GlobalSearch />
+          </div>
+
           {/* Mini metrics row inside banner */}
-          <div className="flex items-center gap-6 mt-6 pt-5 border-t border-white/[0.06]">
+          <div className="flex items-center gap-6 mt-5 pt-5 border-t border-white/[0.06]">
             {[
               { label: "This Week's Leads",  value: stats?.leads_this_week ?? 0, color: "text-blue-400" },
               { label: "Pipeline — Leads",   value: pipeline.lead ?? 0,           color: "text-violet-400" },

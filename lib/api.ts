@@ -325,4 +325,6 @@ export const api = {
     request(`/api/v1/sms/opt-out/lead/${leadId}`, { method: "POST", body: JSON.stringify({ opt_out: optOut }) }),
   toggleCustomerSmsOptOut: (customerId: string, optOut: boolean) =>
     request(`/api/v1/sms/opt-out/customer/${customerId}`, { method: "POST", body: JSON.stringify({ opt_out: optOut }) }),
+
+  globalSearch: (q: string) => request(`/api/v1/search?q=${encodeURIComponent(q)}`),
 };
