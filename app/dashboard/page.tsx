@@ -97,8 +97,10 @@ function GlobalSearch() {
   const [query, setQuery]       = useState("");
   const [results, setResults]   = useState<any[]>([]);
   const [open, setOpen]         = useState(false);
+  const [focused, setFocused]   = useState(false);
   const [loading, setLoading]   = useState(false);
   const [cursor, setCursor]     = useState(-1);
+  const [dropPos, setDropPos]   = useState({ top: 0, left: 0, width: 0 });
   const inputRef  = useRef<HTMLInputElement>(null);
   const wrapRef   = useRef<HTMLDivElement>(null);
   const debounce  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -144,34 +146,42 @@ function GlobalSearch() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    if (open && wrapRef.current) {
+      const r = wrapRef.current.getBoundingClientRect();
+      setDropPos({ top: r.bottom + 8, left: r.left, width: r.width });
+    }
+  }, [open]);
+
   const leads    = results.filter(r => r.type === "lead");
   const customers = results.filter(r => r.type === "customer");
 
   return (
     <div ref={wrapRef} className="relative w-full max-w-2xl mx-auto">
-      <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${open ? "bg-white border-white/30 shadow-2xl" : "bg-white/10 border-white/20 hover:bg-white/15"}`}>
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${(open || focused) ? "bg-white border-slate-200 shadow-2xl" : "bg-white/10 border-white/20 hover:bg-white/15"}`}>
         {loading
-          ? <div className="w-4 h-4 border-2 border-white/40 border-t-white/80 rounded-full animate-spin shrink-0" />
-          : <Search className="w-4 h-4 text-white/50 shrink-0" />
+          ? <div className={`w-4 h-4 border-2 rounded-full animate-spin shrink-0 ${(open || focused) ? "border-slate-300 border-t-slate-600" : "border-white/40 border-t-white/80"}`} />
+          : <Search className={`w-4 h-4 shrink-0 ${(open || focused) ? "text-slate-400" : "text-white/50"}`} />
         }
         <input
           ref={inputRef}
           value={query}
           onChange={e => handleChange(e.target.value)}
           onKeyDown={handleKey}
-          onFocus={() => { if (results.length) setOpen(true); }}
+          onFocus={() => { setFocused(true); if (results.length) setOpen(true); }}
+          onBlur={() => setFocused(false)}
           placeholder="Search by name, phone, ESI ID, address…"
-          className="flex-1 bg-transparent text-sm text-white placeholder:text-white/40 outline-none"
+          className={`flex-1 bg-transparent text-sm outline-none ${(open || focused) ? "text-slate-800 placeholder:text-slate-400" : "text-white placeholder:text-white/40"}`}
         />
         {query && (
-          <button onClick={() => { setQuery(""); setResults([]); setOpen(false); }} className="text-white/40 hover:text-white/70">
+          <button onClick={() => { setQuery(""); setResults([]); setOpen(false); }} className={(open || focused) ? "text-slate-400 hover:text-slate-600" : "text-white/40 hover:text-white/70"}>
             <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 max-h-[420px] overflow-y-auto">
+        <div style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width }} className="bg-white rounded-2xl shadow-2xl border border-slate-100 z-[9999] max-h-[420px] overflow-y-auto">
           {[{ label: "Pipeline Leads", items: leads, color: "text-violet-600", badge: "bg-violet-50 text-violet-600" },
             { label: "Imported Customers", items: customers, color: "text-blue-600", badge: "bg-blue-50 text-blue-700" }]
             .filter(g => g.items.length > 0)
@@ -211,7 +221,7 @@ function GlobalSearch() {
       )}
 
       {open && query.length >= 2 && results.length === 0 && !loading && (
-        <div className="absolute top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-100 px-4 py-6 text-center z-50">
+        <div style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width }} className="bg-white rounded-2xl shadow-2xl border border-slate-100 px-4 py-6 text-center z-[9999]">
           <p className="text-sm text-slate-400">No accounts found for <span className="font-semibold text-slate-600">"{query}"</span></p>
         </div>
       )}
