@@ -508,6 +508,7 @@ const EMPTY_DEAL = {
 
 function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState(EMPTY_DEAL);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState("");
   const [dupWarnings, setDupWarnings] = useState<any[]>([]);
@@ -525,8 +526,27 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
     setForm(f => ({ ...f, contract_end_date: d.toISOString().split("T")[0] }));
   }, [form.contract_start_date, form.contract_term]);
 
-  const setStr = (k: keyof typeof EMPTY_DEAL, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const setStr = (k: keyof typeof EMPTY_DEAL, v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setErrors(e => ({ ...e, [k]: "" }));
+  };
   const toggleFlag = (key: string) => setForm(f => ({ ...f, [key]: !(f as any)[key] }));
+
+  const validate = () => {
+    const required: (keyof typeof EMPTY_DEAL)[] = [
+      "supplier", "product_type", "meter_type", "deal_type", "service_order_type",
+      "contract_term", "energy_rate", "adder",
+      "contract_signed_date", "contract_start_date", "contract_end_date",
+      "service_address", "service_city", "service_state", "service_zip", "esiid",
+      "sales_agent",
+    ];
+    const e: Record<string, string> = {};
+    for (const f of required) {
+      if (!String((form as any)[f] ?? "").trim()) e[f] = "Required";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const checkDup = async (value: string) => {
     if (!value.trim()) return;
@@ -538,6 +558,10 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (!validate()) {
+      setApiError("Please fill in all required fields.");
+      return;
+    }
     setSaving(true);
     setApiError("");
     try {
@@ -638,7 +662,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
                 <option value="INACTIVE">Inactive</option>
               </FormSelect>
 
-              <FormSelect label="Supplier / REP" value={form.supplier} onChange={v => setStr("supplier", v)}>
+              <FormSelect label="Supplier / REP *" error={errors.supplier} value={form.supplier} onChange={v => setStr("supplier", v)}>
                 <option value="">— Select —</option>
                 {SUPPLIERS.map(s => <option key={s} value={s}>{s}</option>)}
               </FormSelect>
@@ -646,7 +670,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
               <FormInput label="Deal Name" placeholder="e.g. Main Meter"
                 value={form.deal_name} onChange={v => setStr("deal_name", v)} />
 
-              <FormSelect label="Product Type" value={form.product_type} onChange={v => setStr("product_type", v)}>
+              <FormSelect label="Product Type *" error={errors.product_type} value={form.product_type} onChange={v => setStr("product_type", v)}>
                 <option value="">— Select —</option>
                 <option value="Fixed Rate">Fixed Rate</option>
                 <option value="Month-Month">Month-Month</option>
@@ -654,48 +678,49 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
                 <option value="Solar Buy-Back">Solar Buy-Back</option>
               </FormSelect>
 
-              <FormSelect label="Meter Type" value={form.meter_type} onChange={v => setStr("meter_type", v)}>
+              <FormSelect label="Meter Type *" error={errors.meter_type} value={form.meter_type} onChange={v => setStr("meter_type", v)}>
                 <option value="">— Select —</option>
                 <option value="Residential">Residential</option>
                 <option value="Commercial">Commercial</option>
                 <option value="Small Commercial">Small Commercial</option>
               </FormSelect>
 
-              <FormSelect label="Deal Type" value={form.deal_type} onChange={v => setStr("deal_type", v)}>
+              <FormSelect label="Deal Type *" error={errors.deal_type} value={form.deal_type} onChange={v => setStr("deal_type", v)}>
                 <option value="">— Select —</option>
                 {ADD_DEAL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </FormSelect>
 
-              <FormSelect label="Service Order Type" value={form.service_order_type} onChange={v => setStr("service_order_type", v)}>
+              <FormSelect label="Service Order Type *" error={errors.service_order_type} value={form.service_order_type} onChange={v => setStr("service_order_type", v)}>
                 <option value="">— Select —</option>
                 {(form.deal_type === "Renew" ? ADD_RENEW_SERVICE_ORDER_TYPES : ADD_SERVICE_ORDER_TYPES).map(t => <option key={t} value={t}>{t}</option>)}
               </FormSelect>
 
-              <FormSelect label="Contract Term" value={form.contract_term} onChange={v => setStr("contract_term", v)}>
+              <FormSelect label="Contract Term *" error={errors.contract_term} value={form.contract_term} onChange={v => setStr("contract_term", v)}>
                 <option value="">— Select —</option>
                 {CONTRACT_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
               </FormSelect>
 
-              <FormInput label="Energy Rate ($/kWh)" placeholder="0.0850" type="number"
+              <FormInput label="Energy Rate ($/kWh) *" placeholder="0.0850" type="number" error={errors.energy_rate}
                 value={form.energy_rate} onChange={v => setStr("energy_rate", v)} />
 
-              <FormInput label="Adder ($/kWh)" placeholder="0.0070" type="number"
+              <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
                 value={form.adder} onChange={v => setStr("adder", v)} />
 
-              <FormInput label="Contract Signed Date" type="date"
+              <FormInput label="Contract Signed Date *" type="date" error={errors.contract_signed_date}
                 value={form.contract_signed_date} onChange={v => setStr("contract_signed_date", v)} />
 
-              <FormInput label="Contract Start Date" type="date"
+              <FormInput label="Contract Start Date *" type="date" error={errors.contract_start_date}
                 value={form.contract_start_date} onChange={v => setStr("contract_start_date", v)} />
 
               <div>
-                <label className={labelCls}>Contract End Date <span className="text-slate-400 font-normal text-xs">(auto-filled)</span></label>
+                <label className={labelCls}>Contract End Date * <span className="text-slate-400 font-normal text-xs">(auto-filled)</span></label>
                 <input
                   type="date"
-                  className={`${inputCls} bg-slate-50`}
+                  className={`${inputCls} bg-slate-50 ${errors.contract_end_date ? "border-red-400" : ""}`}
                   value={form.contract_end_date}
                   onChange={e => setStr("contract_end_date", e.target.value)}
                 />
+                {errors.contract_end_date && <p className="text-xs text-red-500 mt-1">{errors.contract_end_date}</p>}
               </div>
             </div>
           </div>
@@ -704,18 +729,18 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
           <div>
             <p className={sectionLabelCls}>Property</p>
             <div className="space-y-3">
-              <FormInput label="Service Address" placeholder="Street address"
+              <FormInput label="Service Address *" placeholder="Street address" error={errors.service_address}
                 value={form.service_address} onChange={v => setStr("service_address", v)} />
               <div className="grid grid-cols-3 gap-3">
-                <FormInput label="City" placeholder="City"
+                <FormInput label="City *" placeholder="City" error={errors.service_city}
                   value={form.service_city} onChange={v => setStr("service_city", v)} />
-                <FormInput label="State" placeholder="TX"
+                <FormInput label="State *" placeholder="TX" error={errors.service_state}
                   value={form.service_state} onChange={v => setStr("service_state", v)} />
-                <FormInput label="Zip" placeholder="77036"
+                <FormInput label="Zip *" placeholder="77036" error={errors.service_zip}
                   value={form.service_zip} onChange={v => setStr("service_zip", v)} />
               </div>
               <div className="max-w-xs">
-                <FormInput label="ESI ID" placeholder="10089010238183693001"
+                <FormInput label="ESI ID *" placeholder="10089010238183693001" error={errors.esiid}
                   value={form.esiid}
                   onChange={v => { setStr("esiid", v); setDupWarnings([]); }}
                   onBlur={() => checkDup(form.esiid)} />
@@ -727,7 +752,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
           <div>
             <p className={sectionLabelCls}>Assignment</p>
             <div className="max-w-xs">
-              <FormSelect label="Sales Agent" value={form.sales_agent} onChange={v => setStr("sales_agent", v)}>
+              <FormSelect label="Sales Agent *" error={errors.sales_agent} value={form.sales_agent} onChange={v => setStr("sales_agent", v)}>
                 <option value="">— Unassigned —</option>
                 {agents.map(a => <option key={a} value={a}>{a}</option>)}
               </FormSelect>
