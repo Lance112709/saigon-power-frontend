@@ -5,11 +5,13 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, User, MapPin, Phone, Mail, Calendar, Hash,
-  Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare, RefreshCw, Ban, FileEdit,
+  Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare, RefreshCw, Ban, FileEdit, AlertCircle,
 } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
+const labelCls = "block text-sm text-slate-700 mb-1";
+const sectionLabelCls = "text-xs font-bold text-slate-400 uppercase tracking-wider mb-3";
 const fmtDate = (s: string) => { const [y, m, d] = s.slice(0, 10).split("-"); return `${m}-${d}-${y}`; };
 
 const DEAL_FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "DE LINKED"] as const;
@@ -23,6 +25,45 @@ const DEAL_FLAG_KEYS: Record<DealFlag, string> = {
   "DE LINKED": "flag_delinked",
 };
 const EMPTY_FLAGS = { flag_tos: false, flag_toao: false, flag_deposit: false, flag_special_deal: false, flag_promo_10: false, flag_delinked: false };
+
+function FormInput({ label, error, type = "text", value, onChange, onBlur, placeholder }: {
+  label: string; error?: string; type?: string;
+  value: string; onChange: (v: string) => void; onBlur?: () => void; placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <input
+        type={type}
+        className={`${inputCls} ${error ? "border-red-400 ring-1 ring-red-400/30" : ""}`}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
+      />
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
+function FormSelect({ label, error, value, onChange, children }: {
+  label: string; error?: string;
+  value: string; onChange: (v: string) => void; children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <select
+        className={`${inputCls} ${error ? "border-red-400" : ""}`}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      >
+        {children}
+      </select>
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
 
 function IconBox({ icon: Icon }: { icon: any }) {
   return (
@@ -434,64 +475,126 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
   );
 }
 
+const SUPPLIERS = [
+  "Budget Power", "Discount Power", "Heritage Power", "Iron Horse",
+  "CleanSky Energy", "Reliant", "Chariot",
+  "Direct Energy", "Cirro Energy", "True Power", "Hudson Energy", "NRG",
+];
+
+const CONTRACT_TERMS = [
+  "6 Months", "12 Months", "16 Months", "23 Months", "24 Months",
+  "28 Months", "36 Months", "48 Months", "60 Months", "Month to Month",
+];
+
+const TERM_MONTHS: Record<string, number> = {
+  "6 Months": 6, "12 Months": 12, "16 Months": 16, "23 Months": 23,
+  "24 Months": 24, "28 Months": 28, "36 Months": 36, "48 Months": 48, "60 Months": 60,
+};
+
+const ADD_DEAL_TYPES = ["New Business", "Renew", "TOS", "TOAO"];
+const ADD_SERVICE_ORDER_TYPES = ["PMVI", "MVI", "SWI"];
+const ADD_RENEW_SERVICE_ORDER_TYPES = ["PMVI", "MVI", "SWI", "Renewed with same REP"];
+
 const EMPTY_DEAL = {
-  deal_name: "", provider: "", esiid: "", service_address: "",
-  meter_type: "Residential", deal_type: "", energy_rate: "", adder: "",
-  contract_term: "", contract_start_date: "", contract_end_date: "",
-  sales_agent: "", deal_status: "ACTIVE",
+  flag_tos: false, flag_toao: false, flag_deposit: false, flag_special_deal: false, flag_promo_10: false, flag_delinked: false,
+  deal_status: "ACTIVE",
+  supplier: "", deal_name: "", product_type: "", meter_type: "Residential",
+  deal_type: "", service_order_type: "",
+  contract_term: "", energy_rate: "", adder: "",
+  contract_signed_date: "", contract_start_date: "", contract_end_date: "",
+  service_address: "", service_city: "", service_state: "TX", service_zip: "", esiid: "",
+  sales_agent: "",
 };
 
 function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState(EMPTY_DEAL);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [apiError, setApiError] = useState("");
   const [dupWarnings, setDupWarnings] = useState<any[]>([]);
-  const [providers, setProviders] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
 
   useEffect(() => {
-    api.getCrmProviders().then(setProviders).catch(() => {});
     api.getCrmAgents().then(setAgents).catch(() => {});
   }, []);
 
-  const set = (k: keyof typeof EMPTY_DEAL, v: string) => setForm(f => ({ ...f, [k]: v }));
+  useEffect(() => {
+    const months = TERM_MONTHS[form.contract_term];
+    if (!form.contract_start_date || !months) return;
+    const d = new Date(form.contract_start_date);
+    d.setMonth(d.getMonth() + months);
+    setForm(f => ({ ...f, contract_end_date: d.toISOString().split("T")[0] }));
+  }, [form.contract_start_date, form.contract_term]);
 
-  const checkDup = async (field: "esiid" | "service_address", value: string) => {
+  const setStr = (k: keyof typeof EMPTY_DEAL, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const toggleFlag = (key: string) => setForm(f => ({ ...f, [key]: !(f as any)[key] }));
+
+  const checkDup = async (value: string) => {
     if (!value.trim()) return;
     try {
-      const res = await api.checkDuplicateDeal({ [field]: value.trim() });
+      const res = await api.checkDuplicateDeal({ esiid: value.trim() });
       if (res.matches?.length) setDupWarnings(res.matches);
     } catch {}
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setSaving(true);
-    setError("");
+    setApiError("");
     try {
-      await api.createCrmDeal(customerId, form);
+      const fullAddress = [form.service_address, form.service_city, form.service_state, form.service_zip]
+        .filter(Boolean).join(", ");
+      await api.createCrmDeal(customerId, {
+        deal_name:            form.deal_name,
+        provider:             form.supplier,
+        esiid:                form.esiid,
+        service_address:      fullAddress,
+        meter_type:           form.meter_type,
+        deal_type:            form.deal_type,
+        energy_rate:          form.energy_rate ? parseFloat(form.energy_rate) : null,
+        adder:                form.adder ? parseFloat(form.adder) : null,
+        contract_term:        form.contract_term,
+        contract_start_date:  form.contract_start_date,
+        contract_end_date:    form.contract_end_date,
+        contract_signed_date: form.contract_signed_date,
+        sales_agent:          form.sales_agent,
+        deal_status:          form.deal_status,
+        product_type:         form.product_type,
+        flag_tos:             form.flag_tos,
+        flag_toao:            form.flag_toao,
+        flag_deposit:         form.flag_deposit,
+        flag_special_deal:    form.flag_special_deal,
+        flag_promo_10:        form.flag_promo_10,
+        flag_delinked:        form.flag_delinked,
+      });
       onSaved();
     } catch (err: any) {
       const raw = err?.message || "Failed";
       const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
-      try { setError(JSON.parse(body)?.detail ?? body); } catch { setError(body); }
+      try { setApiError(JSON.parse(body)?.detail ?? body); } catch { setApiError(body); }
     }
     setSaving(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white">
-          <h2 className="text-base font-bold text-[#0F1D5E]">Add New Deal</h2>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-6">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h2 className="text-lg font-bold text-slate-900">Add New Deal</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={submit} className="px-6 py-5 space-y-4">
-          {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
+
+        <form onSubmit={submit} className="px-6 py-5 space-y-6">
+          {apiError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {apiError}
+            </div>
+          )}
 
           {dupWarnings.length > 0 && (
             <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 space-y-1.5">
-              <p className="text-xs font-bold text-amber-700">⚠️ This ESIID / address already exists in the system:</p>
+              <p className="text-xs font-bold text-amber-700">⚠️ This ESIID already exists in the system:</p>
               {dupWarnings.map((m, i) => (
                 <p key={i} className="text-xs text-amber-700">
                   <span className="font-semibold">{m.customer_name || "Unknown"}</span>
@@ -505,97 +608,144 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Name</label>
-              <input className={inputCls} placeholder="e.g. Main Meter" value={form.deal_name} onChange={e => set("deal_name", e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Provider (REP)</label>
-              <select className={inputCls} value={form.provider} onChange={e => set("provider", e.target.value)}>
-                <option value="">Select provider…</option>
-                {providers.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">ESIID</label>
-              <input className={inputCls} placeholder="17-digit ESIID" value={form.esiid}
-                onChange={e => { set("esiid", e.target.value); setDupWarnings([]); }}
-                onBlur={e => checkDup("esiid", e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Service Address</label>
-              <input className={inputCls} placeholder="123 Main St, Houston TX" value={form.service_address}
-                onChange={e => { set("service_address", e.target.value); setDupWarnings([]); }}
-                onBlur={e => checkDup("service_address", e.target.value)} />
+          {/* Flags */}
+          <div>
+            <p className="text-sm text-slate-700 mb-2">Flags</p>
+            <div className="flex flex-wrap gap-2">
+              {DEAL_FLAGS.map(flag => {
+                const key = DEAL_FLAG_KEYS[flag];
+                const active = (form as any)[key];
+                return (
+                  <button key={flag} type="button" onClick={() => toggleFlag(key)}
+                    className={`px-4 py-1.5 rounded-full border text-sm font-medium transition-colors ${
+                      flag === "DE LINKED"
+                        ? active ? "bg-red-600 text-white border-red-600" : "bg-white text-red-600 border-red-300 hover:border-red-400"
+                        : active ? "bg-[#0F1D5E] text-white border-[#0F1D5E]" : "bg-white text-slate-700 border-slate-300 hover:border-[#0F1D5E]/40"
+                    }`}>
+                    {flag}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Meter Type</label>
-              <select className={inputCls} value={form.meter_type} onChange={e => set("meter_type", e.target.value)}>
+          {/* Contract Details */}
+          <div>
+            <p className={sectionLabelCls}>Contract Details</p>
+            <div className="grid grid-cols-2 gap-4">
+              <FormSelect label="Status" value={form.deal_status} onChange={v => setStr("deal_status", v)}>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </FormSelect>
+
+              <FormSelect label="Supplier / REP" value={form.supplier} onChange={v => setStr("supplier", v)}>
+                <option value="">— Select —</option>
+                {SUPPLIERS.map(s => <option key={s} value={s}>{s}</option>)}
+              </FormSelect>
+
+              <FormInput label="Deal Name" placeholder="e.g. Main Meter"
+                value={form.deal_name} onChange={v => setStr("deal_name", v)} />
+
+              <FormSelect label="Product Type" value={form.product_type} onChange={v => setStr("product_type", v)}>
+                <option value="">— Select —</option>
+                <option value="Fixed Rate">Fixed Rate</option>
+                <option value="Month-Month">Month-Month</option>
+                <option value="FreeNight &amp; Weekend">FreeNight &amp; Weekend</option>
+                <option value="Solar Buy-Back">Solar Buy-Back</option>
+              </FormSelect>
+
+              <FormSelect label="Meter Type" value={form.meter_type} onChange={v => setStr("meter_type", v)}>
+                <option value="">— Select —</option>
                 <option value="Residential">Residential</option>
                 <option value="Commercial">Commercial</option>
                 <option value="Small Commercial">Small Commercial</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Energy Rate ($/kWh)</label>
-              <input type="number" step="0.0001" className={inputCls} placeholder="0.0850" value={form.energy_rate} onChange={e => set("energy_rate", e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh)</label>
-              <input type="number" step="0.0001" className={inputCls} placeholder="0.0070" value={form.adder} onChange={e => set("adder", e.target.value)} />
+              </FormSelect>
+
+              <FormSelect label="Deal Type" value={form.deal_type} onChange={v => setStr("deal_type", v)}>
+                <option value="">— Select —</option>
+                {ADD_DEAL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </FormSelect>
+
+              <FormSelect label="Service Order Type" value={form.service_order_type} onChange={v => setStr("service_order_type", v)}>
+                <option value="">— Select —</option>
+                {(form.deal_type === "Renew" ? ADD_RENEW_SERVICE_ORDER_TYPES : ADD_SERVICE_ORDER_TYPES).map(t => <option key={t} value={t}>{t}</option>)}
+              </FormSelect>
+
+              <FormSelect label="Contract Term" value={form.contract_term} onChange={v => setStr("contract_term", v)}>
+                <option value="">— Select —</option>
+                {CONTRACT_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+              </FormSelect>
+
+              <FormInput label="Energy Rate ($/kWh)" placeholder="0.0850" type="number"
+                value={form.energy_rate} onChange={v => setStr("energy_rate", v)} />
+
+              <FormInput label="Adder ($/kWh)" placeholder="0.0070" type="number"
+                value={form.adder} onChange={v => setStr("adder", v)} />
+
+              <FormInput label="Contract Signed Date" type="date"
+                value={form.contract_signed_date} onChange={v => setStr("contract_signed_date", v)} />
+
+              <FormInput label="Contract Start Date" type="date"
+                value={form.contract_start_date} onChange={v => setStr("contract_start_date", v)} />
+
+              <div>
+                <label className={labelCls}>Contract End Date <span className="text-slate-400 font-normal text-xs">(auto-filled)</span></label>
+                <input
+                  type="date"
+                  className={`${inputCls} bg-slate-50`}
+                  value={form.contract_end_date}
+                  onChange={e => setStr("contract_end_date", e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Term</label>
-              <input className={inputCls} placeholder="12 Months" value={form.contract_term} onChange={e => set("contract_term", e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Start Date</label>
-              <input type="date" className={inputCls} value={form.contract_start_date} onChange={e => set("contract_start_date", e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">End Date</label>
-              <input type="date" className={inputCls} value={form.contract_end_date} onChange={e => set("contract_end_date", e.target.value)} />
+          {/* Property */}
+          <div>
+            <p className={sectionLabelCls}>Property</p>
+            <div className="space-y-3">
+              <FormInput label="Service Address" placeholder="Street address"
+                value={form.service_address} onChange={v => setStr("service_address", v)} />
+              <div className="grid grid-cols-3 gap-3">
+                <FormInput label="City" placeholder="City"
+                  value={form.service_city} onChange={v => setStr("service_city", v)} />
+                <FormInput label="State" placeholder="TX"
+                  value={form.service_state} onChange={v => setStr("service_state", v)} />
+                <FormInput label="Zip" placeholder="77036"
+                  value={form.service_zip} onChange={v => setStr("service_zip", v)} />
+              </div>
+              <div className="max-w-xs">
+                <FormInput label="ESI ID" placeholder="10089010238183693001"
+                  value={form.esiid}
+                  onChange={v => { setStr("esiid", v); setDupWarnings([]); }}
+                  onBlur={() => checkDup(form.esiid)} />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Sales Agent</label>
-              <select className={inputCls} value={form.sales_agent} onChange={e => set("sales_agent", e.target.value)}>
-                <option value="">Select agent…</option>
+          {/* Assignment */}
+          <div>
+            <p className={sectionLabelCls}>Assignment</p>
+            <div className="max-w-xs">
+              <FormSelect label="Sales Agent" value={form.sales_agent} onChange={v => setStr("sales_agent", v)}>
+                <option value="">— Unassigned —</option>
                 {agents.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
+              </FormSelect>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Status</label>
-              <select className={inputCls} value={form.deal_status} onChange={e => set("deal_status", e.target.value)}>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
-              Cancel
-            </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
-              {saving ? "Saving..." : "Add Deal"}
-            </button>
           </div>
         </form>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+            Cancel
+          </button>
+          <button onClick={submit} disabled={saving}
+            className="flex-1 py-2.5 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 transition-colors disabled:opacity-50">
+            {saving ? "Saving..." : "Add Deal"}
+          </button>
+        </div>
       </div>
     </div>
   );
