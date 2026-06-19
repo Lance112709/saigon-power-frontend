@@ -88,10 +88,11 @@ export const api = {
     request(`/api/v1/crm/customers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   createCrmDeal: (customerId: string, data: object) =>
     request(`/api/v1/crm/customers/${customerId}/deals`, { method: "POST", body: JSON.stringify(data) }),
-  checkDuplicateDeal: (params: { esiid?: string; service_address?: string }) => {
+  checkDuplicateDeal: (params: { esiid?: string; service_address?: string; active_only?: boolean }) => {
     const q = new URLSearchParams();
     if (params.esiid) q.set("esiid", params.esiid);
     if (params.service_address) q.set("service_address", params.service_address);
+    if (params.active_only) q.set("active_only", "true");
     return request(`/api/v1/crm/deals/check-duplicate?${q.toString()}`);
   },
   getCrmDeals: (params?: Record<string, string>) => {

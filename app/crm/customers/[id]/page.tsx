@@ -511,7 +511,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState("");
-  const [dupWarnings, setDupWarnings] = useState<any[]>([]);
+  const [activeConflicts, setActiveConflicts] = useState<any[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
 
   useEffect(() => {
@@ -548,11 +548,18 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
     return Object.keys(e).length === 0;
   };
 
-  const checkDup = async (value: string) => {
-    if (!value.trim()) return;
+  const checkDup = async (params: { esiid?: string; service_address?: string }) => {
+    const key = params.esiid || params.service_address || "";
+    if (!key.trim()) return;
     try {
-      const res = await api.checkDuplicateDeal({ esiid: value.trim() });
-      if (res.matches?.length) setDupWarnings(res.matches);
+      const res = await api.checkDuplicateDeal({ ...params, active_only: true });
+      if (res.matches?.length) {
+        setActiveConflicts(prev => {
+          const newIds = new Set(res.matches.map((m: any) => m.deal_id));
+          const merged = prev.filter((m: any) => !newIds.has(m.deal_id));
+          return [...merged, ...res.matches];
+        });
+      }
     } catch {}
   };
 
@@ -616,19 +623,25 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
             </div>
           )}
 
-          {dupWarnings.length > 0 && (
-            <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 space-y-1.5">
-              <p className="text-xs font-bold text-amber-700">⚠️ This ESIID already exists in the system:</p>
-              {dupWarnings.map((m, i) => (
-                <p key={i} className="text-xs text-amber-700">
-                  <span className="font-semibold">{m.customer_name || "Unknown"}</span>
-                  {m.provider ? ` · ${m.provider}` : ""}
-                  {m.esiid ? ` · ${m.esiid}` : ""}
-                  {m.deal_status ? <span className="ml-1 font-semibold">[{m.deal_status}]</span> : ""}
-                  <span className="ml-1 text-amber-500">({m.source === "lead" ? "Pipeline" : "Imported"})</span>
-                </p>
-              ))}
-              <p className="text-xs text-amber-600 mt-1">You can still proceed if this is intentional.</p>
+          {activeConflicts.length > 0 && (
+            <div className="bg-red-50 border-2 border-red-400 rounded-xl px-4 py-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <p className="text-sm font-bold text-red-700">Active deal already exists for this ESI ID or address</p>
+              </div>
+              <div className="space-y-1.5 pl-6">
+                {activeConflicts.map((m, i) => (
+                  <div key={i} className="text-xs text-red-700 bg-red-100 rounded-lg px-3 py-2">
+                    <span className="font-bold">{m.customer_name || "Unknown Customer"}</span>
+                    {m.provider ? <span className="ml-1 text-red-500">· {m.provider}</span> : ""}
+                    {m.esiid ? <span className="ml-1 font-mono text-red-600"> · {m.esiid}</span> : ""}
+                    {m.service_address ? <span className="ml-1 text-red-500"> · {m.service_address}</span> : ""}
+                    <span className="ml-2 px-1.5 py-0.5 rounded bg-red-200 text-red-800 font-bold uppercase text-[10px]">{m.deal_status}</span>
+                    <span className="ml-1 text-red-400">({m.source === "lead" ? "Pipeline" : "Imported"})</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-red-600 pl-6 font-medium">Saving will create a duplicate. Only proceed if intentional.</p>
             </div>
           )}
 
@@ -730,7 +743,9 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
             <p className={sectionLabelCls}>Property</p>
             <div className="space-y-3">
               <FormInput label="Service Address *" placeholder="Street address" error={errors.service_address}
-                value={form.service_address} onChange={v => setStr("service_address", v)} />
+                value={form.service_address}
+                onChange={v => { setStr("service_address", v); setActiveConflicts([]); }}
+                onBlur={() => { if (form.service_address.trim()) checkDup({ service_address: form.service_address.trim() }); }} />
               <div className="grid grid-cols-3 gap-3">
                 <FormInput label="City *" placeholder="City" error={errors.service_city}
                   value={form.service_city} onChange={v => setStr("service_city", v)} />
@@ -742,8 +757,8 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
               <div className="max-w-xs">
                 <FormInput label="ESI ID *" placeholder="10089010238183693001" error={errors.esiid}
                   value={form.esiid}
-                  onChange={v => { setStr("esiid", v); setDupWarnings([]); }}
-                  onBlur={() => checkDup(form.esiid)} />
+                  onChange={v => { setStr("esiid", v); setActiveConflicts([]); }}
+                  onBlur={() => { if (form.esiid.trim()) checkDup({ esiid: form.esiid.trim() }); }} />
               </div>
             </div>
           </div>
