@@ -303,8 +303,12 @@ export const api = {
   triggerDailyReport: () => request("/api/v1/ai-agent/reports/daily", { method: "POST" }),
   triggerMonthlyReport: () => request("/api/v1/ai-agent/reports/monthly", { method: "POST" }),
   getAiReports: () => request("/api/v1/ai-agent/reports"),
-  getDealsByAgent: (mode: "day" | "month", monthsBack?: number) =>
-    request(`/api/v1/ai-agent/deals-by-agent?mode=${mode}&months_back=${monthsBack ?? 6}`),
+  getDealsByAgent: (mode: "day" | "month", monthsBack?: number, dateFrom?: string, dateTo?: string) => {
+    const p = new URLSearchParams({ mode, months_back: String(monthsBack ?? 6) });
+    if (dateFrom) p.set("date_from", dateFrom);
+    if (dateTo)   p.set("date_to",   dateTo);
+    return request(`/api/v1/ai-agent/deals-by-agent?${p.toString()}`);
+  },
   getAgentLeaderboard: () => request("/api/v1/ai-agent/leaderboard"),
   getPipeline: () => request("/api/v1/ai-agent/pipeline"),
   getReconciliationGap: () => request("/api/v1/ai-agent/reconciliation-gap"),

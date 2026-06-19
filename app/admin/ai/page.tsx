@@ -58,9 +58,11 @@ export default function AiOperationsPage() {
   const [pipeline,     setPipeline]     = useState<any>(null);
   const [plLoading,    setPlLoading]    = useState(false);
 
-  const [dealsData,    setDealsData]    = useState<any>(null);
-  const [dealsMode,    setDealsMode]    = useState<"month"|"day">("month");
-  const [dealsLoading, setDealsLoading] = useState(false);
+  const [dealsData,     setDealsData]     = useState<any>(null);
+  const [dealsMode,     setDealsMode]     = useState<"month"|"day">("month");
+  const [dealsLoading,  setDealsLoading]  = useState(false);
+  const [dealsDateFrom, setDealsDateFrom] = useState("");
+  const [dealsDateTo,   setDealsDateTo]   = useState("");
 
   const [reports,      setReports]      = useState<any[]>([]);
   const [recon,        setRecon]        = useState<any>(null);
@@ -94,9 +96,9 @@ export default function AiOperationsPage() {
     try { setPipeline(await api.getPipeline()); } finally { setPlLoading(false); }
   }, []);
 
-  const loadDeals = useCallback(async (mode: "month"|"day") => {
+  const loadDeals = useCallback(async (mode: "month"|"day", dateFrom?: string, dateTo?: string) => {
     setDealsLoading(true);
-    try { setDealsData(await api.getDealsByAgent(mode, 6)); } finally { setDealsLoading(false); }
+    try { setDealsData(await api.getDealsByAgent(mode, 6, dateFrom, dateTo)); } finally { setDealsLoading(false); }
   }, []);
 
   const loadReports = useCallback(async () => {
@@ -117,7 +119,7 @@ export default function AiOperationsPage() {
     setActiveTab(tab);
     if (tab === "leaderboard" && leaderboard.length === 0) loadLeaderboard();
     if (tab === "pipeline"    && !pipeline)                loadPipeline();
-    if (tab === "performance" && !dealsData)               loadDeals(dealsMode);
+    if (tab === "performance" && !dealsData)               loadDeals(dealsMode, dealsDateFrom || undefined, dealsDateTo || undefined);
     if (tab === "reports"     && reports.length === 0)     loadReports();
     if (tab === "recon"       && !recon)                   loadRecon();
     if (tab === "commission"  && !commTracker)             loadCommTracker();
@@ -259,8 +261,16 @@ export default function AiOperationsPage() {
           {activeTab === "leaderboard" && <LeaderboardTab data={leaderboard} loading={lbLoading} onRefresh={loadLeaderboard} />}
           {activeTab === "pipeline" && <PipelineTab data={pipeline} loading={plLoading} onRefresh={loadPipeline} />}
           {activeTab === "performance" && (
-            <DealsByAgent data={dealsData} mode={dealsMode} loading={dealsLoading}
-              onModeChange={m => { setDealsMode(m); loadDeals(m); }} />
+            <DealsByAgent
+              data={dealsData} mode={dealsMode} loading={dealsLoading}
+              dateFrom={dealsDateFrom} dateTo={dealsDateTo}
+              onModeChange={m => { setDealsMode(m); loadDeals(m, dealsDateFrom || undefined, dealsDateTo || undefined); }}
+              onDateRangeChange={(from, to) => {
+                setDealsDateFrom(from);
+                setDealsDateTo(to);
+                loadDeals(dealsMode, from || undefined, to || undefined);
+              }}
+            />
           )}
           {activeTab === "recon" && (
             <ReconciliationGapTab data={recon} loading={reconLoading} onRefresh={loadRecon} />
@@ -755,10 +765,18 @@ function PipelineTab({ data, loading, onRefresh }: { data: any; loading: boolean
 
 // ── Deals by Agent Tab ─────────────────────────────────────────────────────────
 
-function DealsByAgent({ data, mode, loading, onModeChange }: {
-  data: any; mode: "month"|"day"; loading: boolean; onModeChange: (m: "month"|"day") => void;
+function DealsByAgent({ data, mode, loading, dateFrom, dateTo, onModeChange, onDateRangeChange }: {
+  data: any; mode: "month"|"day"; loading: boolean;
+  dateFrom: string; dateTo: string;
+  onModeChange: (m: "month"|"day") => void;
+  onDateRangeChange: (from: string, to: string) => void;
 }) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; agent: string; count: number } | null>(null);
+  const [localFrom, setLocalFrom] = useState(dateFrom);
+  const [localTo,   setLocalTo]   = useState(dateTo);
+
+  const applyRange = () => onDateRangeChange(localFrom, localTo);
+  const clearRange = () => { setLocalFrom(""); setLocalTo(""); onDateRangeChange("", ""); };
 
   if (loading) return <Spinner text="Loading..." />;
   if (!data) return <div className="py-8 text-center text-sm text-gray-400">No data yet.</div>;
@@ -770,13 +788,47 @@ function DealsByAgent({ data, mode, loading, onModeChange }: {
 
   return (
     <div className="space-y-5">
-      {/* Mode toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      {/* Controls row */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-2 mr-auto">
           <BarChart3 className="w-4 h-4 text-[#0F1D5E]" />
           <span className="text-sm font-semibold text-slate-700">Deals Closed by Period</span>
         </div>
-        <div className="flex rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-0.5 gap-0.5">
+
+        {/* Date range pickers */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">From</span>
+            <input
+              type="date"
+              value={localFrom}
+              onChange={e => setLocalFrom(e.target.value)}
+              className="text-xs text-slate-700 bg-transparent outline-none w-32"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">To</span>
+            <input
+              type="date"
+              value={localTo}
+              onChange={e => setLocalTo(e.target.value)}
+              className="text-xs text-slate-700 bg-transparent outline-none w-32"
+            />
+          </div>
+          <button onClick={applyRange}
+            className="px-3 py-1.5 text-xs font-semibold bg-[#0F1D5E] text-white rounded-xl hover:bg-[#1a2d7c] transition whitespace-nowrap">
+            Apply
+          </button>
+          {(localFrom || localTo) && (
+            <button onClick={clearRange}
+              className="px-3 py-1.5 text-xs font-semibold border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 transition whitespace-nowrap">
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-0.5 gap-0.5 shrink-0">
           {(["month","day"] as const).map(m => (
             <button key={m} onClick={() => onModeChange(m)}
               className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
