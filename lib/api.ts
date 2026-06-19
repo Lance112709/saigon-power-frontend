@@ -309,6 +309,8 @@ export const api = {
     if (dateTo)   p.set("date_to",   dateTo);
     return request(`/api/v1/ai-agent/deals-by-agent?${p.toString()}`);
   },
+  getDupAddresses: () => request("/api/v1/ai-agent/data-quality/dup-addresses"),
+  getDupEsiids:    () => request("/api/v1/ai-agent/data-quality/dup-esiids"),
   getAgentLeaderboard: () => request("/api/v1/ai-agent/leaderboard"),
   getPipeline: () => request("/api/v1/ai-agent/pipeline"),
   getReconciliationGap: () => request("/api/v1/ai-agent/reconciliation-gap"),

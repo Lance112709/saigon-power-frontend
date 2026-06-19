@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Bot, RefreshCw, AlertTriangle, CheckCircle2,
   TrendingUp, Users, FileText, Zap, BarChart3, ChevronRight,
-  Trophy, DollarSign, Clock, ShieldAlert, MessageSquare, Send, Trash2, UserCheck, UserX,
+  Trophy, DollarSign, Clock, ShieldAlert, MessageSquare, Send, Trash2, UserCheck, UserX, X,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -74,6 +74,18 @@ export default function AiOperationsPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput,    setChatInput]    = useState("");
   const [chatLoading,  setChatLoading]  = useState(false);
+
+  const [dupModal,     setDupModal]     = useState<{ type: "address"|"esiid"; data: any[]|null; loading: boolean } | null>(null);
+
+  const openDupModal = async (type: "address"|"esiid") => {
+    setDupModal({ type, data: null, loading: true });
+    try {
+      const data = type === "address" ? await api.getDupAddresses() : await api.getDupEsiids();
+      setDupModal({ type, data, loading: false });
+    } catch {
+      setDupModal({ type, data: [], loading: false });
+    }
+  };
 
   useEffect(() => {
     if (user && user.role !== "admin") router.push("/dashboard");
@@ -304,6 +316,101 @@ export default function AiOperationsPage() {
           )}
         </div>
       </div>
+
+      {/* Duplicates modal */}
+      {dupModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-12 pb-8 px-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-bold text-gray-900">
+                  {dupModal.type === "address" ? "Duplicate Service Addresses" : "Duplicate ESI IDs"}
+                </h2>
+                {dupModal.data && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {dupModal.data.length} group{dupModal.data.length !== 1 ? "s" : ""} with duplicate deals — click a customer to clean up
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setDupModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition text-gray-400 hover:text-gray-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+              {dupModal.loading && (
+                <div className="py-10 text-center text-sm text-gray-400">Loading duplicates…</div>
+              )}
+              {!dupModal.loading && dupModal.data?.length === 0 && (
+                <div className="py-10 text-center text-sm text-gray-400">No duplicates found.</div>
+              )}
+              {!dupModal.loading && dupModal.data?.map((group: any, gi: number) => (
+                <div key={gi} className="border border-amber-200 bg-amber-50/40 rounded-xl overflow-hidden">
+                  {/* Group header */}
+                  <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      {dupModal.type === "address" ? (
+                        <>
+                          <a href={`/crm/customers/${group.customer_id}`}
+                            className="font-semibold text-sm text-[#0F1D5E] hover:underline truncate block">
+                            {group.customer_name}
+                          </a>
+                          <p className="text-xs text-amber-700 mt-0.5 truncate">{group.service_address}</p>
+                        </>
+                      ) : (
+                        <p className="font-semibold text-sm text-amber-800 font-mono">{group.esiid}</p>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-xs font-bold bg-amber-200 text-amber-800 px-2.5 py-1 rounded-full">
+                      {group.deal_count} deals
+                    </span>
+                  </div>
+
+                  {/* Deals list */}
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-gray-400 uppercase border-b border-amber-100">
+                        {dupModal.type === "esiid" && <th className="px-4 py-2 text-left">Customer</th>}
+                        <th className="px-4 py-2 text-left">Provider</th>
+                        <th className="px-4 py-2 text-left">Status</th>
+                        <th className="px-4 py-2 text-left">Agent</th>
+                        <th className="px-4 py-2 text-left">Created</th>
+                        <th className="px-4 py-2 text-right">Go</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.deals.map((d: any, di: number) => (
+                        <tr key={di} className="border-t border-amber-100 hover:bg-amber-50/60 transition-colors">
+                          {dupModal.type === "esiid" && (
+                            <td className="px-4 py-2.5 font-medium text-gray-800">{d.customer_name}</td>
+                          )}
+                          <td className="px-4 py-2.5 text-gray-700">{d.provider || "—"}</td>
+                          <td className="px-4 py-2.5">
+                            <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                              d.deal_status === "ACTIVE" ? "bg-green-100 text-green-700" :
+                              d.deal_status === "INACTIVE" ? "bg-gray-100 text-gray-500" : "bg-blue-100 text-blue-700"
+                            }`}>{d.deal_status || "—"}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-gray-500">{d.sales_agent || "—"}</td>
+                          <td className="px-4 py-2.5 text-gray-400">{d.created_at ? d.created_at.slice(0,10) : "—"}</td>
+                          <td className="px-4 py-2.5 text-right">
+                            <a href={`/crm/customers/${d.customer_id}`}
+                              className="text-[#0F1D5E] font-semibold hover:underline whitespace-nowrap">
+                              Open →
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -454,8 +561,8 @@ function OverviewTab({ m, dashboard }: { m: any; dashboard: Dashboard | null }) 
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Deal Quality</p>
           <div className="grid grid-cols-2 gap-3">
-            <QualityCard label="Duplicate ESI IDs"        count={m.data_quality.dup_esiid}    severity="high"   />
-            <QualityCard label="Duplicate Service Address" count={m.data_quality.dup_address}  severity="medium" />
+            <QualityCard label="Duplicate ESI IDs"        count={m.data_quality.dup_esiid}    severity="high"   onClick={() => openDupModal("esiid")} />
+            <QualityCard label="Duplicate Service Address" count={m.data_quality.dup_address}  severity="medium" onClick={() => openDupModal("address")} />
           </div>
         </div>
       )}
@@ -1298,12 +1405,16 @@ function BigStatCard({ icon: Icon, label, value, sub, color }: { icon: any; labe
   );
 }
 
-function QualityCard({ label, count, severity }: { label: string; count: number; severity: "high"|"medium" }) {
+function QualityCard({ label, count, severity, onClick }: { label: string; count: number; severity: "high"|"medium"; onClick?: () => void }) {
   const s = SEVERITY[severity];
   return (
-    <div className={`${s.bg} border ${s.border} rounded-xl p-4 text-center`}>
+    <div
+      onClick={onClick}
+      className={`${s.bg} border ${s.border} rounded-xl p-4 text-center ${onClick ? "cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all" : ""}`}
+    >
       <p className={`text-2xl font-bold ${s.text}`}>{count}</p>
       <p className={`text-xs font-medium mt-1 ${s.text}`}>{label}</p>
+      {onClick && <p className="text-[10px] mt-1 opacity-60 font-medium" style={{ color: "inherit" }}>Click to review</p>}
     </div>
   );
 }
