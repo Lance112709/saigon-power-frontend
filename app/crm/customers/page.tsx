@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
@@ -30,6 +30,7 @@ function StatCard({ title, value, sub, icon: Icon, valueColor = "text-[#0F1D5E]"
 
 export default function CrmCustomersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isManager = user?.role === "admin" || user?.role === "manager";
@@ -38,7 +39,7 @@ export default function CrmCustomersPage() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [provider, setProvider] = useState("");
-  const [dealStatus, setDealStatus] = useState("");
+  const [dealStatus, setDealStatus] = useState(() => searchParams.get("deal_status") ?? "");
   const [meterType, setMeterType] = useState("");
   const [providers, setProviders] = useState<string[]>([]);
   const [stats, setStats] = useState<any>(null);

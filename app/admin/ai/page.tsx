@@ -234,7 +234,7 @@ export default function AiOperationsPage() {
       {m && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatCard icon={UserX}         label="Leads w/ No Active Deal" value={m.pipeline.leads_no_active_deal ?? 0}            sub={`of ${m.pipeline.total_leads} total leads`}  color="blue"    />
-          <StatCard icon={UserCheck}     label="Active Customer Accts"   value={m.pipeline.active_crm_customers ?? 0}             sub="imported customers w/ active deal"           color="emerald" />
+          <StatCard icon={UserCheck}     label="Active Customer Accts"   value={m.pipeline.active_crm_customers ?? 0}             sub="imported customers w/ active deal"           color="emerald" onClick={() => router.push("/crm/customers?deal_status=ACTIVE")} />
           <StatCard icon={FileText}      label="Active Deals"            value={m.pipeline.active_deals}                          sub={`+${m.today.new_deals} today`}               color="green"   />
           <StatCard icon={ShieldAlert}   label="Open Alerts"             value={m.alerts.total_open}                              sub={`${m.alerts.critical} critical`}             color={m.alerts.critical > 0 ? "red" : "gray"} />
           <StatCard icon={TrendingUp}    label="MTD Commission"          value={`$${(m.mtd.est_commission||0).toLocaleString()}`}  sub={`${m.mtd.deals} deals this month`}           color="purple"  />
@@ -1222,10 +1222,10 @@ function Spinner({ text }: { text: string }) {
   return <div className="py-8 text-center text-sm text-gray-400 flex items-center justify-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" />{text}</div>;
 }
 
-function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: any; sub: string; color: string }) {
+function StatCard({ icon: Icon, label, value, sub, color, onClick }: { icon: any; label: string; value: any; sub: string; color: string; onClick?: () => void }) {
   const c: Record<string, string> = { blue:"bg-blue-50 text-blue-600", green:"bg-green-50 text-green-600", emerald:"bg-emerald-50 text-emerald-600", red:"bg-red-50 text-red-600", gray:"bg-gray-100 text-gray-500", purple:"bg-purple-50 text-purple-600" };
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4">
+    <div className={`bg-white rounded-2xl border border-gray-200 p-4 ${onClick ? "cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all" : ""}`} onClick={onClick}>
       <div className={`inline-flex p-2 rounded-xl mb-3 ${c[color]}`}><Icon className="w-4 h-4" /></div>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-xs text-gray-500 mt-0.5">{label}</p>
