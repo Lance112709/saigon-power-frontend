@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Bot, RefreshCw, AlertTriangle, CheckCircle2,
   TrendingUp, Users, FileText, Zap, BarChart3, ChevronRight,
-  Trophy, DollarSign, Clock, ShieldAlert, MessageSquare, Send, Trash2,
+  Trophy, DollarSign, Clock, ShieldAlert, MessageSquare, Send, Trash2, UserCheck, UserX,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -48,6 +48,7 @@ export default function AiOperationsPage() {
   const [dashboard,    setDashboard]    = useState<Dashboard | null>(null);
   const [loading,      setLoading]      = useState(true);
   const [scanning,     setScanning]     = useState(false);
+  const [scanResult,   setScanResult]   = useState<any>(null);
   const [resolving,    setResolving]    = useState<string | null>(null);
   const [activeTab,    setActiveTab]    = useState<Tab>("overview");
 
@@ -124,7 +125,12 @@ export default function AiOperationsPage() {
 
   const handleScan = async () => {
     setScanning(true);
-    try { await api.runAiScan(); await loadDashboard(); } finally { setScanning(false); }
+    setScanResult(null);
+    let result: any = null;
+    try { result = await api.runAiScan(); } catch {}
+    await loadDashboard();
+    setScanning(false);
+    if (result) setScanResult(result);
   };
 
   const handleResolve = async (id: string) => {
@@ -193,6 +199,24 @@ export default function AiOperationsPage() {
         </button>
       </div>
 
+      {/* Scan result banner */}
+      {scanResult && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-emerald-800">Scan complete</p>
+            <p className="text-xs text-emerald-600 mt-0.5">
+              {scanResult.alerts_created ?? 0} new alert{scanResult.alerts_created !== 1 ? "s" : ""} created
+              · {scanResult.alerts_resolved ?? 0} resolved
+              · {scanResult.deal_issues?.total_scanned ?? 0} deals checked
+              · {scanResult.inactive_leads ?? 0} inactive leads
+              · {scanResult.duplicate_leads ?? 0} duplicate leads
+            </p>
+          </div>
+          <button onClick={() => setScanResult(null)} className="text-emerald-400 hover:text-emerald-600 text-xs">✕</button>
+        </div>
+      )}
+
       {/* AI Summary banner */}
       {dashboard?.summary && (
         <div className="bg-gradient-to-r from-[#0F1D5E] to-[#1a2d7c] rounded-2xl p-5 text-white">
@@ -208,11 +232,12 @@ export default function AiOperationsPage() {
 
       {/* KPI strip */}
       {m && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={Users}         label="Total Leads"     value={m.pipeline.total_leads}                          sub={`+${m.today.new_leads} today`}            color="blue"   />
-          <StatCard icon={FileText}      label="Active Deals"    value={m.pipeline.active_deals}                         sub={`+${m.today.new_deals} today`}            color="green"  />
-          <StatCard icon={ShieldAlert}   label="Open Alerts"     value={m.alerts.total_open}                             sub={`${m.alerts.critical} critical`}          color={m.alerts.critical > 0 ? "red" : "gray"} />
-          <StatCard icon={TrendingUp}    label="MTD Commission"  value={`$${(m.mtd.est_commission||0).toLocaleString()}`} sub={`${m.mtd.deals} deals this month`}        color="purple" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <StatCard icon={UserX}         label="Leads w/ No Active Deal" value={m.pipeline.leads_no_active_deal ?? 0}            sub={`of ${m.pipeline.total_leads} total leads`}  color="blue"    />
+          <StatCard icon={UserCheck}     label="Active Customer Accts"   value={m.pipeline.active_crm_customers ?? 0}             sub="imported customers w/ active deal"           color="emerald" />
+          <StatCard icon={FileText}      label="Active Deals"            value={m.pipeline.active_deals}                          sub={`+${m.today.new_deals} today`}               color="green"   />
+          <StatCard icon={ShieldAlert}   label="Open Alerts"             value={m.alerts.total_open}                              sub={`${m.alerts.critical} critical`}             color={m.alerts.critical > 0 ? "red" : "gray"} />
+          <StatCard icon={TrendingUp}    label="MTD Commission"          value={`$${(m.mtd.est_commission||0).toLocaleString()}`}  sub={`${m.mtd.deals} deals this month`}           color="purple"  />
         </div>
       )}
 
@@ -1198,7 +1223,7 @@ function Spinner({ text }: { text: string }) {
 }
 
 function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: any; sub: string; color: string }) {
-  const c: Record<string, string> = { blue:"bg-blue-50 text-blue-600", green:"bg-green-50 text-green-600", red:"bg-red-50 text-red-600", gray:"bg-gray-100 text-gray-500", purple:"bg-purple-50 text-purple-600" };
+  const c: Record<string, string> = { blue:"bg-blue-50 text-blue-600", green:"bg-green-50 text-green-600", emerald:"bg-emerald-50 text-emerald-600", red:"bg-red-50 text-red-600", gray:"bg-gray-100 text-gray-500", purple:"bg-purple-50 text-purple-600" };
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-4">
       <div className={`inline-flex p-2 rounded-xl mb-3 ${c[color]}`}><Icon className="w-4 h-4" /></div>
