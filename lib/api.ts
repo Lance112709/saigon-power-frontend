@@ -9,10 +9,15 @@ async function request(path: string, options: RequestInit = {}) {
   const token = getToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
-    ...options,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
+      ...options,
+    });
+  } catch {
+    throw new Error("0:The server is unreachable. Please check your connection and try again in a moment.");
+  }
   if (!res.ok) {
     const body = await res.text();
     if (res.status === 401 && typeof window !== "undefined") {
