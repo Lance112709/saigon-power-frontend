@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -28,7 +28,7 @@ function StatCard({ title, value, sub, icon: Icon, valueColor = "text-[#0F1D5E]"
   );
 }
 
-export default function CrmCustomersPage() {
+function CrmCustomersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -388,5 +388,13 @@ export default function CrmCustomersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CrmCustomersPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F4F6FA]" />}>
+      <CrmCustomersContent />
+    </Suspense>
   );
 }
