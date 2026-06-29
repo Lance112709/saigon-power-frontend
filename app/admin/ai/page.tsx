@@ -269,7 +269,7 @@ export default function AiOperationsPage() {
         </div>
 
         <div className="p-5">
-          {activeTab === "overview" && <OverviewTab m={m} dashboard={dashboard} />}
+          {activeTab === "overview" && <OverviewTab m={m} dashboard={dashboard} onOpenDup={openDupModal} />}
           {activeTab === "leaderboard" && <LeaderboardTab data={leaderboard} loading={lbLoading} onRefresh={loadLeaderboard} />}
           {activeTab === "pipeline" && <PipelineTab data={pipeline} loading={plLoading} onRefresh={loadPipeline} />}
           {activeTab === "performance" && (
@@ -526,7 +526,7 @@ function ChatTab({
 
 // ── Overview Tab ───────────────────────────────────────────────────────────────
 
-function OverviewTab({ m, dashboard }: { m: any; dashboard: Dashboard | null }) {
+function OverviewTab({ m, dashboard, onOpenDup }: { m: any; dashboard: Dashboard | null; onOpenDup: (type: "address" | "esiid") => void }) {
   return (
     <div className="space-y-5">
       {m?.health && (
@@ -561,8 +561,8 @@ function OverviewTab({ m, dashboard }: { m: any; dashboard: Dashboard | null }) 
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Deal Quality</p>
           <div className="grid grid-cols-2 gap-3">
-            <QualityCard label="Duplicate ESI IDs"        count={m.data_quality.dup_esiid}    severity="high"   onClick={() => openDupModal("esiid")} />
-            <QualityCard label="Duplicate Service Address" count={m.data_quality.dup_address}  severity="medium" onClick={() => openDupModal("address")} />
+            <QualityCard label="Duplicate ESI IDs"        count={m.data_quality.dup_esiid}    severity="high"   onClick={() => onOpenDup("esiid")} />
+            <QualityCard label="Duplicate Service Address" count={m.data_quality.dup_address}  severity="medium" onClick={() => onOpenDup("address")} />
           </div>
         </div>
       )}
