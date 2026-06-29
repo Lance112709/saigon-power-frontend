@@ -3,13 +3,19 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare } from "lucide-react";
+import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare, Paperclip, Upload, Download, FileText, Loader2 } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 const labelCls = "block text-sm text-slate-700 mb-1";
 const sectionLabelCls = "text-xs font-bold text-slate-400 uppercase tracking-wider mb-3";
+const fmtBytes = (n?: number) => {
+  if (!n || n < 0) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+};
 
 // ── Module-level field components ─────────────────────────────────────────────
 function FormInput({ label, error, type = "text", value, onChange, onBlur, placeholder }: {
@@ -749,6 +755,11 @@ export default function LeadDetailPage() {
   const [savingNote, setSavingNote] = useState(false);
   const [noteError, setNoteError] = useState("");
   const [taskError, setTaskError] = useState("");
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [attachError, setAttachError] = useState("");
+  const [openingAttachment, setOpeningAttachment] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reload = async () => {
     const data = await api.getLead(id);
@@ -766,12 +777,50 @@ export default function LeadDetailPage() {
     setNotes(data);
   };
 
+  const loadAttachments = async () => {
+    const data = await api.getLeadAttachments(id).catch(() => []);
+    setAttachments(data);
+  };
+
   useEffect(() => {
     reload().catch(e => setError(e.message || "Failed to load")).finally(() => setLoading(false));
     loadTasks();
     loadNotes();
+    loadAttachments();
     api.getSalesAgents().then(setSalesAgents).catch(() => {});
   }, [id]);
+
+  const handleUploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    setUploadingFile(true);
+    setAttachError("");
+    try {
+      const created = await api.uploadLeadAttachment(id, file);
+      setAttachments(prev => [created, ...prev]);
+    } catch (err: any) {
+      const raw = err?.message || "Upload failed";
+      const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
+      try { setAttachError(JSON.parse(body)?.detail ?? body); } catch { setAttachError(body); }
+    }
+    setUploadingFile(false);
+  };
+
+  const handleOpenAttachment = async (attachmentId: string) => {
+    setOpeningAttachment(attachmentId);
+    try {
+      const { url } = await api.getLeadAttachmentUrl(id, attachmentId);
+      window.open(url, "_blank", "noopener");
+    } catch {}
+    setOpeningAttachment(null);
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!confirm("Delete this attachment? This cannot be undone.")) return;
+    await api.deleteLeadAttachment(id, attachmentId).catch(() => {});
+    setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+  };
 
   const handleDealSaved = async () => {
     setShowDeal(false);
@@ -1349,6 +1398,57 @@ export default function LeadDetailPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Attachments ── */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Paperclip className="w-4 h-4 text-[#0F1D5E]" />
+            <h3 className="text-sm font-bold text-[#0F1D5E]">Attachments ({attachments.length})</h3>
+          </div>
+          <input ref={fileInputRef} type="file" className="hidden" onChange={handleUploadAttachment} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingFile}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0F1D5E] border border-[#0F1D5E]/20 rounded-xl hover:bg-[#EEF1FA] transition-colors disabled:opacity-50"
+          >
+            {uploadingFile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            {uploadingFile ? "Uploading..." : "Upload File"}
+          </button>
+        </div>
+        {attachError && <p className="text-xs text-red-500 px-5 py-2">{attachError}</p>}
+        {attachments.length === 0 ? (
+          <p className="px-5 py-8 text-center text-slate-400 text-sm">No attachments yet.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {attachments.map(a => (
+              <div key={a.id} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50/50 group">
+                <div className="w-9 h-9 rounded-xl bg-[#EEF1FA] flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-[#0F1D5E]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-slate-700 truncate">{a.file_name}</p>
+                  <p className="text-xs text-slate-400">
+                    {fmtBytes(a.file_size)}
+                    {a.uploaded_by && <> · {a.uploaded_by}</>}
+                    {a.created_at && <> · {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</>}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => handleOpenAttachment(a.id)} disabled={openingAttachment === a.id}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-[#0F1D5E] hover:bg-[#EEF1FA] transition-colors disabled:opacity-50" title="Download">
+                    {openingAttachment === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  </button>
+                  <button onClick={() => handleDeleteAttachment(a.id)}
+                    className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100" title="Delete">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

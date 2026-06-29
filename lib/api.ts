@@ -200,6 +200,24 @@ export const api = {
     request(`/api/v1/leads/${leadId}/notes/${noteId}`, { method: "PATCH", body: JSON.stringify({ content }) }),
   deleteLeadNote: (leadId: string, noteId: string) =>
     request(`/api/v1/leads/${leadId}/notes/${noteId}`, { method: "DELETE" }),
+  getLeadAttachments: (leadId: string) => request(`/api/v1/leads/${leadId}/attachments`),
+  uploadLeadAttachment: (leadId: string, file: File) => {
+    const token = getToken();
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${API_URL}/api/v1/leads/${leadId}/attachments`, {
+      method: "POST",
+      body: form,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(async r => {
+      if (!r.ok) throw new Error(`${r.status}:${await r.text()}`);
+      return r.json();
+    });
+  },
+  getLeadAttachmentUrl: (leadId: string, attachmentId: string) =>
+    request(`/api/v1/leads/${leadId}/attachments/${attachmentId}/url`),
+  deleteLeadAttachment: (leadId: string, attachmentId: string) =>
+    request(`/api/v1/leads/${leadId}/attachments/${attachmentId}`, { method: "DELETE" }),
   getSalesAgents: () => request("/api/v1/leads/agents"),
   createSalesAgent: (data: object) =>
     request("/api/v1/leads/agents", { method: "POST", body: JSON.stringify(data) }),
