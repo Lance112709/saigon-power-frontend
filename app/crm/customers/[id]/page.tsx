@@ -1,11 +1,12 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, User, MapPin, Phone, Mail, Calendar, Hash,
   Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare, RefreshCw, Ban, FileEdit, AlertCircle,
+  Paperclip, Upload, Download, FileText, Loader2,
 } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
 
@@ -13,6 +14,12 @@ const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg
 const labelCls = "block text-sm text-slate-700 mb-1";
 const sectionLabelCls = "text-xs font-bold text-slate-400 uppercase tracking-wider mb-3";
 const fmtDate = (s: string) => { const [y, m, d] = s.slice(0, 10).split("-"); return `${m}-${d}-${y}`; };
+const fmtBytes = (n?: number) => {
+  if (!n || n < 0) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+};
 
 const DEAL_FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "DE LINKED"] as const;
 type DealFlag = typeof DEAL_FLAGS[number];
@@ -830,6 +837,13 @@ export default function CustomerProfilePage() {
   const [taskError, setTaskError] = useState("");
   const [newTask, setNewTask] = useState({ title: "", task_type: "call", due_date: "", priority: "medium", description: "" });
 
+  // Attachments state
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [attachError, setAttachError] = useState("");
+  const [openingAttachment, setOpeningAttachment] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const loadCustomer = useCallback(async () => {
     const data = await api.getCrmCustomer(id);
     setCustomer(data);
@@ -858,13 +872,18 @@ export default function CustomerProfilePage() {
     try { setTasks(await api.getTasks({ customer_id: id })); } catch {}
   }, [id]);
 
+  const loadAttachments = useCallback(async () => {
+    try { setAttachments(await api.getCrmCustomerAttachments(id)); } catch {}
+  }, [id]);
+
   useEffect(() => {
     loadCustomer()
       .catch(e => setError(e.message || "Failed to load"))
       .finally(() => setLoading(false));
     loadNotes();
     loadTasks();
-  }, [id, loadCustomer, loadNotes, loadTasks]);
+    loadAttachments();
+  }, [id, loadCustomer, loadNotes, loadTasks, loadAttachments]);
 
   const cancelEdit = () => {
     const firstAnxh = deals.map((d: any) => d.anxh).find(Boolean) || "";
@@ -954,6 +973,38 @@ export default function CustomerProfilePage() {
     if (!confirm("Delete this task?")) return;
     await api.deleteTask(taskId).catch(() => {});
     setTasks(prev => prev.filter(t => t.id !== taskId));
+  };
+
+  const handleUploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    setUploadingFile(true);
+    setAttachError("");
+    try {
+      const created = await api.uploadCrmCustomerAttachment(id, file);
+      setAttachments(prev => [created, ...prev]);
+    } catch (err: any) {
+      const raw = err?.message || "Upload failed";
+      const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
+      try { setAttachError(JSON.parse(body)?.detail ?? body); } catch { setAttachError(body); }
+    }
+    setUploadingFile(false);
+  };
+
+  const handleOpenAttachment = async (attachmentId: string) => {
+    setOpeningAttachment(attachmentId);
+    try {
+      const { url } = await api.getCrmAttachmentUrl(id, attachmentId);
+      window.open(url, "_blank", "noopener");
+    } catch {}
+    setOpeningAttachment(null);
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!confirm("Delete this attachment? This cannot be undone.")) return;
+    await api.deleteCrmCustomerAttachment(id, attachmentId).catch(() => {});
+    setAttachments(prev => prev.filter(a => a.id !== attachmentId));
   };
 
   if (loading || authLoading) return (
@@ -1262,6 +1313,56 @@ export default function CustomerProfilePage() {
                       )}
                     </div>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap ml-9">{n.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Attachments */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Paperclip className="w-4 h-4 text-[#0F1D5E]" />
+                <h3 className="text-sm font-bold text-[#0F1D5E]">Attachments ({attachments.length})</h3>
+              </div>
+              <input ref={fileInputRef} type="file" className="hidden" onChange={handleUploadAttachment} />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingFile}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0F1D5E] border border-[#0F1D5E]/20 rounded-xl hover:bg-[#EEF1FA] transition-colors disabled:opacity-50">
+                {uploadingFile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                {uploadingFile ? "Uploading..." : "Upload File"}
+              </button>
+            </div>
+            {attachError && <p className="text-xs text-red-500 px-5 py-2">{attachError}</p>}
+            {attachments.length === 0 ? (
+              <p className="px-5 py-8 text-center text-slate-400 text-sm">No attachments yet.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {attachments.map(a => (
+                  <div key={a.id} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50/50 group">
+                    <div className="w-9 h-9 rounded-xl bg-[#EEF1FA] flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-[#0F1D5E]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-700 truncate">{a.file_name}</p>
+                      <p className="text-xs text-slate-400">
+                        {fmtBytes(a.file_size)}
+                        {a.uploaded_by && <> · {a.uploaded_by}</>}
+                        {a.created_at && <> · {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => handleOpenAttachment(a.id)} disabled={openingAttachment === a.id}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-[#0F1D5E] hover:bg-[#EEF1FA] transition-colors disabled:opacity-50" title="Download">
+                        {openingAttachment === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                      </button>
+                      <button onClick={() => handleDeleteAttachment(a.id)}
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -115,6 +115,24 @@ export const api = {
     request(`/api/v1/crm/customers/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
   deleteCrmCustomerNote: (id: string, noteId: string) =>
     request(`/api/v1/crm/customers/${id}/notes/${noteId}`, { method: "DELETE" }),
+  getCrmCustomerAttachments: (id: string) => request(`/api/v1/crm/customers/${id}/attachments`),
+  uploadCrmCustomerAttachment: (id: string, file: File) => {
+    const token = getToken();
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${API_URL}/api/v1/crm/customers/${id}/attachments`, {
+      method: "POST",
+      body: form,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(async r => {
+      if (!r.ok) throw new Error(`${r.status}:${await r.text()}`);
+      return r.json();
+    });
+  },
+  getCrmAttachmentUrl: (id: string, attachmentId: string) =>
+    request(`/api/v1/crm/customers/${id}/attachments/${attachmentId}/url`),
+  deleteCrmCustomerAttachment: (id: string, attachmentId: string) =>
+    request(`/api/v1/crm/customers/${id}/attachments/${attachmentId}`, { method: "DELETE" }),
   getCrmDealNotes: (id: string) => request(`/api/v1/crm/deals/${id}/notes`),
   createCrmDealNote: (id: string, data: object) =>
     request(`/api/v1/crm/deals/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
