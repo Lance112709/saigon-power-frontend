@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit } from "lucide-react";
+import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit, AlertCircle } from "lucide-react";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 
@@ -103,10 +103,12 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
     sales_agent:          deal.sales_agent           || "",
     deal_status:          deal.deal_status           || "ACTIVE",
     business_name:        deal.business_name         || "",
-    anxh:                 deal.anxh                  || "",
+    esiid:                deal.esiid                 || "",
   });
   const [flags, setFlags] = useState({ ...EMPTY_FLAGS, flag_tos: deal.flag_tos ?? false, flag_toao: deal.flag_toao ?? false, flag_deposit: deal.flag_deposit ?? false, flag_special_deal: deal.flag_special_deal ?? false, flag_promo_10: deal.flag_promo_10 ?? false, flag_delinked: deal.flag_delinked ?? false });
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [apiError, setApiError] = useState("");
   const [providers, setProviders] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
 
@@ -115,12 +117,39 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
     api.getCrmAgents().then(setAgents).catch(() => {});
   }, []);
 
-  const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form, v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setErrors(e => ({ ...e, [k]: "" }));
+  };
   const toggleFlag = (key: string) => setFlags(f => ({ ...f, [key]: !(f as any)[key] }));
+
+  // Everything is required except Deal Name and Business Name.
+  const REQUIRED: (keyof typeof form)[] = [
+    "provider", "service_address", "meter_type", "energy_rate", "adder",
+    "contract_start_date", "contract_end_date", "contract_signed_date",
+    "sales_agent", "contract_term", "esiid", "deal_status", "deal_type",
+  ];
+  const inpCls = (field: string) => `${inputCls} ${errors[field] ? "border-red-400 ring-1 ring-red-400/30" : ""}`;
+  const errMsg = (field: string) => errors[field]
+    ? <p className="text-xs text-red-500 mt-1">{errors[field]}</p> : null;
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    for (const f of REQUIRED) {
+      if (!String((form as any)[f] ?? "").trim()) e[f] = "Required";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) {
+      setApiError("Please fill in all required fields.");
+      return;
+    }
     setSaving(true);
+    setApiError("");
     try {
       await api.updateCrmDeal(deal.id, {
         ...form,
@@ -144,6 +173,11 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={submit} className="px-6 py-5 space-y-4">
+          {apiError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {apiError}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Name</label>
@@ -157,88 +191,101 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Provider (REP)</label>
-              <select className={inputCls} value={form.provider} onChange={e => set("provider", e.target.value)}>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Provider (REP) *</label>
+              <select className={inpCls("provider")} value={form.provider} onChange={e => set("provider", e.target.value)}>
                 <option value="">Select provider…</option>
                 {providers.map(p => <option key={p} value={p}>{p}</option>)}
                 {form.provider && !providers.includes(form.provider) && (
                   <option value={form.provider}>{form.provider}</option>
                 )}
               </select>
+              {errMsg("provider")}
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Service Address</label>
-              <input className={inputCls} value={form.service_address} onChange={e => set("service_address", e.target.value)} />
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Service Address *</label>
+              <input className={inpCls("service_address")} value={form.service_address} onChange={e => set("service_address", e.target.value)} />
+              {errMsg("service_address")}
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Meter Type</label>
-              <select className={inputCls} value={form.meter_type} onChange={e => set("meter_type", e.target.value)}>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Meter Type *</label>
+              <select className={inpCls("meter_type")} value={form.meter_type} onChange={e => set("meter_type", e.target.value)}>
                 <option value="Residential">Residential</option>
                 <option value="Commercial">Commercial</option>
                 <option value="Small Commercial">Small Commercial</option>
               </select>
+              {errMsg("meter_type")}
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Energy Rate ($/kWh)</label>
-              <input type="number" step="0.0001" className={inputCls} value={form.energy_rate} onChange={e => set("energy_rate", e.target.value)} placeholder="0.0000" />
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Energy Rate ($/kWh) *</label>
+              <input type="number" step="0.0001" className={inpCls("energy_rate")} value={form.energy_rate} onChange={e => set("energy_rate", e.target.value)} placeholder="0.0000" />
+              {errMsg("energy_rate")}
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh)</label>
-              <input type="number" step="0.0001" className={inputCls} value={form.adder} onChange={e => set("adder", e.target.value)} placeholder="0.0000" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Start</label>
-              <input type="date" className={inputCls} value={form.contract_start_date} onChange={e => set("contract_start_date", e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract End</label>
-              <input type="date" className={inputCls} value={form.contract_end_date} onChange={e => set("contract_end_date", e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Signed Date</label>
-              <input type="date" className={inputCls} value={form.contract_signed_date} onChange={e => set("contract_signed_date", e.target.value)} />
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh) *</label>
+              <input type="number" step="0.0001" className={inpCls("adder")} value={form.adder} onChange={e => set("adder", e.target.value)} placeholder="0.0000" />
+              {errMsg("adder")}
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Sales Agent</label>
-              <select className={inputCls} value={form.sales_agent} onChange={e => set("sales_agent", e.target.value)}>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Start *</label>
+              <input type="date" className={inpCls("contract_start_date")} value={form.contract_start_date} onChange={e => set("contract_start_date", e.target.value)} />
+              {errMsg("contract_start_date")}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract End *</label>
+              <input type="date" className={inpCls("contract_end_date")} value={form.contract_end_date} onChange={e => set("contract_end_date", e.target.value)} />
+              {errMsg("contract_end_date")}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Signed Date *</label>
+              <input type="date" className={inpCls("contract_signed_date")} value={form.contract_signed_date} onChange={e => set("contract_signed_date", e.target.value)} />
+              {errMsg("contract_signed_date")}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Sales Agent *</label>
+              <select className={inpCls("sales_agent")} value={form.sales_agent} onChange={e => set("sales_agent", e.target.value)}>
                 <option value="">Select agent…</option>
                 {agents.map(a => <option key={a} value={a}>{a}</option>)}
                 {form.sales_agent && !agents.includes(form.sales_agent) && (
                   <option value={form.sales_agent}>{form.sales_agent}</option>
                 )}
               </select>
+              {errMsg("sales_agent")}
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Term</label>
-              <input className={inputCls} value={form.contract_term} onChange={e => set("contract_term", e.target.value)} placeholder="e.g. 12 months" />
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Contract Term *</label>
+              <input className={inpCls("contract_term")} value={form.contract_term} onChange={e => set("contract_term", e.target.value)} placeholder="e.g. 12 months" />
+              {errMsg("contract_term")}
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">ANXH</label>
-              <input className={inputCls} value={form.anxh} onChange={e => set("anxh", e.target.value)} />
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">ESI ID *</label>
+              <input className={inpCls("esiid")} value={form.esiid} onChange={e => set("esiid", e.target.value)} placeholder="10089010238183693001" />
+              {errMsg("esiid")}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Status</label>
-              <select className={inputCls} value={form.deal_status} onChange={e => set("deal_status", e.target.value)}>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Status *</label>
+              <select className={inpCls("deal_status")} value={form.deal_status} onChange={e => set("deal_status", e.target.value)}>
                 <option value="ACTIVE">ACTIVE</option>
                 <option value="INACTIVE">INACTIVE</option>
                 <option value="RENEWED">RENEWED</option>
               </select>
+              {errMsg("deal_status")}
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Type</label>
-              <input className={inputCls} value={form.deal_type} onChange={e => set("deal_type", e.target.value)} />
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">Deal Type *</label>
+              <input className={inpCls("deal_type")} value={form.deal_type} onChange={e => set("deal_type", e.target.value)} />
+              {errMsg("deal_type")}
             </div>
           </div>
 
@@ -483,7 +530,7 @@ export default function DealDetailPage() {
           {[
             ["Contract Start", deal.contract_start_date ? fmtDate(deal.contract_start_date) : "—"],
             ["Contract End",   deal.contract_end_date   ? fmtDate(deal.contract_end_date)   : "—"],
-            ["ANXH",           deal.anxh || "—"],
+            ["ESI ID",         deal.esiid || "—"],
           ].map(([label, value]) => (
             <div key={label}>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
