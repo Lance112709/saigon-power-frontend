@@ -350,6 +350,12 @@ export const api = {
     if (dateTo)   p.set("date_to",   dateTo);
     return request(`/api/v1/ai-agent/deals-by-agent?${p.toString()}`);
   },
+  getDealsByAgentDetails: (agent: string, dateFrom?: string, dateTo?: string) => {
+    const p = new URLSearchParams({ agent });
+    if (dateFrom) p.set("date_from", dateFrom);
+    if (dateTo)   p.set("date_to",   dateTo);
+    return request(`/api/v1/ai-agent/deals-by-agent/details?${p.toString()}`);
+  },
   getDupAddresses: () => request("/api/v1/ai-agent/data-quality/dup-addresses"),
   getDupEsiids:    () => request("/api/v1/ai-agent/data-quality/dup-esiids"),
   getAgentLeaderboard: () => request("/api/v1/ai-agent/leaderboard"),
