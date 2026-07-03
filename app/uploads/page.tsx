@@ -131,9 +131,15 @@ export default function UploadsPage() {
       fd.append("file", file);
       const res = await api.uploadFile(fd);
       if (res.detail) throw new Error(res.detail);
-      setResult(res);
-      // Pre-populate manual mapping from AI result
-      setManualMapping(res.ai_mapping?.mapping ?? {});
+      if (res.auto) {
+        // Recognized provider format — everything already imported & reconciled
+        setConfirmed(res);
+      } else {
+        setResult(res);
+        // Pre-populate manual mapping from AI result
+        setManualMapping(res.ai_mapping?.mapping ?? {});
+        if (res.suggested_month) setBillingMonth(`${res.suggested_month}-01`);
+      }
       loadUploads();
       loadSuppliers();
     } catch (e: any) {
@@ -188,7 +194,10 @@ export default function UploadsPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Upload Commission Statements</h1>
-        <p className="text-gray-500 mt-1">Upload NRG Excel or CSV files — AI will map the columns automatically</p>
+        <p className="text-gray-500 mt-1">
+          Drop any provider statement (Discount Power/Cirro, Iron Horse, Chariot, Budget Power, CleanSky) —
+          it imports, matches deals, and reconciles automatically. Unknown formats fall back to AI column mapping.
+        </p>
       </div>
 
       <Card className="mb-6">
@@ -226,9 +235,61 @@ export default function UploadsPage() {
             <div className="mt-4 space-y-3">
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 font-medium">
                 <CheckCircle className="w-5 h-5" />
-                Imported {confirmed.rows_imported} records successfully!
+                {confirmed.auto
+                  ? `${confirmed.provider_group} statement detected — ${confirmed.rows_imported} payments imported & reconciled automatically`
+                  : `Imported ${confirmed.rows_imported} records successfully!`}
                 {confirmed.rows_skipped > 0 && <span className="text-gray-500 font-normal ml-2">({confirmed.rows_skipped} rows skipped)</span>}
               </div>
+
+              {confirmed.auto && (
+                <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="font-bold text-sm text-[#0F1D5E]">
+                      Statement month{(confirmed.labels?.length ?? 0) > 1 ? "s" : ""}:{" "}
+                      {(confirmed.labels ?? [confirmed.statement_label]).join(", ")}
+                    </div>
+                    <button
+                      onClick={() => router.push("/reconciliation")}
+                      className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1">
+                      <Eye className="w-3.5 h-3.5" /> Open Reconciliation
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3 text-center mb-3">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">Total Paid</div>
+                      <div className="font-bold text-gray-800">${(confirmed.total_affinity_amount ?? 0).toFixed(2)}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">Matched to Deals</div>
+                      <div className="font-bold text-gray-800">{confirmed.matched_count}</div>
+                    </div>
+                    <div className={`rounded-lg p-3 ${confirmed.unknown_count ? "bg-yellow-50" : "bg-gray-50"}`}>
+                      <div className="text-xs text-gray-500 mb-1">Not in CRM</div>
+                      <div className={`font-bold ${confirmed.unknown_count ? "text-yellow-700" : "text-gray-800"}`}>{confirmed.unknown_count}</div>
+                    </div>
+                    <div className={`rounded-lg p-3 ${confirmed.backfilled_esiids?.length ? "bg-blue-50" : "bg-gray-50"}`}>
+                      <div className="text-xs text-gray-500 mb-1">ESI IDs Auto-Filled</div>
+                      <div className="font-bold text-blue-700">{confirmed.backfilled_esiids?.length ?? 0}</div>
+                    </div>
+                  </div>
+                  {(confirmed.runs ?? []).map((run: any) => (
+                    <div key={run.run_id} className="flex flex-wrap items-center gap-2 border-t pt-2 mt-2 text-xs">
+                      <span className="font-semibold text-gray-700">{run.billing_month}:</span>
+                      <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">{run.matched} matched</span>
+                      {run.missing > 0 && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">{run.missing} missing</span>}
+                      {run.short_paid > 0 && <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">{run.short_paid} wrong rate</span>}
+                      {run.over_paid > 0 && <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">{run.over_paid} duplicates</span>}
+                      {run.unexpected > 0 && <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">{run.unexpected} review</span>}
+                      <span className={`ml-auto font-bold ${run.total_discrepancy < -0.01 ? "text-red-600" : "text-green-600"}`}>
+                        {run.total_discrepancy < 0 ? "−" : "+"}${Math.abs(run.total_discrepancy).toFixed(2)} vs expected
+                      </span>
+                    </div>
+                  ))}
+                  {(confirmed.warnings ?? []).map((w: string, i: number) => (
+                    <div key={i} className="text-xs text-yellow-700 mt-2">⚠ {w}</div>
+                  ))}
+                </div>
+              )}
 
               {/* Amount reconciliation */}
               {confirmed.amount_received != null && (

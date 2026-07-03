@@ -397,7 +397,14 @@ export default function ReconciliationPage() {
                           />
                         )}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.esiid}</td>
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs text-slate-600">{item.esiid}</span>
+                        {item.resolution_notes?.startsWith("ROOT CAUSE:") && !item.is_resolved && (
+                          <p className="text-xs text-slate-500 mt-1 max-w-md whitespace-normal">
+                            {item.resolution_notes.replace("ROOT CAUSE: ", "")}
+                          </p>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right font-medium text-[#0F1D5E]">{fmt(item.expected_amount)}</td>
                       <td className="px-4 py-3 text-right text-slate-600">{fmt(item.actual_amount)}</td>
                       <td className="px-4 py-3 text-right">
