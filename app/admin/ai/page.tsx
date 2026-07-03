@@ -921,7 +921,7 @@ function AgentDealsModal({ agent, dateFrom, dateTo, onClose }: {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-slate-50 z-10">
                 <tr className="border-b border-slate-100 text-left">
-                  {["Customer", "Service Address", "ESI ID", "Provider", "Status", "Rate", "Closed"].map(h => (
+                  {["Customer", "Service Address", "ESI ID", "Provider", "Status", "Rate", "Signed Date"].map(h => (
                     <th key={h} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -948,7 +948,7 @@ function AgentDealsModal({ agent, dateFrom, dateTo, onClose }: {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.rate != null ? `$${Number(d.rate).toFixed(4)}` : "—"}</td>
-                    <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{fmt(d.created_at)}</td>
+                    <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{fmt(d.signed_date)}</td>
                   </tr>
                 ))}
               </tbody>
