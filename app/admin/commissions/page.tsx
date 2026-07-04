@@ -29,18 +29,29 @@ interface Commission {
 
 interface Deal {
   deal_id: string;
-  lead_id?: string;
-  customer_name: string;
-  phone?: string;
+  esiid: string;
+  customer: string;
   supplier: string;
-  plan_name: string;
-  est_kwh: number;
-  adder: number;
-  applied_rate?: number;
-  applied_type?: string;
+  plan_type: string;
+  kwh_paid: number;
+  gross_received: number;
+  first_payment: boolean;
+  excluded: boolean;
   commission: number;
-  start_date?: string;
-  end_date?: string;
+  applied: string;
+}
+
+interface CalcResult {
+  calculated: number;
+  locked: string[];
+  warnings: string[];
+  gross_total: number;
+  statement_rows: number;
+  unassigned: {
+    no_deal: { esiids: number; gross: number };
+    no_agent_on_deal: { esiids: number; gross: number };
+    agent_not_registered: Record<string, number>;
+  };
 }
 
 interface Log {
@@ -204,6 +215,23 @@ export default function CommissionsPage() {
   const [modal, setModal] = useState<Modal | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [breakdown, setBreakdown] = useState<Record<string, Deal[]>>({});
+  const [calcResult, setCalcResult] = useState<CalcResult | null>(null);
+
+  const downloadStatement = async (row: Commission) => {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const res = await fetch(`${API_BASE}/api/v1/agent-commissions/${row.id}/export`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) { alert("Export failed"); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `commission_${row.agent_name.replace(/ /g, "_")}_${row.year}-${String(row.month).padStart(2, "0")}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Load commissions
   const load = useCallback(async () => {
@@ -250,7 +278,7 @@ export default function CommissionsPage() {
       agentName: "all agents",
       action: "recalculate",
       title: "Calculate Commissions",
-      message: `Run commission calculation for ${MONTHS[month - 1]} ${year}? Any existing "Calculated" records will be overwritten. Approved/Closed/Paid records are protected.`,
+      message: `Calculate ${MONTHS[month - 1]} ${year} payouts from the provider payments imported for that month? Each agent's custom plan is applied to the dollars actually received. "Calculated" records are refreshed; Approved/Closed/Paid records are protected.`,
     });
   };
 
@@ -280,7 +308,9 @@ export default function CommissionsPage() {
     try {
       if (modal.action === "recalculate") {
         setCalcLoading(true);
-        await api.calculateAgentCommissions({ month, year });
+        const result = await api.calculateAgentCommissions({ month, year });
+        setCalcResult(result);
+        setBreakdown({});
         setCalcLoading(false);
       } else if (modal.action === "approve") {
         await api.approveAgentCommission(modal.commissionId, { notes });
@@ -390,6 +420,38 @@ export default function CommissionsPage() {
         </div>
       </div>
 
+      {/* Post-calculation report */}
+      {calcResult && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-[#0F1D5E]">
+              Calculation report — {calcResult.statement_rows.toLocaleString()} provider payment rows,{" "}
+              {fmt(calcResult.gross_total)} gross received
+            </p>
+            <button onClick={() => setCalcResult(null)} className="text-slate-300 hover:text-slate-500 text-xs">dismiss</button>
+          </div>
+          {calcResult.locked.length > 0 && (
+            <p className="text-xs text-slate-500">
+              Untouched (already approved/paid): {calcResult.locked.join(", ")}
+            </p>
+          )}
+          {(calcResult.unassigned?.no_agent_on_deal?.esiids > 0 ||
+            Object.keys(calcResult.unassigned?.agent_not_registered || {}).length > 0) && (
+            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 space-y-1">
+              {calcResult.unassigned.no_agent_on_deal.esiids > 0 && (
+                <p>{calcResult.unassigned.no_agent_on_deal.esiids} paid accounts have a deal with <b>no sales agent set</b> ({fmt(calcResult.unassigned.no_agent_on_deal.gross)} gross) — house accounts or missing data.</p>
+              )}
+              {Object.entries(calcResult.unassigned.agent_not_registered || {}).map(([nm, gross]) => (
+                <p key={nm}>Deals credit "<b>{nm}</b>" ({fmt(gross as number)} gross) but that agent isn't registered.</p>
+              ))}
+            </div>
+          )}
+          {calcResult.warnings.filter(w => w.includes("NO commission plan")).map((w, i) => (
+            <p key={i} className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{w}</p>
+          ))}
+        </div>
+      )}
+
       {/* Status flow indicator */}
       <div className="flex items-center gap-1 px-1">
         {["Calculated", "Approved", "Closed Out", "Paid"].map((s, i) => (
@@ -475,6 +537,10 @@ export default function CommissionsPage() {
                           {row.status === "paid" && (
                             <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 text-slate-400 border border-slate-200">Paid ✓</span>
                           )}
+                          <button onClick={() => downloadStatement(row)} title="Download Excel statement for this agent"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-[#0F1D5E] hover:bg-slate-100 border border-slate-200 transition-colors">
+                            <FileText className="w-3 h-3" />
+                          </button>
                           {row.status === "calculated" && (
                             <button onClick={handleCalculate} title="Recalculate"
                               className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-[#0F1D5E] hover:bg-slate-100 border border-slate-200 transition-colors">
@@ -490,8 +556,8 @@ export default function CommissionsPage() {
                       <tr key={`${row.id}-breakdown`} className="bg-[#F8FAFF] border-b border-slate-200">
                         <td colSpan={7} className="px-6 py-4">
                           <div className="mb-2 flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Deal Breakdown — {row.agent_name}</span>
-                            <span className="text-xs text-slate-400">· Formula: kWh × Adder = Commission/month</span>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Paid Deals — {row.agent_name}</span>
+                            <span className="text-xs text-slate-400">· computed from provider payments received this month</span>
                           </div>
                           {deals.length === 0 ? (
                             <p className="text-xs text-slate-400 py-2">Loading deals…</p>
@@ -500,39 +566,39 @@ export default function CommissionsPage() {
                               <thead>
                                 <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-200">
                                   <th className="pb-2 text-left">Customer</th>
-                                  <th className="pb-2 text-left">Supplier / REP</th>
-                                  <th className="pb-2 text-right">Est. kWh</th>
-                                  <th className="pb-2 text-right">Rate Applied</th>
-                                  <th className="pb-2 text-right">Commission</th>
-                                  <th className="pb-2 text-left pl-4">Contract Period</th>
+                                  <th className="pb-2 text-left">Provider</th>
+                                  <th className="pb-2 text-right">kWh Paid</th>
+                                  <th className="pb-2 text-right">Gross Received</th>
+                                  <th className="pb-2 text-left pl-4">How Calculated</th>
+                                  <th className="pb-2 text-right">Agent Commission</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                 {deals.map(d => (
-                                  <tr key={d.deal_id} className="hover:bg-white/60">
-                                    <td className="py-2 pr-4 font-medium text-slate-700">{d.customer_name}</td>
+                                  <tr key={d.esiid} className="hover:bg-white/60">
+                                    <td className="py-2 pr-4">
+                                      <span className="font-medium text-slate-700">{d.customer || "—"}</span>
+                                      {d.first_payment && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">NEW</span>
+                                      )}
+                                      <span className="block font-mono text-[10px] text-slate-400">{d.esiid}</span>
+                                    </td>
                                     <td className="py-2 pr-4 text-slate-500">{d.supplier}</td>
-                                    <td className="py-2 pr-4 text-right text-slate-600">{d.est_kwh.toLocaleString()}</td>
-                                    <td className="py-2 pr-4 text-right text-slate-600">
-                                      {d.applied_type === "excluded"
-                                        ? <span className="text-red-400 font-semibold">Excluded</span>
-                                        : d.applied_type === "flat_monthly"
-                                        ? <span>${(d.applied_rate ?? d.adder).toFixed(4)}/acct</span>
-                                        : <span>${(d.applied_rate ?? d.adder).toFixed(4)}/kWh</span>
-                                      }
+                                    <td className="py-2 pr-4 text-right text-slate-600">{(d.kwh_paid ?? 0).toLocaleString()}</td>
+                                    <td className="py-2 pr-4 text-right text-slate-600">{fmt(d.gross_received)}</td>
+                                    <td className="py-2 pl-4 text-slate-500">
+                                      {d.excluded
+                                        ? <span className="text-red-400 font-semibold">Excluded — {d.plan_type}</span>
+                                        : d.applied}
                                     </td>
-                                    <td className="py-2 pr-4 text-right font-semibold text-emerald-600">{fmt(d.commission)}</td>
-                                    <td className="py-2 pl-4 text-slate-400">
-                                      {d.start_date ? d.start_date.slice(0,10) : "—"} → {d.end_date ? d.end_date.slice(0,10) : "—"}
-                                    </td>
+                                    <td className="py-2 text-right font-semibold text-emerald-600">{fmt(d.commission)}</td>
                                   </tr>
                                 ))}
                               </tbody>
                               <tfoot>
                                 <tr className="border-t-2 border-slate-200 font-semibold">
-                                  <td colSpan={4} className="pt-2 text-right text-slate-500">Total:</td>
-                                  <td className="pt-2 pr-4 text-right text-emerald-600">{fmt(deals.reduce((s,d) => s + d.commission, 0))}</td>
-                                  <td />
+                                  <td colSpan={5} className="pt-2 text-right text-slate-500">Total from paid deals:</td>
+                                  <td className="pt-2 text-right text-emerald-600">{fmt(deals.reduce((s,d) => s + d.commission, 0))}</td>
                                 </tr>
                               </tfoot>
                             </table>

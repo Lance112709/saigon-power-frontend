@@ -18,11 +18,13 @@ const SUPPLIERS = [
   "Cirro Energy", "True Power", "Hudson Energy", "NRG",
 ];
 
+// A commission plan is a stack of components. Every dollar is computed from
+// what providers ACTUALLY paid that month — never from estimates.
 const COMM_TYPES = [
-  { value: "per_kwh",       label: "$/kWh / mo" },
-  { value: "flat_monthly",  label: "$/account / mo" },
-  { value: "flat_per_deal", label: "$ one-time / deal" },
-  { value: "percentage",    label: "% of commission" },
+  { value: "flat_per_deal",         label: "One-time $ per new deal",   hint: "paid once, in the month the provider's first payment for the deal arrives" },
+  { value: "per_kwh",               label: "$ per kWh (residual)",      hint: "monthly · rate × actual kWh the provider paid on" },
+  { value: "percent_of_commission", label: "% of commission received",  hint: "monthly · % of the gross commission dollars received" },
+  { value: "flat_monthly",          label: "Flat $ per month",          hint: "fixed monthly amount (only in months with paid deals)" },
 ];
 
 const PLAN_TYPES = [
@@ -32,23 +34,62 @@ const PLAN_TYPES = [
   "Solar Buy-Back",
 ];
 
-function commLabel(type: string, rate: number): string {
-  if (!rate && rate !== 0) return "—";
-  switch (type) {
-    case "per_kwh":       return `$${rate}/kWh`;
-    case "flat_monthly":  return `$${rate}/mo`;
-    case "flat_per_deal": return `$${rate}/deal`;
-    case "percentage":    return `${rate}%`;
-    default:              return `${rate}`;
+type PlanComponent = { type: string; value: string; supplier: string };
+
+function componentLabel(c: { type: string; value?: string | number; supplier?: string }): string {
+  const v = c.value ?? "";
+  const scope = c.supplier ? ` (${c.supplier})` : "";
+  switch (c.type) {
+    case "per_kwh":               return `$${v}/kWh${scope}`;
+    case "flat_monthly":          return `$${v}/mo${scope}`;
+    case "flat_per_deal":         return `$${v}/new deal${scope}`;
+    case "percent_of_commission": return `${v}% of received${scope}`;
+    default:                      return `${v}${scope}`;
   }
+}
+
+/** Read rules in either shape (v2 components or legacy default+overrides). */
+function rulesToComponents(rules: any): PlanComponent[] {
+  rules = rules || {};
+  const legacyType = (t: string) => (t === "percentage" ? "percent_of_commission" : t || "per_kwh");
+  if (Array.isArray(rules.components)) {
+    return rules.components.map((c: any) => ({
+      type: c.type || "per_kwh",
+      value: String(c.rate ?? c.amount ?? c.percent ?? ""),
+      supplier: c.supplier || "",
+    }));
+  }
+  const out: PlanComponent[] = [];
+  for (const o of rules.overrides || []) {
+    if (o.rate != null && o.rate !== "") out.push({ type: legacyType(o.type), value: String(o.rate), supplier: o.supplier || "" });
+  }
+  if (rules.default_rate != null && rules.default_rate !== "" && rules.default_rate !== 0) {
+    out.push({ type: legacyType(rules.default_type), value: String(rules.default_rate), supplier: "" });
+  }
+  return out;
+}
+
+function componentsToRules(components: PlanComponent[], exclude_plan_types: string[]) {
+  return {
+    version: 2,
+    components: components
+      .filter(c => c.value !== "" && !isNaN(parseFloat(c.value)))
+      .map(c => {
+        const n = parseFloat(c.value);
+        const base: any = { type: c.type, supplier: c.supplier || null };
+        if (c.type === "per_kwh") base.rate = n;
+        else if (c.type === "percent_of_commission") base.percent = n;
+        else base.amount = n;
+        return base;
+      }),
+    exclude_plan_types,
+  };
 }
 
 const EMPTY = { name: "", email: "", phone: "", agent_type: "" };
 
 const EMPTY_RULES = {
-  default_type: "per_kwh",
-  default_rate: "",
-  overrides: [] as { supplier: string; type: string; rate: string }[],
+  components: [] as PlanComponent[],
   exclude_plan_types: [] as string[],
 };
 
@@ -102,13 +143,7 @@ export default function AgentsPage() {
     setEditForm({ name: a.name || "", email: a.email || "", phone: a.phone || "", agent_type: a.agent_type || "" });
     const rules = a.commission_rules || {};
     setEditRules({
-      default_type: rules.default_type || "per_kwh",
-      default_rate: rules.default_rate != null ? String(rules.default_rate) : "",
-      overrides: (rules.overrides || []).map((o: any) => ({
-        supplier: o.supplier || "",
-        type: o.type || "per_kwh",
-        rate: o.rate != null ? String(o.rate) : "",
-      })),
+      components: rulesToComponents(rules),
       exclude_plan_types: rules.exclude_plan_types || [],
     });
     setEditError("");
@@ -152,18 +187,18 @@ export default function AgentsPage() {
     setBulkApplying(false);
   };
 
-  const addOverride = () => {
-    setEditRules(r => ({ ...r, overrides: [...r.overrides, { supplier: "", type: "per_kwh", rate: "" }] }));
+  const addComponent = () => {
+    setEditRules(r => ({ ...r, components: [...r.components, { type: "flat_per_deal", value: "", supplier: "" }] }));
   };
 
-  const removeOverride = (i: number) => {
-    setEditRules(r => ({ ...r, overrides: r.overrides.filter((_, idx) => idx !== i) }));
+  const removeComponent = (i: number) => {
+    setEditRules(r => ({ ...r, components: r.components.filter((_, idx) => idx !== i) }));
   };
 
-  const setOverride = (i: number, field: string, val: string) => {
+  const setComponent = (i: number, field: keyof PlanComponent, val: string) => {
     setEditRules(r => ({
       ...r,
-      overrides: r.overrides.map((o, idx) => idx === i ? { ...o, [field]: val } : o),
+      components: r.components.map((c, idx) => idx === i ? { ...c, [field]: val } : c),
     }));
   };
 
@@ -177,14 +212,7 @@ export default function AgentsPage() {
     setEditSaving(true);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     try {
-      const commission_rules = {
-        default_type:        editRules.default_type || "per_kwh",
-        default_rate:        editRules.default_rate !== "" ? parseFloat(String(editRules.default_rate)) : null,
-        overrides:           (editRules.overrides || [])
-                               .filter(o => o.supplier && o.rate !== "")
-                               .map(o => ({ supplier: o.supplier, type: o.type, rate: parseFloat(String(o.rate)) })),
-        exclude_plan_types:  editRules.exclude_plan_types || [],
-      };
+      const commission_rules = componentsToRules(editRules.components, editRules.exclude_plan_types || []);
 
       const res = await api.updateSalesAgent(editAgent.id, { ...editForm, commission_rules });
       if (!res || (typeof res === "object" && "error" in res)) {
@@ -194,11 +222,10 @@ export default function AgentsPage() {
       // Verify the save actually persisted by reading back from DB
       const freshAgents: any[] = await api.getSalesAgents();
       const saved = freshAgents.find((a: any) => a.id === editAgent.id);
-      const savedRate = saved?.commission_rules?.default_rate ?? null;
-      const sentRate  = commission_rules.default_rate;
-      if (sentRate !== null && savedRate !== sentRate) {
+      const savedCount = (saved?.commission_rules?.components || []).length;
+      if (savedCount !== commission_rules.components.length) {
         throw new Error(
-          `Save did not persist! API: ${apiUrl} | Sent rate: ${sentRate} | DB has: ${savedRate}. ` +
+          `Save did not persist! API: ${apiUrl} | Sent ${commission_rules.components.length} plan rules, DB has ${savedCount}. ` +
           `The backend may have old code — redeploy Railway.`
         );
       }
@@ -343,8 +370,7 @@ export default function AgentsPage() {
                 <tbody>
                   {agents.map(a => {
                     const rules = a.commission_rules || {};
-                    const hasRate = rules.default_rate != null && rules.default_rate !== "";
-                    const hasCommission = hasRate || (rules.exclude_plan_types || []).length > 0 || (rules.overrides || []).length > 0;
+                    const comps = rulesToComponents(rules);
                     const exclusions: string[] = rules.exclude_plan_types || [];
                     const isInhouse = a.agent_type === "Inhouse Agent";
                     return (
@@ -363,15 +389,19 @@ export default function AgentsPage() {
                           ) : "—"}
                         </td>
                         <td className="px-4 py-3.5">
-                          {hasRate ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">
-                              <DollarSign className="w-3 h-3" />
-                              {commLabel(rules.default_type, rules.default_rate)}
-                            </span>
-                          ) : hasCommission ? (
-                            <span className="text-xs text-amber-600 font-semibold">Exclusions only</span>
+                          {comps.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {comps.map((c, i) => (
+                                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                                  <DollarSign className="w-3 h-3" />
+                                  {componentLabel({ ...c, value: c.value })}
+                                </span>
+                              ))}
+                            </div>
+                          ) : exclusions.length > 0 ? (
+                            <span className="text-xs text-amber-600 font-semibold">Exclusions only — pays $0</span>
                           ) : (
-                            <span className="text-xs text-slate-300 italic">Not set</span>
+                            <span className="text-xs text-red-500 font-semibold">No plan — pays $0</span>
                           )}
                         </td>
                         <td className="px-4 py-3.5">
@@ -505,95 +535,84 @@ export default function AgentsPage() {
                     )}
                   </div>
 
-                  {/* Default rate */}
-                  <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                    <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Default Commission Rate</p>
-                    <p className="text-xs text-slate-400">Applies to all non-excluded plans and suppliers.</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className={labelCls}>Commission Type</label>
-                        <select className={inputCls} value={editRules.default_type}
-                          onChange={e => setEditRules(r => ({ ...r, default_type: e.target.value }))}>
-                          {COMM_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className={labelCls}>
-                          Rate {editRules.default_type === "percentage" ? "(%)" : editRules.default_type === "per_kwh" ? "($/kWh)" : "($)"}
-                        </label>
-                        <input type="number" step="0.0001" min="0" className={inputCls}
-                          placeholder={editRules.default_type === "per_kwh" ? "e.g. 0.0005" : "e.g. 5.00"}
-                          value={editRules.default_rate}
-                          onChange={e => setEditRules(r => ({ ...r, default_rate: e.target.value }))} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Supplier overrides */}
+                  {/* Commission plan builder */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Supplier Overrides</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Different rate for specific REPs</p>
+                        <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Commission Plan</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Stack any pay rules — all computed from dollars the providers actually paid.
+                        </p>
                       </div>
-                      <button onClick={addOverride}
+                      <button onClick={addComponent}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EEF1FA] text-[#0F1D5E] text-xs font-semibold hover:bg-[#0F1D5E] hover:text-white transition-colors">
-                        <Plus className="w-3.5 h-3.5" /> Add Override
+                        <Plus className="w-3.5 h-3.5" /> Add Pay Rule
                       </button>
                     </div>
-                    {editRules.overrides.length === 0 ? (
-                      <div className="text-center py-5 border-2 border-dashed border-slate-200 rounded-xl">
-                        <p className="text-xs text-slate-400">No supplier overrides set.</p>
+                    {editRules.components.length === 0 ? (
+                      <div className="text-center py-6 border-2 border-dashed border-red-200 bg-red-50/40 rounded-xl">
+                        <p className="text-xs font-semibold text-red-500">No pay rules — this agent earns $0.</p>
+                        <p className="text-xs text-slate-400 mt-1">Click "Add Pay Rule" to build their plan.</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {editRules.overrides.map((o, i) => (
-                          <div key={i} className="flex items-end gap-2 bg-slate-50 rounded-xl p-3">
-                            <div className="flex-1">
-                              <label className={labelCls}>Supplier</label>
-                              <select className={inputCls} value={o.supplier} onChange={e => setOverride(i, "supplier", e.target.value)}>
-                                <option value="">— Select —</option>
-                                {SUPPLIERS.map(s => <option key={s} value={s}>{s}</option>)}
-                              </select>
+                        {editRules.components.map((c, i) => {
+                          const meta = COMM_TYPES.find(t => t.value === c.type);
+                          const unit = c.type === "percent_of_commission" ? "%" : c.type === "per_kwh" ? "$/kWh" : "$";
+                          return (
+                            <div key={i} className="bg-slate-50 rounded-xl p-3 space-y-2">
+                              <div className="flex items-end gap-2">
+                                <div className="flex-[2]">
+                                  <label className={labelCls}>Pay Rule</label>
+                                  <select className={inputCls} value={c.type} onChange={e => setComponent(i, "type", e.target.value)}>
+                                    {COMM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                  </select>
+                                </div>
+                                <div className="w-28">
+                                  <label className={labelCls}>Amount ({unit})</label>
+                                  <input type="number" step="0.0001" min="0" className={inputCls}
+                                    placeholder={c.type === "per_kwh" ? "0.001" : c.type === "percent_of_commission" ? "30" : "20"}
+                                    value={c.value} onChange={e => setComponent(i, "value", e.target.value)} />
+                                </div>
+                                <div className="flex-1">
+                                  <label className={labelCls}>Provider</label>
+                                  <select className={inputCls} value={c.supplier} onChange={e => setComponent(i, "supplier", e.target.value)}>
+                                    <option value="">All providers</option>
+                                    {SUPPLIERS.map(s => <option key={s} value={s}>{s}</option>)}
+                                  </select>
+                                </div>
+                                <button onClick={() => removeComponent(i)} className="pb-2.5 text-slate-300 hover:text-red-500 transition-colors">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                              {meta && <p className="text-[11px] text-slate-400 pl-1">{meta.hint}</p>}
                             </div>
-                            <div className="flex-1">
-                              <label className={labelCls}>Type</label>
-                              <select className={inputCls} value={o.type} onChange={e => setOverride(i, "type", e.target.value)}>
-                                {COMM_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                              </select>
-                            </div>
-                            <div className="w-24">
-                              <label className={labelCls}>Rate</label>
-                              <input type="number" step="0.0001" min="0" className={inputCls}
-                                value={o.rate} onChange={e => setOverride(i, "rate", e.target.value)} />
-                            </div>
-                            <button onClick={() => removeOverride(i)} className="pb-0.5 text-slate-300 hover:text-red-500 transition-colors">
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
 
                   {/* Preview */}
-                  {(editRules.default_rate !== "" || editRules.exclude_plan_types.length > 0) && (
+                  {(editRules.components.length > 0 || editRules.exclude_plan_types.length > 0) && (
                     <div className="bg-[#EEF1FA] rounded-xl p-4 space-y-2">
-                      <p className="text-xs font-bold text-[#0F1D5E]">Summary</p>
+                      <p className="text-xs font-bold text-[#0F1D5E]">Plan Summary</p>
+                      {editRules.components.filter(c => c.value !== "").map((c, i) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="text-slate-500">{c.supplier || "All providers"}</span>
+                          <span className="font-semibold text-[#0F1D5E]">{componentLabel(c)}</span>
+                        </div>
+                      ))}
                       {editRules.exclude_plan_types.length > 0 && (
-                        <div className="flex justify-between text-xs">
+                        <div className="flex justify-between text-xs border-t border-[#0F1D5E]/10 pt-2">
                           <span className="text-slate-500">No commission on</span>
                           <span className="font-semibold text-red-600">{editRules.exclude_plan_types.join(", ")}</span>
                         </div>
                       )}
-                      {editRules.default_rate !== "" && (
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500">All other plans</span>
-                          <span className="font-semibold text-[#0F1D5E]">
-                            {commLabel(editRules.default_type, parseFloat(editRules.default_rate))}
-                          </span>
-                        </div>
-                      )}
+                      <p className="text-[11px] text-slate-400 pt-1">
+                        Payouts are calculated each month from imported provider statements — if a provider
+                        doesn't pay on an account, no agent commission is owed on it.
+                      </p>
                     </div>
                   )}
                 </div>
