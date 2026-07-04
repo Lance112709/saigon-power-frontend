@@ -181,7 +181,7 @@ function PaymentsReceived({ runs, onSelectRun }: { runs: any[]; onSelectRun: (r:
             <Tooltip content={<ChartTooltip />} cursor={{ fill: "#0F1D5E08" }} />
             {visibleProviders.map(p => (
               <Bar key={p} dataKey={p} stackId="received" fill={colorOf(p)}
-                stroke="#ffffff" strokeWidth={1} maxBarSize={44} />
+                stroke="#ffffff" strokeWidth={1} maxBarSize={44} isAnimationActive={false} />
             ))}
           </BarChart>
         </ResponsiveContainer>
