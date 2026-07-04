@@ -3,8 +3,14 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import {
   DollarSign, AlertTriangle, CheckCircle, TrendingDown, Copy, HelpCircle,
-  RefreshCw, X, Search, Download,
+  RefreshCw, X, Search, Download, Banknote,
 } from "lucide-react";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+} from "recharts";
+
+// Validated categorical palette (CVD-safe order) — one fixed color per provider.
+const SERIES_COLORS = ["#2a78d6", "#1baf7a", "#eda100", "#008300", "#4a3aa7"];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -52,25 +58,177 @@ const issueCount = (r: any) =>
   (r.missing_count ?? 0) + (r.short_paid_count ?? 0) + (r.over_paid_count ?? 0);
 const totalItems = (r: any) => issueCount(r) + (r.matched_count ?? 0) + (r.unexpected_count ?? 0);
 
-function StatCard({ title, value, sub, icon: Icon, tone = "navy" }: {
-  title: string; value: string; sub?: string; icon: any; tone?: "navy" | "good" | "bad" | "warn";
-}) {
-  const tones: Record<string, { chip: string; icon: string; value: string }> = {
-    navy: { chip: "bg-[#EEF1FA]", icon: "text-[#0F1D5E]", value: "text-[#0F1D5E]" },
-    good: { chip: "bg-emerald-50", icon: "text-emerald-600", value: "text-emerald-700" },
-    bad:  { chip: "bg-red-50", icon: "text-red-600", value: "text-red-700" },
-    warn: { chip: "bg-orange-50", icon: "text-orange-600", value: "text-orange-700" },
-  };
-  const t = tones[tone];
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start gap-4">
-      <div className={`w-11 h-11 rounded-xl ${t.chip} flex items-center justify-center shrink-0`}>
-        <Icon className={`w-5 h-5 ${t.icon}`} />
+/** "2026-05" → "May '26" for chart ticks */
+function shortMonth(m: string) {
+  return `${MONTHS[parseInt(m.slice(5, 7), 10) - 1]?.slice(0, 3)} '${m.slice(2, 4)}`;
+}
+
+function PaymentsReceived({ runs, onSelectRun }: { runs: any[]; onSelectRun: (r: any) => void }) {
+  const [rangeMonths, setRangeMonths] = useState(12);
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  // Fixed provider order (by all-time received) → stable colors regardless of filters
+  const providers = useMemo(() => {
+    const totals = new Map<string, number>();
+    runs.forEach(r => {
+      const n = r.suppliers?.name ?? "Unknown";
+      totals.set(n, (totals.get(n) ?? 0) + (r.total_actual ?? 0));
+    });
+    return Array.from(totals.entries()).sort((a, b) => b[1] - a[1]).map(([n]) => n);
+  }, [runs]);
+  const colorOf = (name: string) => SERIES_COLORS[providers.indexOf(name) % SERIES_COLORS.length];
+
+  const months = useMemo(() => {
+    const all = Array.from(new Set(runs.map(r => r.billing_month.slice(0, 7)))).sort();
+    return rangeMonths > 0 ? all.slice(-rangeMonths) : all;
+  }, [runs, rangeMonths]);
+
+  const runAt = useMemo(() => {
+    const m = new Map<string, any>();
+    runs.forEach(r => m.set(`${r.billing_month.slice(0, 7)}|${r.suppliers?.name ?? "Unknown"}`, r));
+    return m;
+  }, [runs]);
+
+  const chartData = useMemo(() => months.map(m => {
+    const row: any = { month: m, label: shortMonth(m), total: 0 };
+    providers.forEach(p => {
+      const run = runAt.get(`${m}|${p}`);
+      const v = run ? (run.total_actual ?? 0) : 0;
+      row[p] = v;
+      if (!hidden.has(p)) row.total += v;
+    });
+    return row;
+  }), [months, providers, runAt, hidden]);
+
+  const visibleProviders = providers.filter(p => !hidden.has(p));
+  const rangeTotal = chartData.reduce((s, r) => s + r.total, 0);
+
+  const toggle = (p: string) => setHidden(prev => {
+    const next = new Set(prev);
+    next.has(p) ? next.delete(p) : next.add(p);
+    return next;
+  });
+
+  const ChartTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const total = payload.reduce((s: number, e: any) => s + (e.value || 0), 0);
+    return (
+      <div className="bg-[#0F1D5E] text-white rounded-xl px-3.5 py-2.5 shadow-xl text-xs space-y-1">
+        <p className="font-bold text-sm">{label}</p>
+        {[...payload].reverse().filter((e: any) => e.value > 0).map((e: any) => (
+          <p key={e.dataKey} className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full inline-block" style={{ background: e.fill }} />
+            <span className="text-white/80">{e.dataKey}</span>
+            <span className="ml-auto font-semibold tabular-nums pl-4">{fmt(e.value)}</span>
+          </p>
+        ))}
+        <p className="border-t border-white/20 pt-1 flex justify-between font-bold">
+          <span>Total</span><span className="tabular-nums">{fmt(total)}</span>
+        </p>
       </div>
-      <div className="min-w-0">
-        <p className="text-[13px] text-slate-500 font-medium">{title}</p>
-        <p className={`text-[26px] leading-8 font-bold mt-0.5 tabular-nums ${t.value}`}>{value}</p>
-        {sub && <p className="text-xs text-slate-400 mt-1 truncate">{sub}</p>}
+    );
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-[#EEF1FA] flex items-center justify-center">
+            <Banknote className="w-4.5 h-4.5 text-[#0F1D5E]" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-[#0F1D5E]">Payments Received by Month</h2>
+            <p className="text-xs text-slate-400">
+              {fmt(rangeTotal)} across {months.length} month{months.length !== 1 ? "s" : ""} — click a provider to show/hide it, click any amount below to open its reconciliation
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {[{ v: 6, l: "6 mo" }, { v: 12, l: "12 mo" }, { v: 0, l: "All" }].map(o => (
+            <button key={o.v} onClick={() => setRangeMonths(o.v)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                rangeMonths === o.v ? "bg-[#0F1D5E] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}>{o.l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Legend / provider filter chips */}
+      <div className="px-5 pt-4 flex flex-wrap gap-2">
+        {providers.map(p => {
+          const off = hidden.has(p);
+          return (
+            <button key={p} onClick={() => toggle(p)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                off ? "bg-white border-slate-200 text-slate-300" : "border-transparent text-slate-700"
+              }`}
+              style={off ? {} : { background: `${colorOf(p)}18`, borderColor: `${colorOf(p)}40` }}>
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: off ? "#cbd5e1" : colorOf(p) }} />
+              {p}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Stacked monthly chart */}
+      <div className="px-3 pt-2">
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={chartData} margin={{ top: 12, right: 16, left: 4, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="#eef1f6" />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
+              tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={48} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: "#0F1D5E08" }} />
+            {visibleProviders.map(p => (
+              <Bar key={p} dataKey={p} stackId="received" fill={colorOf(p)}
+                stroke="#ffffff" strokeWidth={1} maxBarSize={44} />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Month × provider matrix */}
+      <div className="overflow-x-auto border-t border-slate-100 mt-2">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50">
+              <th className="px-5 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider sticky left-0 bg-slate-50">Month</th>
+              {visibleProviders.map(p => (
+                <th key={p} className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ background: colorOf(p) }} />{p}
+                  </span>
+                </th>
+              ))}
+              <th className="px-5 py-2.5 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...months].reverse().map(m => {
+              const rowTotal = visibleProviders.reduce((s, p) => s + (runAt.get(`${m}|${p}`)?.total_actual ?? 0), 0);
+              return (
+                <tr key={m} className="border-t border-slate-100 hover:bg-slate-50/60">
+                  <td className="px-5 py-2.5 font-semibold text-[#0F1D5E] whitespace-nowrap sticky left-0 bg-white">{fmtMonth(`${m}-01`)}</td>
+                  {visibleProviders.map(p => {
+                    const run = runAt.get(`${m}|${p}`);
+                    return (
+                      <td key={p} className="px-4 py-2.5 text-right tabular-nums">
+                        {run ? (
+                          <button onClick={() => onSelectRun(run)}
+                            className="text-slate-700 hover:text-[#0F1D5E] hover:underline font-medium"
+                            title={`Open ${p} — ${fmtMonth(`${m}-01`)}`}>
+                            {fmt(run.total_actual)}
+                          </button>
+                        ) : <span className="text-slate-200">—</span>}
+                      </td>
+                    );
+                  })}
+                  <td className="px-5 py-2.5 text-right font-bold text-[#0F1D5E] tabular-nums">{fmt(rowTotal)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -226,77 +384,94 @@ export default function ReconciliationPage() {
 
   const selectClass = "border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 text-slate-700";
 
+  const allTimeReceived = runs.reduce((s, r) => s + (r.total_actual ?? 0), 0);
+
+  const heroTile = "rounded-2xl bg-white/10 backdrop-blur-sm border border-white/15 px-4 py-3.5";
+
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-6">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0F1D5E]">Commission Reconciliation</h1>
-          <p className="text-slate-500 mt-1 text-sm">
-            Every statement upload reconciles automatically — review and resolve flagged items here.
-          </p>
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0F1D5E] via-[#182a80] to-[#2a3f9e] text-white p-6 shadow-lg">
+        <div className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-32 right-40 w-80 h-80 rounded-full bg-white/5" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Commission Reconciliation</h1>
+            <p className="text-white/60 mt-1 text-sm">
+              Every statement upload reconciles automatically — review and resolve flagged items here.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {runs.length > 0 && (
+              <button
+                onClick={() => {
+                  const months = runs.map(r => r.billing_month.slice(0, 7));
+                  const start = months.reduce((a, b) => (a < b ? a : b));
+                  const end = months.reduce((a, b) => (a > b ? a : b));
+                  downloadFile(`/api/v1/reconciliation/export?start=${start}&end=${end}&format=xlsx`,
+                    `reconciliation_${start}_${end}.xlsx`).catch(() => alert("Export failed"));
+                }}
+                title="Excel report: every provider, every month, plus all open issues"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-colors"
+              >
+                <Download className="w-4 h-4" /> Export All
+              </button>
+            )}
+            {selectedRun && (
+              <button
+                onClick={rerunSelectedMonth}
+                disabled={rerunning}
+                title="Re-check this month against the current deal book (after fixing deals or backfilling ESI IDs)"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-[#0F1D5E] text-sm font-semibold hover:bg-white/90 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${rerunning ? "animate-spin" : ""}`} />
+                {rerunning ? "Re-checking…" : `Re-check ${fmtMonth(selectedRun.billing_month)}`}
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {runs.length > 0 && (
-            <button
-              onClick={() => {
-                const months = runs.map(r => r.billing_month.slice(0, 7));
-                const start = months.reduce((a, b) => (a < b ? a : b));
-                const end = months.reduce((a, b) => (a > b ? a : b));
-                downloadFile(`/api/v1/reconciliation/export?start=${start}&end=${end}&format=xlsx`,
-                  `reconciliation_${start}_${end}.xlsx`).catch(() => alert("Export failed"));
-              }}
-              title="Excel report: every provider, every month, plus all open issues"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-[#0F1D5E] text-sm font-semibold hover:bg-slate-50 transition-colors"
-            >
-              <Download className="w-4 h-4" /> Export All
-            </button>
-          )}
-          {selectedRun && (
-            <button
-              onClick={rerunSelectedMonth}
-              disabled={rerunning}
-              title="Re-check this month against the current deal book (after fixing deals or backfilling ESI IDs)"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-[#0F1D5E] text-sm font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${rerunning ? "animate-spin" : ""}`} />
-              {rerunning ? "Re-checking…" : `Re-check ${fmtMonth(selectedRun.billing_month)}`}
-            </button>
-          )}
+
+        <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+          <div className={heroTile}>
+            <p className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+              <DollarSign className="w-3.5 h-3.5" /> Latest Statements
+            </p>
+            <p className="text-2xl font-bold mt-1 tabular-nums">{fmt(kpi.received)}</p>
+            <p className="text-[11px] text-white/50 mt-0.5 truncate">
+              {latestBySupplier.length} providers · {kpi.monthRange}
+            </p>
+          </div>
+          <div className={heroTile}>
+            <p className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+              <Banknote className="w-3.5 h-3.5" /> All-Time Received
+            </p>
+            <p className="text-2xl font-bold mt-1 tabular-nums">{fmt(allTimeReceived)}</p>
+            <p className="text-[11px] text-white/50 mt-0.5">verified across every statement</p>
+          </div>
+          <div className={heroTile}>
+            <p className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-300" /> Missing Payments
+            </p>
+            <p className={`text-2xl font-bold mt-1 tabular-nums ${kpi.missing > 0 ? "text-amber-300" : "text-emerald-300"}`}>
+              {kpi.missing}
+            </p>
+            <p className="text-[11px] text-white/50 mt-0.5">active accounts not on latest statement</p>
+          </div>
+          <div className={heroTile}>
+            <p className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+              <TrendingDown className="w-3.5 h-3.5 text-rose-300" /> Under Expected
+            </p>
+            <p className={`text-2xl font-bold mt-1 tabular-nums ${kpi.underpaid > 0.01 ? "text-rose-300" : "text-emerald-300"}`}>
+              {fmt(kpi.underpaid)}
+            </p>
+            <p className="text-[11px] text-white/50 mt-0.5">{kpi.wrongRate} wrong-rate accounts · latest month</p>
+          </div>
         </div>
       </div>
 
-      {/* Portfolio snapshot — latest statement per provider */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Received — Latest Statements"
-          value={fmt(kpi.received)}
-          sub={kpi.monthRange && `${latestBySupplier.length} providers · ${kpi.monthRange}`}
-          icon={DollarSign}
-        />
-        <StatCard
-          title="Missing Payments"
-          value={String(kpi.missing)}
-          sub="active accounts not on latest statement"
-          icon={AlertTriangle}
-          tone={kpi.missing > 0 ? "bad" : "good"}
-        />
-        <StatCard
-          title="Wrong Rate"
-          value={String(kpi.wrongRate)}
-          sub="accounts paid below contract rate"
-          icon={TrendingDown}
-          tone={kpi.wrongRate > 0 ? "warn" : "good"}
-        />
-        <StatCard
-          title="Under Expected"
-          value={fmt(kpi.underpaid)}
-          sub="latest month, all providers"
-          icon={kpi.underpaid > 0.01 ? TrendingDown : CheckCircle}
-          tone={kpi.underpaid > 0.01 ? "bad" : "good"}
-        />
-      </div>
+      {/* Payments received by month × provider */}
+      {runs.length > 0 && <PaymentsReceived runs={runs} onSelectRun={setSelectedRun} />}
 
       {/* Runs + Items */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
