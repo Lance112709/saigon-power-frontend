@@ -3,8 +3,25 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import {
   DollarSign, AlertTriangle, CheckCircle, TrendingDown, Copy, HelpCircle,
-  RefreshCw, X, Search,
+  RefreshCw, X, Search, Download,
 } from "lucide-react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+async function downloadFile(path: string, filename: string) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Export failed");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function fmt(n: number | null | undefined) {
   if (n == null) return "—";
@@ -220,17 +237,34 @@ export default function ReconciliationPage() {
             Every statement upload reconciles automatically — review and resolve flagged items here.
           </p>
         </div>
-        {selectedRun && (
-          <button
-            onClick={rerunSelectedMonth}
-            disabled={rerunning}
-            title="Re-check this month against the current deal book (after fixing deals or backfilling ESI IDs)"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-[#0F1D5E] text-sm font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${rerunning ? "animate-spin" : ""}`} />
-            {rerunning ? "Re-checking…" : `Re-check ${fmtMonth(selectedRun.billing_month)}`}
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {runs.length > 0 && (
+            <button
+              onClick={() => {
+                const months = runs.map(r => r.billing_month.slice(0, 7));
+                const start = months.reduce((a, b) => (a < b ? a : b));
+                const end = months.reduce((a, b) => (a > b ? a : b));
+                downloadFile(`/api/v1/reconciliation/export?start=${start}&end=${end}&format=xlsx`,
+                  `reconciliation_${start}_${end}.xlsx`).catch(() => alert("Export failed"));
+              }}
+              title="Excel report: every provider, every month, plus all open issues"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-[#0F1D5E] text-sm font-semibold hover:bg-slate-50 transition-colors"
+            >
+              <Download className="w-4 h-4" /> Export All
+            </button>
+          )}
+          {selectedRun && (
+            <button
+              onClick={rerunSelectedMonth}
+              disabled={rerunning}
+              title="Re-check this month against the current deal book (after fixing deals or backfilling ESI IDs)"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-[#0F1D5E] text-sm font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${rerunning ? "animate-spin" : ""}`} />
+              {rerunning ? "Re-checking…" : `Re-check ${fmtMonth(selectedRun.billing_month)}`}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Portfolio snapshot — latest statement per provider */}
@@ -362,6 +396,18 @@ export default function ReconciliationPage() {
               </div>
               {selectedRun && (
                 <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      const sup = selectedRun.suppliers?.code ?? "run";
+                      const m = selectedRun.billing_month.slice(0, 7);
+                      downloadFile(`/api/v1/reconciliation/runs/${selectedRun.id}/export?format=xlsx`,
+                        `reconciliation_${sup}_${m}.xlsx`).catch(() => alert("Export failed"));
+                    }}
+                    title="Download this month as Excel"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Excel
+                  </button>
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
