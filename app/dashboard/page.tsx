@@ -8,8 +8,11 @@ import {
   ArrowUpRight, FileText, Clock, Activity, Users, Search, X,
 } from "lucide-react";
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
+import {
+  Building2, PhoneCall, Award, Wallet,
+} from "lucide-react";
 
 function greeting() {
   const h = new Date().getHours();
@@ -229,6 +232,225 @@ function GlobalSearch() {
   );
 }
 
+// ── Business Health ────────────────────────────────────────────────────────────
+function fmtMonthShort(m: string) {
+  const [y, mo] = m.split("-");
+  return `${new Date(+y, +mo - 1).toLocaleDateString("en-US", { month: "short" })} '${y.slice(2)}`;
+}
+
+function BusinessHealth({ data }: { data: any }) {
+  const router = useRouter();
+  if (!data) return null;
+  const growth = (data.growth ?? []).filter((g: any) => Object.keys(g.by_provider ?? {}).length > 0);
+  const chart = growth.map((g: any) => ({
+    label: fmtMonthShort(g.month), Gained: g.gained, Lost: -g.lost, net: g.net,
+  }));
+  const book = data.book ?? {};
+  const wb = data.winback ?? {};
+  const chasing = data.chasing ?? {};
+
+  const GrowthTip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const g = payload.find((p: any) => p.dataKey === "Gained")?.value ?? 0;
+    const l = Math.abs(payload.find((p: any) => p.dataKey === "Lost")?.value ?? 0);
+    return (
+      <div className="bg-[#0F1D5E] text-white rounded-xl px-3 py-2 shadow-xl text-xs space-y-0.5">
+        <p className="font-bold">{label}</p>
+        <p className="text-emerald-300">+{g} new accounts</p>
+        <p className="text-red-300">−{l} confirmed lost</p>
+        <p className="border-t border-white/20 pt-0.5 font-bold">net {g - l >= 0 ? "+" : ""}{g - l}</p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 pt-2">
+        <Activity className="w-4 h-4 text-[#0F1D5E]" />
+        <h2 className="text-sm font-black text-[#0F1D5E] uppercase tracking-widest">Business Health</h2>
+        <span className="text-[11px] text-slate-400">computed from verified provider payments</span>
+      </div>
+
+      {/* Growth + Book value */}
+      <div className="grid grid-cols-5 gap-4">
+        <div className="col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Net Account Growth</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Real gains vs confirmed losses (an account absent 2+ months) — bounce-proof
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs font-semibold">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#1baf7a]" />Gained</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#e34948]" />Lost</span>
+            </div>
+          </div>
+          <div className="p-4">
+            <ResponsiveContainer width="100%" height={190}>
+              <BarChart data={chart} stackOffset="sign" margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="#eef1f6" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={36} />
+                <Tooltip content={<GrowthTip />} cursor={{ fill: "#0F1D5E08" }} />
+                <Bar dataKey="Gained" stackId="g" fill="#1baf7a" maxBarSize={36} isAnimationActive={false} />
+                <Bar dataKey="Lost" stackId="g" fill="#e34948" maxBarSize={36} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="col-span-2 bg-gradient-to-br from-[#0F1D5E] to-[#2a3f9e] rounded-2xl shadow-lg text-white p-5">
+          <p className="text-xs text-white/60 font-semibold flex items-center gap-1.5 uppercase tracking-wider">
+            <Wallet className="w-3.5 h-3.5" /> Estimated Book Value
+          </p>
+          <p className="text-4xl font-black mt-2 tabular-nums">
+            {fmt$(book.book_value ?? 0)}
+          </p>
+          <p className="text-[11px] text-white/50 mt-1">
+            {book.paying_accounts?.toLocaleString()} paying accounts × {fmt$(book.ltv_per_account ?? 0)} lifetime value
+          </p>
+          <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+            {[
+              { l: "Avg / account / mo", v: `$${book.arpa ?? 0}` },
+              { l: "Monthly churn", v: `${book.monthly_churn_pct ?? 0}%` },
+              { l: "Avg lifetime", v: `${book.expected_lifetime_months ?? 0} mo` },
+            ].map(x => (
+              <div key={x.l} className="rounded-xl bg-white/10 px-2 py-2.5">
+                <p className="text-sm font-bold tabular-nums">{x.v}</p>
+                <p className="text-[10px] text-white/50 mt-0.5">{x.l}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-white/40 mt-3">
+            All-time verified received: {fmt$(book.total_received_alltime ?? 0)}
+          </p>
+        </div>
+      </div>
+
+      {/* Provider scorecards */}
+      <div className="grid grid-cols-5 gap-3">
+        {(data.providers ?? []).map((p: any) => (
+          <div key={p.name} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-3.5 h-3.5 text-slate-400" />
+              <p className="text-xs font-bold text-slate-700 truncate">{p.name}</p>
+            </div>
+            <p className="text-xl font-black text-[#0F1D5E] mt-1.5">{p.share_pct}%</p>
+            <p className="text-[10px] text-slate-400">of revenue · {p.accounts_latest} accounts</p>
+            <div className="mt-2 space-y-1 text-[11px]">
+              <div className="flex justify-between"><span className="text-slate-400">Effective rate</span>
+                <span className="font-semibold text-slate-600">{p.effective_mills != null ? `${p.effective_mills} mills` : "—"}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Pay accuracy</span>
+                <span className={`font-semibold ${p.pay_accuracy_pct != null && p.pay_accuracy_pct < 90 ? "text-red-500" : "text-emerald-600"}`}>
+                  {p.pay_accuracy_pct != null ? `${p.pay_accuracy_pct}%` : "—"}</span></div>
+              {p.months_not_reporting > 0 && (
+                <p className="text-[10px] font-semibold text-amber-600 bg-amber-50 rounded px-1.5 py-0.5">
+                  {p.months_not_reporting} month{p.months_not_reporting > 1 ? "s" : ""} without a statement
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Win-back + Dollars chased */}
+      <div className="grid grid-cols-5 gap-4">
+        <div className="col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Win-Back Queue</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {wb.count ?? 0} accounts leaving · {fmt$(wb.monthly_value_at_risk ?? 0)}/mo at stake ·{" "}
+                <span className="text-emerald-600 font-semibold">{wb.recovered_this_month ?? 0} recovered this month</span>
+              </p>
+            </div>
+            <PhoneCall className="w-4 h-4 text-slate-300" />
+          </div>
+          {(wb.queue ?? []).length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm text-slate-400">No accounts flagged right now — all quiet.</p>
+          ) : (
+            <div className="divide-y divide-slate-50 max-h-[280px] overflow-y-auto">
+              {wb.queue.map((w: any) => (
+                <div key={`${w.source}-${w.deal_id}`} className="px-5 py-2.5 flex items-center gap-3">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                    w.provider_status === "Going Final" ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"
+                  }`}>{w.provider_status}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-700 truncate">{w.customer || w.esiid}</p>
+                    <p className="text-[11px] text-slate-400">{w.provider} · agent {w.agent || "—"}</p>
+                  </div>
+                  <span className="text-xs font-bold text-slate-600 tabular-nums shrink-0">{fmt$(w.monthly_value)}/mo</span>
+                  {w.phone && <a href={`tel:${w.phone}`} className="text-xs text-blue-600 font-bold hover:underline shrink-0">Call</a>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col">
+          <p className="text-xs font-bold text-slate-800">Dollars Being Chased</p>
+          <p className="text-xs text-slate-400 mt-0.5">Open issues on the latest statements</p>
+          <p className="text-3xl font-black text-red-600 mt-3 tabular-nums">{fmt$(chasing.total ?? 0)}</p>
+          <div className="mt-3 space-y-1.5 text-xs">
+            <div className="flex justify-between"><span className="text-slate-500">Missing payments</span>
+              <span className="font-bold text-slate-700">{fmt$(chasing.missing_dollars ?? 0)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Underpaid (wrong rate)</span>
+              <span className="font-bold text-slate-700">{fmt$(chasing.underpaid_dollars ?? 0)}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Open items</span>
+              <span className="font-bold text-slate-700">{chasing.open_items ?? 0}</span></div>
+          </div>
+          <button onClick={() => router.push("/reconciliation")}
+            className="mt-auto pt-4 text-xs text-emerald-600 font-bold flex items-center gap-1 hover:text-emerald-700">
+            Work the list <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Agent scoreboard */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
+          <Award className="w-4 h-4 text-amber-500" />
+          <h3 className="text-sm font-bold text-slate-800">Agent Scoreboard</h3>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-100">
+              {["Agent", "Active Book", "Added This Month", "Accounts At Risk", "Last Payout"].map((h, i) => (
+                <th key={h} className={`px-5 py-2.5 text-xs font-bold text-slate-400 uppercase tracking-wider ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(data.agents ?? []).map((a: any, i: number) => (
+              <tr key={a.agent} className="border-b border-slate-50 last:border-0">
+                <td className="px-5 py-2.5 font-semibold text-slate-700">
+                  {i === 0 && <span className="mr-1.5">🥇</span>}
+                  {i === 1 && <span className="mr-1.5">🥈</span>}
+                  {i === 2 && <span className="mr-1.5">🥉</span>}
+                  {a.agent}
+                </td>
+                <td className="px-5 py-2.5 text-right tabular-nums text-slate-600">{a.book.toLocaleString()}</td>
+                <td className="px-5 py-2.5 text-right tabular-nums font-semibold text-emerald-600">
+                  {a.added_this_month > 0 ? `+${a.added_this_month}` : "—"}
+                </td>
+                <td className="px-5 py-2.5 text-right tabular-nums">
+                  {a.at_risk > 0
+                    ? <span className="font-semibold text-red-600">{a.at_risk}</span>
+                    : <span className="text-slate-300">0</span>}
+                </td>
+                <td className="px-5 py-2.5 text-right tabular-nums text-slate-600">
+                  {a.last_payout != null ? fmt$(a.last_payout) : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
@@ -238,6 +460,7 @@ export default function DashboardPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [overview, setOverview] = useState<any>(null);
   const [expiring, setExpiring] = useState<any[]>([]);
+  const [health, setHealth]   = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -252,7 +475,11 @@ export default function DashboardPage() {
       setOverview(o.status === "fulfilled" ? o.value : null);
       setExpiring(e.status === "fulfilled" ? (e.value ?? []) : []);
     }).finally(() => setLoading(false));
-  }, []);
+    // heavier aggregate loads separately so the page paints fast
+    if (user?.role === "admin") {
+      api.getBusinessHealth().then(setHealth).catch(() => {});
+    }
+  }, [user?.role]);
 
   // Prefer REAL received dollars (from reconciliation) over signup-month estimates
   const received: any[] = stats?.finance?.received_history ?? [];
@@ -477,6 +704,9 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
+
+        {/* Business Health */}
+        {showFinance && health && <BusinessHealth data={health} />}
 
         {/* Recent Leads */}
         <Card title={`Recent Leads · ${recentLeads.length} shown`} action="View all" actionHref="/crm/leads">

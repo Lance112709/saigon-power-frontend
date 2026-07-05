@@ -37,6 +37,7 @@ export const api = {
   getExpiringDeals: () => request("/api/v1/dashboard/expiring-deals"),
   getRenewals: (qs = "") => request(`/api/v1/renewals${qs}`),
   // Agent portal (self-service)
+  getBusinessHealth: () => request("/api/v1/dashboard/business-health"),
   agentPortalOverview: (agent?: string) => request(`/api/v1/agent-portal/overview${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalBook: (agent?: string) => request(`/api/v1/agent-portal/book${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalCommissions: (agent?: string) => request(`/api/v1/agent-portal/commissions${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
