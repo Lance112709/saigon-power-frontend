@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/apply", "/proposal", "/enroll", "/api"];
+const PUBLIC = ["/login", "/apply", "/proposal", "/enroll", "/en", "/refer", "/api"];
+
+// Hosts that serve the public marketing site (root shows the landing page)
+const MARKETING_HOSTS = ["saigonpowertx.com", "www.saigonpowertx.com"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host = (request.headers.get("host") || "").toLowerCase();
+
+  // On the marketing domain, the homepage IS the landing page
+  if (MARKETING_HOSTS.includes(host) && pathname === "/") {
+    return NextResponse.rewrite(new URL("/en", request.url));
+  }
 
   if (PUBLIC.some(p => pathname.startsWith(p))) {
     return NextResponse.next();
