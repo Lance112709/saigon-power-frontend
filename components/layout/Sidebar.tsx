@@ -25,6 +25,7 @@ const links: NavItem[] = [
   { href: "/rates",          label: "Today's Rates",     icon: Tag },
   { href: "/forecast",       label: "Revenue Forecast",  icon: TrendingUp, perm: "view_forecast" },
   { href: "/uploads",        label: "Upload Statements", icon: Upload, perm: "view_uploads" },
+  { href: "/admin/enrollments", label: "Enrollments",     icon: FileSignature, roles: ["admin", "manager"] },
   { href: "/reconciliation", label: "Reconciliation",    icon: RefreshCw, perm: "view_reconciliation" },
   { href: "/suppliers",      label: "Suppliers",         icon: Building2, roles: ["admin", "manager"] },
 ];

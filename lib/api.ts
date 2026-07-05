@@ -38,6 +38,20 @@ export const api = {
   getRenewals: (qs = "") => request(`/api/v1/renewals${qs}`),
   // Agent portal (self-service)
   getBusinessHealth: () => request("/api/v1/dashboard/business-health"),
+  // Enrollments (admin)
+  listEnrollments: (params: Record<string, string> = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/api/v1/enrollments${q ? `?${q}` : ""}`);
+  },
+  updateEnrollment: (id: string, data: any) =>
+    request(`/api/v1/enrollments/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  dispatchEnrollment: (id: string, force = false) =>
+    request(`/api/v1/enrollments/${id}/dispatch${force ? "?force=true" : ""}`, { method: "POST" }),
+  listEnrollmentIntegrations: () => request("/api/v1/enrollments/integrations"),
+  saveEnrollmentIntegration: (provider: string, data: any) =>
+    request(`/api/v1/enrollments/integrations/${encodeURIComponent(provider)}`, { method: "PUT", body: JSON.stringify(data) }),
+  previewEnrollmentIntegration: (provider: string) =>
+    request(`/api/v1/enrollments/integrations/${encodeURIComponent(provider)}/preview`, { method: "POST" }),
   agentPortalOverview: (agent?: string) => request(`/api/v1/agent-portal/overview${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalBook: (agent?: string) => request(`/api/v1/agent-portal/book${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalCommissions: (agent?: string) => request(`/api/v1/agent-portal/commissions${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
