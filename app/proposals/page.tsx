@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { FileSignature, Copy, Check, ExternalLink, Download } from "lucide-react";
+import { FileSignature, Copy, Check, ExternalLink, Download, Mail, Loader2 } from "lucide-react";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -14,6 +14,38 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const TABS = ["all","draft","sent","viewed","accepted","rejected"] as const;
+
+function EmailContractButton({ proposal }: { proposal: any }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const send = async () => {
+    let email = proposal.customer_email;
+    if (!email) {
+      email = window.prompt(`No email on file for ${proposal.customer_name || "this customer"}. Enter their email:`) || "";
+      if (!email.includes("@")) return;
+    }
+    setBusy(true);
+    setMsg("");
+    try {
+      const r = await api.emailContract(proposal.id, email);
+      setMsg(r.attached_signed_pdf ? "Sent w/ signed PDF ✓" : "Sent ✓");
+    } catch (err: any) {
+      const raw = err?.message || "Failed";
+      let m = raw; try { m = JSON.parse(raw.slice(raw.indexOf(":") + 1))?.detail ?? raw; } catch {}
+      setMsg(m.length > 40 ? m.slice(0, 40) + "…" : m);
+      alert(m);
+    }
+    setBusy(false);
+    setTimeout(() => setMsg(""), 5000);
+  };
+  return (
+    <button onClick={send} disabled={busy} title={proposal.customer_email ? `Email contract to ${proposal.customer_email}` : "No email on file — click to add"}
+      className="flex items-center gap-1 text-xs text-[#0F1D5E] hover:text-emerald-600 font-semibold transition-colors">
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+      {msg || "Email"}
+    </button>
+  );
+}
 
 function CopyLink({ token }: { token: string }) {
   const [copied, setCopied] = useState(false);
@@ -178,6 +210,7 @@ export default function ProposalsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
+                        <EmailContractButton proposal={p} />
                         <CopyLink token={p.token} />
                         <a href={`/proposal/${p.token}`} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-1 text-xs text-slate-400 hover:text-[#0F1D5E] transition-colors">

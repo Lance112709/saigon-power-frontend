@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { Mail, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { RefreshCw, Search, X, ChevronRight } from "lucide-react";
@@ -65,6 +66,30 @@ export default function RenewalsPage() {
         (d.sales_agent || "").toLowerCase().includes(search.toLowerCase())
       )
     : deals;
+
+  const [emailing, setEmailing] = useState<string | null>(null);
+  const [emailMsg, setEmailMsg] = useState("");
+
+  const sendRenewalEmail = async (e: React.MouseEvent, d: any) => {
+    e.stopPropagation();
+    let email = d.email;
+    if (!email) {
+      email = window.prompt(`No email on file for ${d.full_name || "this customer"}. Enter their email:`) || "";
+      if (!email.includes("@")) return;
+    }
+    setEmailing(d.deal_id);
+    setEmailMsg("");
+    try {
+      await api.emailRenewal(d.source, d.deal_id, email);
+      setEmailMsg(`✓ Renewal offer emailed to ${email}`);
+    } catch (err: any) {
+      const raw = err?.message || "Failed";
+      let msg = raw; try { msg = JSON.parse(raw.slice(raw.indexOf(":") + 1))?.detail ?? raw; } catch {}
+      setEmailMsg(`✕ ${msg}`);
+    }
+    setEmailing(null);
+    setTimeout(() => setEmailMsg(""), 6000);
+  };
 
   const expiredCount  = filtered.filter(d => (d.days_left ?? 1) < 0).length;
   const urgentCount   = filtered.filter(d => d.days_left != null && d.days_left >= 0 && d.days_left <= 30).length;
@@ -153,6 +178,12 @@ export default function RenewalsPage() {
       </div>
 
       {/* Table */}
+      {emailMsg && (
+        <div className={`rounded-2xl px-4 py-3 text-sm font-semibold ${emailMsg.startsWith("✓") ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-600 border border-red-200"}`}>
+          {emailMsg}
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-slate-400 text-sm">Loading…</div>
@@ -199,7 +230,20 @@ export default function RenewalsPage() {
                         {d.source === "imported" ? "Imported" : "CRM"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-300"><ChevronRight className="w-4 h-4" /></td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={(e) => sendRenewalEmail(e, d)}
+                        disabled={emailing === d.deal_id}
+                        title={d.email ? `Email renewal offer to ${d.email}` : "No email on file — click to add one"}
+                        className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
+                          d.email
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            : "border-slate-200 text-slate-400 hover:bg-slate-50"
+                        }`}>
+                        {emailing === d.deal_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                        Email
+                      </button>
+                    </td>
                   </tr>
                 );
               })}

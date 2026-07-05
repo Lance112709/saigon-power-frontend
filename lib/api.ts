@@ -38,6 +38,10 @@ export const api = {
   getRenewals: (qs = "") => request(`/api/v1/renewals${qs}`),
   // Agent portal (self-service)
   getBusinessHealth: () => request("/api/v1/dashboard/business-health"),
+  emailContract: (proposalId: string, email?: string) =>
+    request(`/api/v1/proposals/${proposalId}/email`, { method: "POST", body: JSON.stringify(email ? { email } : {}) }),
+  emailRenewal: (source: string, dealId: string, email?: string) =>
+    request("/api/v1/renewals/email", { method: "POST", body: JSON.stringify({ source, deal_id: dealId, ...(email ? { email } : {}) }) }),
   // Enrollments (admin)
   listEnrollments: (params: Record<string, string> = {}) => {
     const q = new URLSearchParams(params).toString();
