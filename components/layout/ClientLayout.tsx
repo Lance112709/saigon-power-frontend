@@ -7,7 +7,9 @@ const NO_LAYOUT = ["/login", "/change-password", "/en", "/apply", "/proposal/", 
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const bare = NO_LAYOUT.some(p => pathname.startsWith(p));
+  // "/" is bare everywhere: on marketing domains it serves the landing page
+  // (middleware rewrite), and on the CRM domain it just redirects to /dashboard.
+  const bare = pathname === "/" || NO_LAYOUT.some(p => pathname.startsWith(p));
 
   return (
     <AuthProvider>

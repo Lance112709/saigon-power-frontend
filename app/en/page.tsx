@@ -201,10 +201,10 @@ export default function LandingPage() {
           <a href="tel:8329379999" className="flex items-center gap-1.5 text-white/80 hover:text-white font-semibold">
             <Phone className="w-3 h-3" />(832) 937-9999
           </a>
-          <span className="text-white/20">·</span>
-          <span>Mon–Fri, 8AM–6PM support</span>
+          <span className="text-white/20 hidden sm:inline">·</span>
+          <span className="hidden sm:inline">Mon–Fri, 8AM–6PM support</span>
         </div>
-        <span>Texas Electric License <strong className="text-white/50">#BR190102</strong></span>
+        <span className="hidden md:inline">Texas Electric License <strong className="text-white/50">#BR190102</strong></span>
       </div>
 
       {/* ── Navbar ── */}
@@ -238,7 +238,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative min-h-[88vh] flex items-center overflow-hidden bg-[#0a1a0e]">
+      <section className="relative lg:min-h-[88vh] flex items-center overflow-hidden bg-[#0a1a0e]">
         {/* Wave background */}
         <div className="absolute inset-0">
           <WaveBackground />
@@ -247,12 +247,12 @@ export default function LandingPage() {
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0a1a0e] to-transparent" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-5 lg:px-10 w-full pt-16 pb-20 flex flex-col lg:flex-row items-center gap-16 lg:gap-20">
+        <div className="relative z-10 max-w-7xl mx-auto px-5 lg:px-10 w-full pt-10 lg:pt-16 pb-14 lg:pb-20 flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
 
           {/* Left — headline + form */}
           <div className="flex-1 min-w-0">
             {/* Rating badge */}
-            <div className="hero-text inline-flex items-center gap-2 mb-7">
+            <div className="hero-text flex flex-wrap items-center gap-2 mb-7">
               <div className="flex gap-0.5">
                 {[...Array(5)].map((_,i) => <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />)}
               </div>
@@ -263,13 +263,13 @@ export default function LandingPage() {
 
             {/* Headline */}
             <h1 className="hero-text-2 font-black text-white leading-[1.02] tracking-tight mb-5"
-              style={{ fontSize:"clamp(2.8rem,6vw,5rem)" }}>
+              style={{ fontSize:"clamp(2.1rem,8vw,5rem)" }}>
               Compare Texas<br />
               Electricity Plans.<br />
               <span className="text-[#22c55e]">Switch in 24 Hours.</span>
             </h1>
 
-            <p className="hero-text-3 text-white/55 text-lg leading-relaxed mb-8 max-w-[440px]">
+            <p className="hero-text-3 text-white/55 text-base sm:text-lg leading-relaxed mb-8 max-w-[440px]">
               We shop 50+ providers, find your lowest rate, and handle all the paperwork.{" "}
               <strong className="text-white font-semibold">You do nothing.</strong>
             </p>
@@ -286,7 +286,7 @@ export default function LandingPage() {
                 />
               </div>
               <a href="/apply"
-                className="px-6 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-r-2xl text-sm transition-colors flex items-center gap-2 whitespace-nowrap shadow-xl shadow-[#22c55e]/25">
+                className="px-4 sm:px-6 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-r-2xl text-sm transition-colors flex items-center gap-2 whitespace-nowrap shadow-xl shadow-[#22c55e]/25">
                 See My Plans <ArrowRight className="w-4 h-4" />
               </a>
             </div>
