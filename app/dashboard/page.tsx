@@ -254,7 +254,12 @@ export default function DashboardPage() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const chartData = history.map(r => ({ month: fmtMonth(r.month), amount: r.amount }));
+  // Prefer REAL received dollars (from reconciliation) over signup-month estimates
+  const received: any[] = stats?.finance?.received_history ?? [];
+  const chartData = received.length > 0
+    ? received.map((r: any) => ({ month: fmtMonth(r.month), amount: r.amount }))
+    : history.map(r => ({ month: fmtMonth(r.month), amount: r.amount }));
+  const chartIsReal = received.length > 0;
 
   if (loading) return (
     <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center">
@@ -273,10 +278,11 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#F4F6FA]">
 
       {/* ── Hero banner ── */}
-      <div className="relative bg-[#0d1117] overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#0A1440] via-[#0F1D5E] to-[#1e2f8a] overflow-hidden">
         {/* decorative blobs */}
-        <div className="absolute top-0 right-0 w-96 h-48 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-20 w-64 h-32 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2" />
+        <div className="absolute top-0 right-0 w-96 h-48 bg-emerald-500/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-20 w-64 h-32 bg-blue-400/15 rounded-full blur-3xl translate-y-1/2" />
+        <div className="absolute top-10 left-1/2 w-40 h-40 bg-violet-500/10 rounded-full blur-3xl" />
 
         <div className="relative px-6 pt-8 pb-10">
           <div className="flex items-start justify-between">
@@ -335,17 +341,22 @@ export default function DashboardPage() {
             gradient="bg-gradient-to-br from-emerald-600 to-green-500 shadow-lg shadow-emerald-500/25"
             icon={<Zap className="w-5 h-5 text-white" />}
             label="Active Deals"
-            value={String(stats?.active_deals ?? 0)}
-            sub={`${pipeline.converted ?? 0} converted customers`}
-            onClick={() => router.push("/crm/leads")}
+            value={(stats?.active_deals ?? 0).toLocaleString()}
+            sub={`${(stats?.active_deals_pipeline ?? 0).toLocaleString()} pipeline · ${(stats?.active_deals_imported ?? 0).toLocaleString()} imported`}
+            onClick={() => router.push("/crm/deals")}
           />
           {showFinance && (
             <StatCard
               gradient="bg-gradient-to-br from-violet-600 to-purple-500 shadow-lg shadow-violet-500/25"
               icon={<DollarSign className="w-5 h-5 text-white" />}
-              label="Est. Commission / mo"
-              value={fmt$(portfolio.commission_mo ?? 0)}
-              sub={`${(portfolio.total_kwh ?? 0).toLocaleString()} kWh enrolled`}
+              label={stats?.finance?.received_month
+                ? `Received — ${fmtMonth(stats.finance.received_month)}`
+                : "Commission Received"}
+              value={fmt$(stats?.finance?.received_last_month ?? 0)}
+              sub={stats?.finance && stats.finance.providers_reported < stats.finance.total_providers
+                ? `${stats.finance.providers_reported} of ${stats.finance.total_providers} providers reported so far`
+                : "verified from provider statements"}
+              onClick={() => router.push("/reconciliation")}
             />
           )}
           <StatCard
@@ -404,8 +415,12 @@ export default function DashboardPage() {
               <div className="bg-[#0d1117] rounded-2xl border border-white/[0.06] overflow-hidden h-full">
                 <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
                   <div>
-                    <h2 className="text-sm font-bold text-white">Est. Commission History</h2>
-                    <p className="text-xs text-slate-500 mt-0.5">Last 6 months</p>
+                    <h2 className="text-sm font-bold text-white">
+                      {chartIsReal ? "Commission Received" : "Est. Commission History"}
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {chartIsReal ? "Verified provider payments · last 6 months" : "Last 6 months"}
+                    </p>
                   </div>
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                 </div>
@@ -429,7 +444,8 @@ export default function DashboardPage() {
                           tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
                         <Tooltip content={<ChartTooltip />} />
                         <Area type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={2.5}
-                          fill="url(#emeraldGrad)" dot={{ r: 4, fill: "#10b981", strokeWidth: 0 }} activeDot={{ r: 6, fill: "#34d399" }} />
+                          fill="url(#emeraldGrad)" dot={{ r: 4, fill: "#10b981", strokeWidth: 0 }}
+                          activeDot={{ r: 6, fill: "#34d399" }} isAnimationActive={false} />
                       </AreaChart>
                     </ResponsiveContainer>
                   )}
@@ -443,10 +459,10 @@ export default function DashboardPage() {
         {showFinance && (
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: "Active Contracts",   value: portfolio.active_contracts ?? 0,  fmt: (v: number) => String(v),       icon: <Users className="w-4 h-4" />,         color: "text-blue-600",    bg: "bg-blue-50" },
-              { label: "Total kWh / mo",     value: portfolio.total_kwh ?? 0,          fmt: (v: number) => v.toLocaleString(), icon: <Zap className="w-4 h-4" />,           color: "text-emerald-600", bg: "bg-emerald-50" },
-              { label: "Est. Commission / mo", value: portfolio.commission_mo ?? 0,   fmt: fmt$,                             icon: <DollarSign className="w-4 h-4" />,     color: "text-violet-600",  bg: "bg-violet-50" },
-              { label: "At-risk ≤ 30 days", value: portfolio.at_risk ?? 0,            fmt: (v: number) => String(v),        icon: <AlertTriangle className="w-4 h-4" />,  color: "text-amber-600",   bg: "bg-amber-50" },
+              { label: "Active Contracts",        value: portfolio.active_contracts ?? 0,             fmt: (v: number) => v.toLocaleString(), icon: <Users className="w-4 h-4" />,        color: "text-blue-600",    bg: "bg-blue-50" },
+              { label: "Received Last Month",     value: stats?.finance?.received_last_month ?? 0,    fmt: fmt$,                              icon: <DollarSign className="w-4 h-4" />,   color: "text-emerald-600", bg: "bg-emerald-50" },
+              { label: "Pipeline Est. / mo",      value: portfolio.commission_mo ?? 0,                fmt: fmt$,                              icon: <TrendingUp className="w-4 h-4" />,   color: "text-violet-600",  bg: "bg-violet-50" },
+              { label: "At-risk ≤ 30 days",       value: portfolio.at_risk ?? 0,                      fmt: (v: number) => String(v),          icon: <AlertTriangle className="w-4 h-4" />, color: "text-amber-600",   bg: "bg-amber-50" },
             ].map(({ label, value, fmt, icon, color, bg }) => (
               <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center shrink-0`}>
