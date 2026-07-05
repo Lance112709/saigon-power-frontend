@@ -6,8 +6,20 @@ import ClientLayout from "@/components/layout/ClientLayout";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Saigon Power — Commission Tracker",
-  description: "Energy broker commission reconciliation system",
+  title: "Saigon Power",
+  description: "Save on your Texas electricity — trusted energy broker for homes and businesses. Enroll online in minutes.",
+  openGraph: {
+    title: "Saigon Power",
+    siteName: "Saigon Power",
+    description: "Save on your Texas electricity — trusted energy broker for homes and businesses. Enroll online in minutes.",
+    url: "https://saigonpowertx.com",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Saigon Power",
+    description: "Save on your Texas electricity — trusted energy broker for homes and businesses.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
