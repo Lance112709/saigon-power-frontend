@@ -48,7 +48,10 @@ export default function DroppedDealsPage() {
           <XCircle className="w-6 h-6 text-red-400" />
           <h1 className="text-2xl font-bold text-[#0F1D5E]">Dropped Deals</h1>
         </div>
-        <p className="text-slate-500 mt-1 text-sm">All terminated or inactive contracts</p>
+        <p className="text-slate-500 mt-1 text-sm">
+          All terminated or inactive contracts — pipeline and imported — with the provider-reported
+          reason from commission statements where available
+        </p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -90,7 +93,7 @@ export default function DroppedDealsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    {["Customer", "Supplier", "ESIID", "Rate", "Agent", "Start Date", "End Date", "Terminated"].map(h => (
+                    {["Customer", "Supplier", "ESIID", "Rate", "Agent", "Start Date", "End Date", "Why Dropped"].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -98,12 +101,20 @@ export default function DroppedDealsPage() {
                 <tbody>
                   {deals.map(d => (
                     <tr
-                      key={d.id}
-                      onClick={() => d.lead_id && router.push(`/crm/leads/${d.lead_id}`)}
+                      key={`${d.source}-${d.id}`}
+                      onClick={() => {
+                        if (d.lead_id) router.push(`/crm/leads/${d.lead_id}`);
+                        else if (d.customer_id) router.push(`/crm/customers/${d.customer_id}`);
+                      }}
                       className="border-b border-slate-100 last:border-0 hover:bg-red-50/40 cursor-pointer"
                     >
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-slate-800">{d.lead_name || "—"}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-slate-800">{d.lead_name || "—"}</p>
+                          {d.source === "imported" && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-500">Imported</span>
+                          )}
+                        </div>
                         {d.lead_phone && <p className="text-xs text-slate-400 mt-0.5">{d.lead_phone}</p>}
                       </td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.supplier || "—"}</td>
@@ -119,10 +130,22 @@ export default function DroppedDealsPage() {
                         {d.end_date ? d.end_date.slice(0, 10) : "—"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600">
-                          <XCircle className="w-3 h-3" />
-                          Dropped
-                        </span>
+                        {d.provider_status ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600">
+                              <XCircle className="w-3 h-3" />
+                              Provider: {d.provider_status}
+                            </span>
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              per statement{d.provider_status_date ? ` · ${String(d.provider_status_date).slice(0, 7)}` : ""}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                            <XCircle className="w-3 h-3" />
+                            Dropped
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
