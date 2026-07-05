@@ -285,6 +285,55 @@ export default function UploadsPage() {
                       </span>
                     </div>
                   ))}
+                  {confirmed.status_sync && (
+                    <div className="border-t pt-3 mt-3">
+                      <div className="text-xs font-semibold text-gray-600 mb-2">
+                        Account statuses from this statement
+                        <span className="text-gray-400 font-normal ml-1">
+                          ({confirmed.status_sync.with_status} accounts reported)
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {confirmed.status_sync.confirmed_active > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                            {confirmed.status_sync.confirmed_active} confirmed active
+                          </span>
+                        )}
+                        {confirmed.status_sync.going_final > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">
+                            {confirmed.status_sync.going_final} going final — win-back now
+                          </span>
+                        )}
+                        {confirmed.status_sync.deactivated > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+                            {confirmed.status_sync.deactivated} {confirmed.status_sync.pending ? "to deactivate" : "deactivated"}
+                          </span>
+                        )}
+                        {confirmed.status_sync.reactivated > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                            {confirmed.status_sync.reactivated} reactivated
+                          </span>
+                        )}
+                        {confirmed.status_sync.pending && (
+                          <button
+                            onClick={async () => {
+                              if (!confirm(
+                                `This statement marks ${Math.round(confirmed.status_sync.churn_ratio * 100)}% of accounts as churned, ` +
+                                `which usually means the provider's status column is glitchy this month.\n\n` +
+                                `Apply ${confirmed.status_sync.deactivated} deactivations anyway?`)) return;
+                              try {
+                                const r = await authFetch(`/api/v1/uploads/${confirmed.upload_batch_id}/apply-statuses`, { method: "POST" });
+                                setConfirmed((c: any) => ({ ...c, status_sync: { ...r, pending: false } }));
+                              } catch (e: any) { alert(e.message || "Failed"); }
+                            }}
+                            className="ml-auto px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700"
+                          >
+                            Review looks right — apply changes
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {(confirmed.warnings ?? []).map((w: string, i: number) => (
                     <div key={i} className="text-xs text-yellow-700 mt-2">⚠ {w}</div>
                   ))}

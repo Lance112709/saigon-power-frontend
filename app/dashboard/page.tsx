@@ -311,6 +311,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-6 mt-5 pt-5 border-t border-white/[0.06]">
             {[
               { label: "This Week's Leads",  value: stats?.leads_this_week ?? 0, color: "text-blue-400" },
+              { label: "New Deals This Month", value: stats?.deals_added_this_month ?? 0, color: "text-cyan-400" },
               { label: "Pipeline — Leads",   value: pipeline.lead ?? 0,           color: "text-violet-400" },
               { label: "Converted",          value: pipeline.converted ?? 0,       color: "text-emerald-400" },
               ...(showFinance ? [{ label: "At-risk ≤30d", value: portfolio.at_risk ?? 0, color: "text-amber-400" }] : []),
