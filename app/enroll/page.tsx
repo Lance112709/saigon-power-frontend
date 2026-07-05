@@ -27,6 +27,7 @@ export default function EnrollPage() {
     first_name: "", last_name: "", email: "", phone: "",
     terms_accepted: false,
     company_website: "",   // honeypot — hidden field, humans never fill it
+    ref: "",
   });
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
 
@@ -38,6 +39,8 @@ export default function EnrollPage() {
 
   useEffect(() => {
     fetch(`${API}/api/v1/landing`).then(r => r.json()).then(d => setPlans(Array.isArray(d) ? d : [])).catch(() => {});
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) setForm((f: any) => ({ ...f, ref }));
   }, []);
 
   const selectedPlan = useMemo(() => plans.find(p => p.id === form.plan_id) ?? null, [plans, form.plan_id]);
