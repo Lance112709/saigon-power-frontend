@@ -36,6 +36,12 @@ export const api = {
     request(`/api/v1/dashboard/overview${month ? `?billing_month=${month}` : ""}`),
   getExpiringDeals: () => request("/api/v1/dashboard/expiring-deals"),
   getRenewals: (qs = "") => request(`/api/v1/renewals${qs}`),
+  // Agent portal (self-service)
+  agentPortalOverview: (agent?: string) => request(`/api/v1/agent-portal/overview${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
+  agentPortalBook: (agent?: string) => request(`/api/v1/agent-portal/book${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
+  agentPortalCommissions: (agent?: string) => request(`/api/v1/agent-portal/commissions${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
+  agentPortalBreakdown: (id: string, agent?: string) => request(`/api/v1/agent-portal/commissions/${id}/breakdown${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
+  agentPortalAlerts: (agent?: string) => request(`/api/v1/agent-portal/alerts${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   getRenewalFilters: () => request("/api/v1/renewals/filters"),
   getLeadsStats: () => request("/api/v1/dashboard/leads-stats"),
   getCommissionHistory: () => request("/api/v1/dashboard/commission-history"),

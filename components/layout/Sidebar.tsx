@@ -6,8 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe, Tag, Zap, CalendarClock, DollarSign,
-} from "lucide-react";
+  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
 interface NavItem {
@@ -20,6 +19,7 @@ interface NavItem {
 
 const links: NavItem[] = [
   { href: "/dashboard",      label: "Dashboard",        icon: LayoutDashboard },
+  { href: "/my-business",    label: "My Business",      icon: Briefcase, roles: ["sales_agent", "admin"] },
   { href: "/call-list",      label: "Who To Call Today", icon: PhoneCall },
   { href: "/tasks",          label: "Tasks & Follow-Ups", icon: Bell },
   { href: "/rates",          label: "Today's Rates",     icon: Tag },
