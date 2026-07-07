@@ -38,6 +38,7 @@ export const api = {
   getRenewals: (qs = "") => request(`/api/v1/renewals${qs}`),
   // Agent portal (self-service)
   getBusinessHealth: () => request("/api/v1/dashboard/business-health"),
+  pollEmailStatements: () => request("/api/v1/uploads/poll-email", { method: "POST" }),
   emailContract: (proposalId: string, email?: string) =>
     request(`/api/v1/proposals/${proposalId}/email`, { method: "POST", body: JSON.stringify(email ? { email } : {}) }),
   emailRenewal: (source: string, dealId: string, email?: string) =>

@@ -65,6 +65,8 @@ export default function UploadsPage() {
   const [editSupplier, setEditSupplier]   = useState("");
   const [editSaving, setEditSaving]       = useState(false);
   const [deletingId, setDeletingId]       = useState<string | null>(null);
+  const [polling, setPolling]             = useState(false);
+  const [pollResult, setPollResult]       = useState<any>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadUploads = async () => {
@@ -192,13 +194,39 @@ export default function UploadsPage() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+        <div>
         <h1 className="text-2xl font-bold text-gray-900">Upload Commission Statements</h1>
         <p className="text-gray-500 mt-1">
           Drop any provider statement (Discount Power/Cirro, Iron Horse, Chariot, Budget Power, CleanSky) —
           it imports, matches deals, and reconciles automatically. Unknown formats fall back to AI column mapping.
         </p>
+        </div>
+        <button
+          onClick={async () => {
+            setPolling(true); setPollResult(null);
+            try { setPollResult(await api.pollEmailStatements()); } catch (e: any) { setPollResult({ ok: false, error: e.message }); }
+            setPolling(false); loadUploads();
+          }}
+          disabled={polling}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50"
+        >
+          📬 {polling ? "Checking inbox…" : "Check Email Now"}
+        </button>
       </div>
+      {pollResult && (
+        <div className={`mb-6 rounded-2xl border p-4 text-sm ${pollResult.ok ? "bg-blue-50 border-blue-200 text-blue-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+          {!pollResult.ok ? (pollResult.error || "Email check failed") : (
+            <>
+              {pollResult.imported?.length > 0
+                ? <>✓ Auto-imported <b>{pollResult.imported.length}</b> statement{pollResult.imported.length !== 1 ? "s" : ""}: {pollResult.imported.map((i: any) => `${i.provider} (${i.rows} rows, $${Number(i.total).toLocaleString()})`).join(", ")}</>
+                : <>Inbox checked — no new statements found.</>}
+              {pollResult.already_imported > 0 && <> · {pollResult.already_imported} already imported</>}
+              {pollResult.unrecognized?.length > 0 && <> · {pollResult.unrecognized.length} attachment{pollResult.unrecognized.length !== 1 ? "s" : ""} skipped (not a known statement format)</>}
+            </>
+          )}
+        </div>
+      )}
 
       <Card className="mb-6">
         <CardContent className="pt-6">
