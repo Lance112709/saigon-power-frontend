@@ -86,7 +86,7 @@ export default function Sidebar() {
     pathname === href ||
     (href !== "/" && href !== "/crm/leads" && href !== "/crm/converted" && pathname.startsWith(href)) ||
     (href === "/crm/leads" && (pathname === "/crm/leads" || pathname.startsWith("/crm/leads/"))) ||
-    (href === "/crm/converted" && pathname === "/crm/converted");
+    (href === "/crm/converted" && (pathname === "/crm/converted" || pathname.startsWith("/crm/converted/")));
 
   const NavLink = ({ href, label, icon: Icon, badge }: NavItem & { badge?: number }) => {
     const active = isActive(href);

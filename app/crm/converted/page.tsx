@@ -72,7 +72,7 @@ export default function ConvertedCustomersPage() {
             <tbody>
               {customers.map(c => (
                 <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 cursor-pointer"
-                  onClick={() => router.push(`/crm/leads/${c.lead_id}`)}>
+                  onClick={() => router.push(`/crm/converted/${c.lead_id}`)}>
                   <td className="px-5 py-3.5 whitespace-nowrap">
                     {c.sgp_customer_id
                       ? <span className="font-mono text-xs font-semibold text-[#0F1D5E] bg-[#EEF1FA] px-2 py-1 rounded-lg">{c.sgp_customer_id}</span>

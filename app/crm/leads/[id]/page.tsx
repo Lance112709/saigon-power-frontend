@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare, Paperclip, Upload, Download, FileText, Loader2, Hash, Calendar } from "lucide-react";
@@ -719,6 +719,8 @@ function TerminateModal({ deal, leadId, onClose, onDone }: {
 export default function LeadDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
+  const fromCustomers = pathname?.startsWith("/crm/converted/");
   const { user } = useAuth();
   const canDeleteNotes = user?.role === "admin";
   const canSeeFullAnxh = user?.role === "admin" || user?.role === "manager";
@@ -988,8 +990,8 @@ export default function LeadDetailPage() {
       )}
 
       <div className="flex items-center justify-between">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1D5E] transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Leads
+        <button onClick={() => router.push(fromCustomers ? "/crm/converted" : "/crm/leads")} className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1D5E] transition-colors">
+          <ArrowLeft className="w-4 h-4" /> {fromCustomers ? "Back to Customers" : "Back to Leads"}
         </button>
         <div className="flex items-center gap-2">
           {lead?.phone && (
