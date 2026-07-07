@@ -1126,192 +1126,246 @@ export default function CustomerProfilePage() {
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-5">
-        {/* Left column */}
-        <div className="col-span-1 space-y-4">
-          {/* Customer info card */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-[#EEF1FA] flex items-center justify-center">
-                  <User className="w-5 h-5 text-[#0F1D5E]" />
-                </div>
-                {editing ? (
-                  <input
-                    className="text-base font-bold text-[#0F1D5E] border-b-2 border-[#0F1D5E]/30 focus:border-[#0F1D5E] outline-none bg-transparent w-full"
-                    value={editForm.full_name}
-                    onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))}
-                  />
-                ) : (
-                  <h2 className="text-base font-bold text-[#0F1D5E]">{customer.full_name}</h2>
-                )}
-              </div>
-              {!editing ? (
-                <button onClick={() => setEditing(true)} className="text-slate-400 hover:text-[#0F1D5E] transition-colors" title="Edit">
-                  <Pencil className="w-4 h-4" />
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button onClick={saveEdit} disabled={saving} className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50">
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button onClick={cancelEdit} className="text-slate-400 hover:text-red-500">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
+      {/* ── Customer Hero ── */}
+      <div className="rounded-2xl bg-gradient-to-r from-[#0F1D5E] via-[#1a2d7a] to-[#2a3f96] shadow-lg p-6 text-white">
+        <div className="flex items-start justify-between gap-6 flex-wrap">
+          <div className="flex items-start gap-4 min-w-0">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+              <User className="w-7 h-7 text-white" />
             </div>
-
-            <div className="space-y-3 text-sm">
-              {/* Email */}
-              <div className="flex items-start gap-3 text-slate-600">
-                <IconBox icon={Mail} />
-                {editing ? (
-                  <input
-                    className="border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm flex-1 pt-1"
-                    value={editForm.email}
-                    placeholder="Email address"
-                    onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
-                  />
-                ) : (
-                  <span className="break-all pt-2">{customer.email || "—"}</span>
-                )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-xl font-bold">{customer.full_name}</h2>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider bg-emerald-400/20 text-emerald-200 border border-emerald-300/30 uppercase">Customer</span>
               </div>
-
-              {/* Phone */}
-              <div className="flex items-center gap-3 text-slate-600">
-                <IconBox icon={Phone} />
-                {editing ? (
-                  <input
-                    className="border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm flex-1"
-                    value={editForm.phone}
-                    placeholder="Phone number"
-                    onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
-                  />
-                ) : (
-                  <span>{customer.phone || "—"}</span>
-                )}
-              </div>
-
-              {/* DOB */}
-              <div className="flex items-center gap-3 text-slate-600">
-                <IconBox icon={Calendar} />
-                {editing ? (
-                  <input
-                    type="date"
-                    className="border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm flex-1"
-                    value={editForm.dob}
-                    onChange={e => setEditForm(f => ({ ...f, dob: e.target.value }))}
-                  />
-                ) : (
-                  <span>{customer.dob ? `DOB: ${customer.dob}` : "—"}</span>
-                )}
-              </div>
-
-              {/* Address */}
-              <div className="flex items-start gap-3 text-slate-600">
-                <IconBox icon={MapPin} />
-                {editing ? (
-                  <div className="flex-1 space-y-1.5">
-                    <input
-                      className="w-full border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm"
-                      value={editForm.mailing_address}
-                      placeholder="Street address"
-                      onChange={e => setEditForm(f => ({ ...f, mailing_address: e.target.value }))}
-                    />
-                    <div className="flex gap-2">
-                      <input
-                        className="flex-1 border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm"
-                        value={editForm.city}
-                        placeholder="City"
-                        onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
-                      />
-                      <input
-                        className="w-14 border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm"
-                        value={editForm.state}
-                        placeholder="TX"
-                        onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))}
-                      />
-                      <input
-                        className="w-20 border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm"
-                        value={editForm.postal_code}
-                        placeholder="ZIP"
-                        onChange={e => setEditForm(f => ({ ...f, postal_code: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="pt-2">
-                    {customer.mailing_address
-                      ? <><div>{customer.mailing_address}</div>{customer.city && <div>{customer.city}, {customer.state} {customer.postal_code}</div>}</>
-                      : <span className="text-slate-400">—</span>
-                    }
-                  </div>
-                )}
-              </div>
-
-              {/* ANXH — editable for non-CSR, masked for CSR */}
-              <div className="flex items-start gap-3 text-slate-600">
-                <IconBox icon={Hash} />
-                <div className="pt-2 flex-1">
-                  <span className="text-slate-400 text-xs block mb-1">
-                    ANXH {isCsr && <span className="text-slate-300">(last 4 only)</span>}
+              <div className="flex flex-wrap gap-2 mt-2.5">
+                {customer.phone && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">
+                    <Phone className="w-3 h-3 text-blue-200" /> {customer.phone}
                   </span>
-                  {editing && !isCsr ? (
-                    <input
-                      className="border-b border-slate-300 focus:border-[#0F1D5E] outline-none bg-transparent text-sm w-full font-mono"
-                      value={editForm.anxh}
-                      placeholder="Account number"
-                      onChange={e => setEditForm(f => ({ ...f, anxh: e.target.value }))}
-                    />
-                  ) : anxhValues.length > 0 ? (
-                    anxhValues.map((a: any) => (
-                      <span key={a} className="block font-mono text-xs tracking-wider">{maskAnxh(String(a))}</span>
-                    ))
-                  ) : (
-                    <span className="text-slate-400 text-xs">—</span>
-                  )}
-                </div>
+                )}
+                {customer.email && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50 break-all">
+                    <Mail className="w-3 h-3 text-blue-200" /> {customer.email}
+                  </span>
+                )}
+                {customer.dob && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">
+                    <Calendar className="w-3 h-3 text-blue-200" /> DOB {fmtDate(customer.dob)}
+                  </span>
+                )}
+                {customer.mailing_address && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">
+                    <MapPin className="w-3 h-3 text-blue-200" />
+                    {customer.mailing_address}{customer.city ? `, ${customer.city}, ${customer.state} ${customer.postal_code || ""}` : ""}
+                  </span>
+                )}
+                {anxhValues.map((a: any) => (
+                  <span key={a} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs font-mono text-blue-50">
+                    <Hash className="w-3 h-3 text-blue-200" /> {maskAnxh(String(a))}
+                  </span>
+                ))}
               </div>
-
-              {/* Notes */}
-              <div className="pt-2 border-t border-slate-100">
-                {editing ? (
-                  <textarea
-                    className="w-full text-xs text-slate-500 border border-slate-200 rounded-lg p-2 focus:outline-none focus:border-[#0F1D5E]/40 resize-none"
-                    rows={3}
-                    placeholder="Notes..."
-                    value={editForm.notes}
-                    onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
-                  />
-                ) : customer.notes ? (
-                  <p className="text-xs text-slate-400">{customer.notes}</p>
-                ) : null}
-              </div>
+              {customer.notes && <p className="text-xs text-blue-200/80 mt-2 max-w-2xl">{customer.notes}</p>}
             </div>
           </div>
 
-          {/* Deal count card */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-emerald-600">{active.length}</p>
-                <p className="text-xs text-slate-500 mt-1">Active</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-indigo-500">{renewed.length}</p>
-                <p className="text-xs text-slate-500 mt-1">Renewed</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-400">{inactive.length}</p>
-                <p className="text-xs text-slate-500 mt-1">Inactive</p>
-              </div>
+          <div className="flex items-center gap-6 shrink-0">
+            <div className="flex items-center gap-5 text-center">
+              <div><p className="text-2xl font-bold text-emerald-300">{active.length}</p><p className="text-[11px] text-blue-200/80 mt-0.5">Active</p></div>
+              <div><p className="text-2xl font-bold text-indigo-200">{renewed.length}</p><p className="text-[11px] text-blue-200/80 mt-0.5">Renewed</p></div>
+              <div><p className="text-2xl font-bold text-white/50">{inactive.length}</p><p className="text-[11px] text-blue-200/80 mt-0.5">Inactive</p></div>
             </div>
+            {!editing && (
+              <button onClick={() => setEditing(true)} className="p-2 rounded-xl bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-colors" title="Edit customer info">
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Right column */}
-        <div className="col-span-3 space-y-5">
+      {/* ── Edit form ── */}
+      {editing && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <h3 className="text-sm font-bold text-[#0F1D5E]">Edit Customer Info</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Full Name</label>
+              <input className={inputCls} value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Phone</label>
+              <input className={inputCls} value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Email</label>
+              <input className={inputCls} value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-6 gap-3">
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">DOB</label>
+              <input type="date" className={inputCls} value={editForm.dob} onChange={e => setEditForm(f => ({ ...f, dob: e.target.value }))} />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs text-slate-500 mb-1 block">Street Address</label>
+              <input className={inputCls} value={editForm.mailing_address} onChange={e => setEditForm(f => ({ ...f, mailing_address: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">City</label>
+              <input className={inputCls} value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">State</label>
+              <input className={inputCls} value={editForm.state} onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">ZIP</label>
+              <input className={inputCls} value={editForm.postal_code} onChange={e => setEditForm(f => ({ ...f, postal_code: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {!isCsr && (
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">ANXH</label>
+                <input className={`${inputCls} font-mono`} placeholder="Account number" value={editForm.anxh} onChange={e => setEditForm(f => ({ ...f, anxh: e.target.value }))} />
+              </div>
+            )}
+            <div className={isCsr ? "col-span-3" : "col-span-2"}>
+              <label className="text-xs text-slate-500 mb-1 block">Notes</label>
+              <textarea className={`${inputCls} resize-none`} rows={2} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={saveEdit} disabled={saving}
+              className="px-5 flex items-center gap-1.5 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+              <Check className="w-3.5 h-3.5" /> {saving ? "Saving..." : "Save"}
+            </button>
+            <button onClick={cancelEdit}
+              className="px-5 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+
+          {/* Deals */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#0F1D5E]">Deals ({deals.length})</h3>
+              <button onClick={() => setShowAddDeal(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-[#0F1D5E] text-white text-xs font-semibold rounded-xl hover:bg-[#0F1D5E]/90 transition-colors">
+                <Plus className="w-3.5 h-3.5" /> Add Deal
+              </button>
+            </div>
+            {deals.length === 0 ? (
+              <div className="p-14 text-center">
+                <Zap className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                <p className="text-slate-400 text-sm font-medium">No deals yet</p>
+                <p className="text-slate-300 text-xs mt-1">Click Add Deal to get started.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {[...active, ...inactive, ...renewed].map(d => {
+                  const accent = d.deal_status === "ACTIVE" ? "border-l-emerald-400" : d.deal_status === "RENEWED" ? "border-l-indigo-400" : "border-l-slate-300";
+                  return (
+                    <div key={d.id}
+                      className={`px-6 py-5 hover:bg-slate-50/70 cursor-pointer transition-colors border-l-4 ${accent}`}
+                      onClick={() => router.push(`/crm/deals/${d.id}`)}>
+
+                      {/* Row 1: name + provider + flags + actions */}
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <span className="text-base font-bold text-[#0F1D5E]">{d.deal_name || d.business_name || "Unnamed Deal"}</span>
+                          {d.provider && (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{d.provider}</span>
+                          )}
+                          <StatusBadge status={d.deal_status} />
+                          {DEAL_FLAGS.map(flag => {
+                            const key = DEAL_FLAG_KEYS[flag];
+                            if (!(d as any)[key]) return null;
+                            return (
+                              <span key={flag} className={`px-2 py-0.5 rounded-full text-xs font-bold border ${flag === "DE LINKED" ? "bg-red-100 text-red-600 border-red-200" : "bg-[#EEF1FA] text-[#0F1D5E] border-[#0F1D5E]/20"}`}>
+                                {flag}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+                          {d.deal_status === "ACTIVE" && (
+                            <>
+                              <button onClick={e => { e.stopPropagation(); setRenewDeal(d); }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">
+                                <RefreshCw className="w-3 h-3" /> Renew
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); setTerminateDeal(d); }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                                <Ban className="w-3 h-3" /> Terminate
+                              </button>
+                            </>
+                          )}
+                          <button onClick={e => { e.stopPropagation(); setEditDeal(d); }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                            <FileEdit className="w-3 h-3" /> Edit
+                          </button>
+                          {isAdmin && (
+                            <button onClick={e => handleDeleteDeal(e, d.id)}
+                              className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Row 2: stat chips */}
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {d.energy_rate != null && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            Rate <span className="font-bold text-slate-700">${parseFloat(d.energy_rate).toFixed(4)}/kWh</span>
+                          </span>
+                        )}
+                        {d.adder != null && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            Adder <span className="font-bold text-slate-700">${parseFloat(d.adder).toFixed(4)}/kWh</span>
+                          </span>
+                        )}
+                        {d.meter_type && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs font-semibold text-slate-600">{d.meter_type}</span>
+                        )}
+                        {d.sales_agent && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            Agent <span className="font-bold text-slate-700">{d.sales_agent}</span>
+                          </span>
+                        )}
+                        {d.contract_start_date && d.contract_end_date && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            {fmtDate(d.contract_start_date)} <span className="text-slate-300 mx-1">→</span> {fmtDate(d.contract_end_date)}
+                          </span>
+                        )}
+                        {d.esiid && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs font-mono text-slate-500">{d.esiid}</span>
+                        )}
+                      </div>
+
+                      {/* Row 3: address + terminated */}
+                      <div className="flex items-center gap-4 text-xs text-slate-400">
+                        {d.service_address && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 shrink-0" />{d.service_address}
+                          </span>
+                        )}
+                        {d.deal_status === "INACTIVE" && d.contract_end_date && (
+                          <span className="text-red-500 font-semibold">Terminated: {fmtDate(d.contract_end_date)}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Account Notes */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -1487,127 +1541,6 @@ export default function CustomerProfilePage() {
             )}
           </div>
 
-          {/* Deals */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-[#0F1D5E]">All Deals</h3>
-                <p className="text-xs text-slate-400 mt-0.5">{deals.length} deal{deals.length !== 1 ? "s" : ""}</p>
-              </div>
-              <button onClick={() => setShowAddDeal(true)}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[#0F1D5E] rounded-xl hover:bg-[#0F1D5E]/90 transition-colors shadow-sm">
-                <Plus className="w-4 h-4" /> Add Deal
-              </button>
-            </div>
-            {deals.length === 0 ? (
-              <div className="p-14 text-center">
-                <Zap className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-400 text-sm font-medium">No deals yet</p>
-                <p className="text-slate-300 text-xs mt-1">Click Add Deal to get started.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {[...active, ...inactive, ...renewed].map(d => {
-                  const accent = d.deal_status === "ACTIVE" ? "border-l-emerald-400" : d.deal_status === "RENEWED" ? "border-l-indigo-400" : "border-l-slate-300";
-                  return (
-                    <div key={d.id}
-                      className={`px-6 py-5 hover:bg-slate-50/70 cursor-pointer transition-colors border-l-4 ${accent}`}
-                      onClick={() => router.push(`/crm/deals/${d.id}`)}>
-
-                      {/* Row 1: name + provider + flags + actions */}
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          <span className="text-base font-bold text-[#0F1D5E]">{d.deal_name || d.business_name || "Unnamed Deal"}</span>
-                          {d.provider && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{d.provider}</span>
-                          )}
-                          <StatusBadge status={d.deal_status} />
-                          {DEAL_FLAGS.map(flag => {
-                            const key = DEAL_FLAG_KEYS[flag];
-                            if (!(d as any)[key]) return null;
-                            return (
-                              <span key={flag} className={`px-2 py-0.5 rounded-full text-xs font-bold border ${flag === "DE LINKED" ? "bg-red-100 text-red-600 border-red-200" : "bg-[#EEF1FA] text-[#0F1D5E] border-[#0F1D5E]/20"}`}>
-                                {flag}
-                              </span>
-                            );
-                          })}
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
-                          {d.deal_status === "ACTIVE" && (
-                            <>
-                              <button onClick={e => { e.stopPropagation(); setRenewDeal(d); }}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">
-                                <RefreshCw className="w-3 h-3" /> Renew
-                              </button>
-                              <button onClick={e => { e.stopPropagation(); setTerminateDeal(d); }}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
-                                <Ban className="w-3 h-3" /> Terminate
-                              </button>
-                            </>
-                          )}
-                          <button onClick={e => { e.stopPropagation(); setEditDeal(d); }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                            <FileEdit className="w-3 h-3" /> Edit
-                          </button>
-                          {isAdmin && (
-                            <button onClick={e => handleDeleteDeal(e, d.id)}
-                              className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Row 2: stat chips */}
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {d.energy_rate != null && (
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
-                            Rate <span className="font-bold text-slate-700">${parseFloat(d.energy_rate).toFixed(4)}/kWh</span>
-                          </span>
-                        )}
-                        {d.adder != null && (
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
-                            Adder <span className="font-bold text-slate-700">${parseFloat(d.adder).toFixed(4)}/kWh</span>
-                          </span>
-                        )}
-                        {d.meter_type && (
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs font-semibold text-slate-600">{d.meter_type}</span>
-                        )}
-                        {d.sales_agent && (
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
-                            Agent <span className="font-bold text-slate-700">{d.sales_agent}</span>
-                          </span>
-                        )}
-                        {d.contract_start_date && d.contract_end_date && (
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
-                            {fmtDate(d.contract_start_date)} <span className="text-slate-300 mx-1">→</span> {fmtDate(d.contract_end_date)}
-                          </span>
-                        )}
-                        {d.esiid && (
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs font-mono text-slate-500">{d.esiid}</span>
-                        )}
-                      </div>
-
-                      {/* Row 3: address + terminated */}
-                      <div className="flex items-center gap-4 text-xs text-slate-400">
-                        {d.service_address && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 shrink-0" />{d.service_address}
-                          </span>
-                        )}
-                        {d.deal_status === "INACTIVE" && d.contract_end_date && (
-                          <span className="text-red-500 font-semibold">Terminated: {fmtDate(d.contract_end_date)}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-        </div>
-      </div>
     </div>
   );
 }

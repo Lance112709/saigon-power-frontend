@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare, Paperclip, Upload, Download, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare, Paperclip, Upload, Download, FileText, Loader2, Hash, Calendar } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -1009,101 +1009,96 @@ export default function LeadDetailPage() {
         </div>
       </div>
 
-      {/* ── Lead Info Card (horizontal) ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-        <div className="flex items-start justify-between gap-6">
+      {/* ── Lead Hero ── */}
+      <div className="rounded-2xl bg-gradient-to-r from-[#0F1D5E] via-[#1a2d7a] to-[#2a3f96] shadow-lg p-6 text-white">
+        <div className="flex items-start justify-between gap-6 flex-wrap">
           {/* Identity */}
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-xl bg-[#EEF1FA] flex items-center justify-center shrink-0">
-              <User className="w-6 h-6 text-[#0F1D5E]" />
+          <div className="flex items-start gap-4 min-w-0">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+              <User className="w-7 h-7 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-lg font-bold text-[#0F1D5E]">{lead.full_name}</h2>
+                <h2 className="text-xl font-bold">{lead.full_name}</h2>
                 <LeadBadge status={lead.status} />
               </div>
               {lead.status === "converted" && (
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <p className="text-xs text-emerald-600">Converted customer · appears in Customers tab</p>
+                  <p className="text-xs text-emerald-300">Converted customer · appears in Customers tab</p>
                   {lead.sgp_customer_id && (
-                    <span className="font-mono text-xs font-semibold text-[#0F1D5E] bg-[#EEF1FA] px-2 py-0.5 rounded-lg">{lead.sgp_customer_id}</span>
+                    <span className="font-mono text-xs font-semibold text-white bg-white/10 px-2 py-0.5 rounded-lg">{lead.sgp_customer_id}</span>
                   )}
                 </div>
               )}
+
+              <div className="flex flex-wrap gap-2 mt-2.5">
+                {lead.phone && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">
+                    <Phone className="w-3 h-3 text-blue-200" /> {lead.phone}{lead.phone2 ? ` · ${lead.phone2}` : ""}
+                  </span>
+                )}
+                {lead.email && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50 break-all">
+                    <Mail className="w-3 h-3 text-blue-200" /> {lead.email}{lead.email2 ? ` · ${lead.email2}` : ""}
+                  </span>
+                )}
+                {(lead.address || lead.city) && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">
+                    <MapPin className="w-3 h-3 text-blue-200" /> {lead.address}, {lead.city}, {lead.state} {lead.zip}
+                  </span>
+                )}
+                {lead.sales_agent && (
+                  <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">Agent <strong>{lead.sales_agent}</strong></span>
+                )}
+                {lead.referral_by && (
+                  <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">Ref <strong>{lead.referral_by}</strong></span>
+                )}
+                {lead.anxh && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs font-mono text-blue-50">
+                    <Hash className="w-3 h-3 text-blue-200" /> {canSeeFullAnxh ? lead.anxh : `••••${String(lead.anxh).slice(-4)}`}
+                  </span>
+                )}
+                {lead.dob && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">
+                    <Calendar className="w-3 h-3 text-blue-200" /> DOB {(() => { const [y,m,d] = lead.dob.split("-"); return `${m}/${d}/${y}`; })()}
+                  </span>
+                )}
+                {lead.dl_number && (
+                  <span className="px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">DL <strong>{lead.dl_number}</strong></span>
+                )}
+                {lead.account_flag && (
+                  <span className={`text-xs px-2.5 py-1 rounded-lg font-semibold ${
+                    lead.account_flag === "VIP Client" ? "bg-amber-400/20 text-amber-200 border border-amber-300/30" :
+                    lead.account_flag === "Red Flag" ? "bg-red-400/20 text-red-200 border border-red-300/30" :
+                    lead.account_flag === "65+" ? "bg-purple-400/20 text-purple-200 border border-purple-300/30" :
+                    "bg-blue-400/20 text-blue-100 border border-blue-300/30"
+                  }`}>{lead.account_flag}</span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Contact + Address */}
-          {!editingLead && (
-            <div className="flex items-center gap-8 text-sm text-slate-600 flex-wrap">
-              {lead.phone && (
-                <div className="flex items-center gap-2">
-                  <IconBox icon={Phone} />
-                  <span>{lead.phone}{lead.phone2 ? ` · ${lead.phone2}` : ""}</span>
-                </div>
-              )}
-              {lead.email && (
-                <div className="flex items-center gap-2">
-                  <IconBox icon={Mail} />
-                  <span className="break-all">{lead.email}{lead.email2 ? ` · ${lead.email2}` : ""}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <IconBox icon={MapPin} />
-                <span>{lead.address}, {lead.city}, {lead.state} {lead.zip}</span>
-              </div>
-              {(lead.referral_by || lead.sales_agent || lead.anxh || lead.dob || lead.dl_number || lead.account_flag) && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {lead.sales_agent && (
-                    <span className="text-xs bg-[#EEF1FA] text-[#0F1D5E] px-2 py-0.5 rounded-lg">Agent: <strong>{lead.sales_agent}</strong></span>
-                  )}
-                  {lead.referral_by && (
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">Ref: <strong>{lead.referral_by}</strong></span>
-                  )}
-                  {lead.anxh && (
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">
-                      ANXH: <strong>{canSeeFullAnxh ? lead.anxh : `••••${String(lead.anxh).slice(-4)}`}</strong>
-                    </span>
-                  )}
-                  {lead.dob && (
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">DOB: <strong>{lead.dob ? (() => { const [y,m,d] = lead.dob.split("-"); return `${m}/${d}/${y}`; })() : ""}</strong></span>
-                  )}
-                  {lead.dl_number && (
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">DL: <strong>{lead.dl_number}</strong></span>
-                  )}
-                  {lead.account_flag && (
-                    <span className={`text-xs px-2 py-0.5 rounded-lg font-semibold ${
-                      lead.account_flag === "VIP Client" ? "bg-amber-100 text-amber-700" :
-                      lead.account_flag === "Red Flag" ? "bg-red-100 text-red-600" :
-                      lead.account_flag === "65+" ? "bg-purple-100 text-purple-700" :
-                      "bg-blue-100 text-blue-700"
-                    }`}>{lead.account_flag}</span>
-                  )}
-                </div>
-              )}
+          <div className="flex items-center gap-6 shrink-0">
+            <div className="flex items-center gap-5 text-center">
+              <div><p className="text-2xl font-bold text-emerald-300">{active.length}</p><p className="text-[11px] text-blue-200/80 mt-0.5">Active</p></div>
+              <div><p className="text-2xl font-bold text-amber-300">{deals.filter(d => d.status === "Future").length}</p><p className="text-[11px] text-blue-200/80 mt-0.5">Future</p></div>
+              <div><p className="text-2xl font-bold text-white/50">{deals.filter(d => d.status === "Inactive").length}</p><p className="text-[11px] text-blue-200/80 mt-0.5">Inactive</p></div>
             </div>
-          )}
-
-          {/* Deal stats */}
-          {!editingLead && (
-            <div className="flex items-center gap-5 shrink-0 text-center">
-              <div><p className="text-xl font-bold text-emerald-600">{active.length}</p><p className="text-xs text-slate-400">Active</p></div>
-              <div><p className="text-xl font-bold text-amber-500">{deals.filter(d => d.status === "Future").length}</p><p className="text-xs text-slate-400">Future</p></div>
-              <div><p className="text-xl font-bold text-slate-400">{deals.filter(d => d.status === "Inactive").length}</p><p className="text-xs text-slate-400">Inactive</p></div>
-            </div>
-          )}
-
-          {/* Edit toggle */}
-          {!editingLead ? (
-            <button onClick={startEditLead} className="text-slate-400 hover:text-[#0F1D5E] transition-colors shrink-0" title="Edit lead info">
-              <Pencil className="w-4 h-4" />
-            </button>
-          ) : null}
+            {!editingLead && (
+              <button onClick={startEditLead} className="p-2 rounded-xl bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-colors" title="Edit lead info">
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Edit form */}
-        {editingLead && (
-          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+      </div>
+
+      {/* Edit form */}
+      {editingLead && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <h3 className="text-sm font-bold text-[#0F1D5E]">Edit Lead Info</h3>
+          <div className="space-y-3">
             <div className="grid grid-cols-6 gap-3">
               <div className="col-span-2">
                 <label className="text-xs text-slate-500">First Name <span className="text-red-500">*</span></label>
@@ -1228,8 +1223,8 @@ export default function LeadDetailPage() {
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Deals ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -1248,7 +1243,9 @@ export default function LeadDetailPage() {
         ) : (
           <div className="divide-y divide-slate-100">
             {[...active, ...other].map(d => (
-              <div key={d.id} className="p-5 hover:bg-slate-50/50 transition-colors">
+              <div key={d.id} className={`p-5 hover:bg-slate-50/50 transition-colors border-l-4 ${
+                d.status === "Active" ? "border-l-emerald-400" : d.status === "Future" ? "border-l-amber-400" : "border-l-slate-300"
+              }`}>
                 {/* Top row: supplier + status + actions */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
