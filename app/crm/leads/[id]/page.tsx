@@ -1011,9 +1011,9 @@ export default function LeadDetailPage() {
 
       {/* ── Lead Hero ── */}
       <div className="rounded-2xl bg-gradient-to-r from-[#0F1D5E] via-[#1a2d7a] to-[#2a3f96] shadow-lg p-6 text-white">
-        <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="flex items-start justify-between gap-6">
           {/* Identity */}
-          <div className="flex items-start gap-4 min-w-0">
+          <div className="flex items-start gap-4 min-w-0 flex-1">
             <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
               <User className="w-7 h-7 text-white" />
             </div>
