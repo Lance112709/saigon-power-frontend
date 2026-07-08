@@ -95,7 +95,7 @@ export default function ForecastPage() {
           Projected commission from {data?.contributing_deals ?? 0} active deals · up to 24 months out
         </p>
         <p className="text-xs text-slate-400 mt-1">
-          Lead deals use est. kWh × adder · Imported deals use TX avg kWh (Residential 1,100 / Commercial 2,500) × adder
+          Uses each meter's real usage from commission statements when available (TX averages otherwise) × contracted adder
         </p>
       </div>
 
@@ -161,7 +161,7 @@ export default function ForecastPage() {
                 tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
-              <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="amount" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
