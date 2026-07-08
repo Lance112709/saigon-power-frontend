@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare, Paperclip, Upload, Download, FileText, Loader2, Hash, Calendar } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
+import CommissionPayments from "@/components/CommissionPayments";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -1451,6 +1452,9 @@ export default function LeadDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Commission Payments (admin only) */}
+      <CommissionPayments leadId={id} />
 
       {/* ── Tasks & Follow-Ups ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

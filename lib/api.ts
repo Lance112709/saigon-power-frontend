@@ -164,6 +164,11 @@ export const api = {
     request(`/api/v1/crm/deals/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
   deleteCrmDealNote: (id: string, noteId: string) =>
     request(`/api/v1/crm/deals/${id}/notes/${noteId}`, { method: "DELETE" }),
+  getCommissionPayments: (params: Record<string, string>) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/api/v1/commission-payments?${qs}`);
+  },
+  getUnmatchedCommissionPayments: () => request("/api/v1/commission-payments/unmatched"),
   getCrmCustomerSources: () => request("/api/v1/crm/customers/sources"),
   getCrmProviders: () => request("/api/v1/crm/providers"),
   getCrmAgents: () => request("/api/v1/crm/agents"),

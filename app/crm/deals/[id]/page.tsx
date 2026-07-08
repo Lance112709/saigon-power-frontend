@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import CommissionPayments from "@/components/CommissionPayments";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -672,6 +673,9 @@ export default function DealDetailPage() {
           </table>
         )}
       </div>
+
+      {/* Commission Payments (admin only) */}
+      <CommissionPayments dealId={id} />
     </div>
   );
 }

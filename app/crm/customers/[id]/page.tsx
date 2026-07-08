@@ -9,6 +9,7 @@ import {
   Paperclip, Upload, Download, FileText, Loader2,
 } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
+import CommissionPayments from "@/components/CommissionPayments";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 const labelCls = "block text-sm text-slate-700 mb-1";
@@ -1469,6 +1470,9 @@ export default function CustomerProfilePage() {
               </div>
             )}
           </div>
+
+          {/* Commission Payments (admin only) */}
+          <CommissionPayments customerId={id} />
 
           {/* Tasks & Follow-Ups */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
