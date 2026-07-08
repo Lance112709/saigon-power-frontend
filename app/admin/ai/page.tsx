@@ -665,7 +665,7 @@ function CommandCenter({ cc, onGo }: { cc: any; onGo: (link: string) => void }) 
                       {p.name}
                     </td>
                     <td className="px-4 py-2.5 text-gray-500">{p.latest_month || "—"}</td>
-                    <td className="px-4 py-2.5 text-gray-700">{p.accounts_latest ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{p.accounts_latest || "—"}</td>
                     <td className="px-4 py-2.5 text-gray-700">{fmtUsd(p.received_3mo)}</td>
                     <td className="px-4 py-2.5 text-gray-500">{p.share_pct != null ? `${p.share_pct}%` : "—"}</td>
                     <td className="px-4 py-2.5 text-gray-500">{p.effective_mills ?? "—"}</td>
