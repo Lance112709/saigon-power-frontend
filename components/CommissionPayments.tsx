@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import { DollarSign, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 const STATUS_STYLE: Record<string, string> = {
   paid: "bg-emerald-100 text-emerald-700",
@@ -17,6 +18,96 @@ const fmtMonth = (m?: string) => {
   return new Date(Number(y), Number(mo) - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 };
 const fmtUsd = (v: number) => "$" + (v ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+
+function MonthlyUsageCard({ data }: { data: any }) {
+  const [showAll, setShowAll] = useState(false);
+  const rows = (data?.payments || []).filter((p: any) => p.kwh != null && p.service_end);
+  if (!rows.length) return null;
+
+  const buckets: Record<string, { month: string; kwh: number; meters: Set<string> }> = {};
+  for (const p of rows) {
+    const m = String(p.service_end).slice(0, 7);
+    const b = buckets[m] || (buckets[m] = { month: m, kwh: 0, meters: new Set() });
+    b.kwh += Number(p.kwh) || 0;
+    b.meters.add(p.esi_id);
+  }
+  const series = Object.values(buckets)
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .slice(-24)
+    .map(b => ({ month: b.month, kwh: Math.round(b.kwh), meters: b.meters.size }));
+  const totalKwh = rows.reduce((s: number, p: any) => s + (Number(p.kwh) || 0), 0);
+  const detail = [...rows].sort((a: any, b: any) => String(b.service_end).localeCompare(String(a.service_end)));
+  const visible = showAll ? detail : detail.slice(0, 12);
+  const multiMeter = (data?.esi_ids || []).length > 1;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4 text-[#0F1D5E]" />
+          <h3 className="text-sm font-bold text-[#0F1D5E]">Monthly Usage</h3>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">Admin only</span>
+        </div>
+        <span className="text-sm text-slate-500">
+          Lifetime metered <span className="font-bold text-slate-700">{Math.round(totalKwh).toLocaleString()} kWh</span>
+        </span>
+      </div>
+
+      <div className="px-4 pt-4" style={{ height: 170 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={series} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+            <CartesianGrid vertical={false} stroke="#eef1f6" />
+            <XAxis dataKey="month" tickLine={false} axisLine={false}
+              tick={{ fontSize: 10, fill: "#94a3b8" }} interval="preserveStartEnd" minTickGap={28}
+              tickFormatter={(m: string) => fmtMonth(m)} />
+            <YAxis tickLine={false} axisLine={false} width={44}
+              tick={{ fontSize: 10, fill: "#94a3b8" }}
+              tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : String(v)} />
+            <Tooltip
+              cursor={{ fill: "rgba(42,120,214,0.08)" }}
+              formatter={(v: any) => [`${Number(v).toLocaleString()} kWh`, "Usage"]}
+              labelFormatter={(m: any, pl: any) => {
+                const meters = pl?.[0]?.payload?.meters;
+                return `${fmtMonth(String(m))}${multiMeter && meters ? ` · ${meters} meter${meters > 1 ? "s" : ""}` : ""}`;
+              }}
+              contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} />
+            <Bar dataKey="kwh" fill="#2a78d6" radius={[4, 4, 0, 0]} maxBarSize={26} isAnimationActive={false} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="overflow-x-auto border-t border-slate-100 mt-2">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-100">
+              {["Service Period", "kWh", "ESI ID", "Supplier", "Statement Month"].map(h => (
+                <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((p: any) => (
+              <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
+                <td className="px-4 py-2.5 text-slate-700 whitespace-nowrap">{p.service_start} → {p.service_end}</td>
+                <td className="px-4 py-2.5 font-bold text-slate-700">{Number(p.kwh).toLocaleString()}</td>
+                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400">{p.esi_id}</td>
+                <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{p.supplier || "—"}</td>
+                <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{fmtMonth((p.payment_date || "").slice(0, 7))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {detail.length > 12 && (
+        <button onClick={() => setShowAll(v => !v)}
+          className="w-full py-2.5 text-xs font-semibold text-[#0F1D5E] hover:bg-[#EEF1FA] border-t border-slate-100 flex items-center justify-center gap-1">
+          {showAll ? <>Show fewer <ChevronUp className="w-3.5 h-3.5" /></> : <>Show all {detail.length} periods <ChevronDown className="w-3.5 h-3.5" /></>}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function CommissionPayments({ customerId, dealId, leadId }: {
   customerId?: string; dealId?: string; leadId?: string;
@@ -43,6 +134,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
   const visible = showAll ? payments : payments.slice(0, 12);
 
   return (
+    <>
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
@@ -111,5 +203,8 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
         </>
       )}
     </div>
+
+    <MonthlyUsageCard data={data} />
+    </>
   );
 }
