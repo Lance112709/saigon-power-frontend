@@ -35,7 +35,7 @@ export default function DroppedDealsPage() {
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
   const [offset, setOffset] = useState(0);
-  const LIMIT = 100;
+  const LIMIT = 500;
 
   const load = useCallback(async (off = 0) => {
     setLoading(true);

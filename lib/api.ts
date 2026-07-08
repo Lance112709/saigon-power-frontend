@@ -364,6 +364,7 @@ export const api = {
 
   // AI Operations Agent (admin only)
   getAiDashboard: () => request("/api/v1/ai-agent/dashboard"),
+  getAiCommandCenter: () => request("/api/v1/ai-agent/command-center"),
   runAiScan: () => request("/api/v1/ai-agent/scan", { method: "POST" }),
   getAiAlerts: () => request("/api/v1/ai-agent/alerts"),
   resolveAiAlert: (id: string) => request(`/api/v1/ai-agent/alerts/${id}/resolve`, { method: "PATCH" }),

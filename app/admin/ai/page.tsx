@@ -114,6 +114,7 @@ export default function AiOperationsPage() {
   const [chatLoading,  setChatLoading]  = useState(false);
 
   const [dupModal,     setDupModal]     = useState<{ type: "address"|"esiid"; data: any[]|null; loading: boolean } | null>(null);
+  const [cc,           setCc]           = useState<any>(null);
 
   const openDupModal = async (type: "address"|"esiid") => {
     setDupModal({ type, data: null, loading: true });
@@ -135,6 +136,7 @@ export default function AiOperationsPage() {
   }, []);
 
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
+  useEffect(() => { api.getAiCommandCenter().then(setCc).catch(() => {}); }, []);
 
   const loadLeaderboard = useCallback(async () => {
     setLbLoading(true);
@@ -221,7 +223,7 @@ export default function AiOperationsPage() {
 
   const TABS: { key: Tab; label: string }[] = [
     { key: "chat",         label: "💬 AI Chat"            },
-    { key: "overview",     label: "Overview"              },
+    { key: "overview",     label: "Command Center"        },
     { key: "leaderboard",  label: "Agent Leaderboard"     },
     { key: "pipeline",     label: "Pipeline & Revenue"    },
     { key: "performance",  label: "Deals by Agent"        },
@@ -307,7 +309,12 @@ export default function AiOperationsPage() {
         </div>
 
         <div className="p-5">
-          {activeTab === "overview" && <OverviewTab m={m} dashboard={dashboard} onOpenDup={openDupModal} />}
+          {activeTab === "overview" && (
+            <div className="space-y-6">
+              <CommandCenter cc={cc} onGo={(l: string) => router.push(l)} />
+              <OverviewTab m={m} dashboard={dashboard} onOpenDup={openDupModal} />
+            </div>
+          )}
           {activeTab === "leaderboard" && <LeaderboardTab data={leaderboard} loading={lbLoading} onRefresh={loadLeaderboard} />}
           {activeTab === "pipeline" && <PipelineTab data={pipeline} loading={plLoading} onRefresh={loadPipeline} />}
           {activeTab === "performance" && (
@@ -563,6 +570,138 @@ function ChatTab({
 }
 
 // ── Overview Tab ───────────────────────────────────────────────────────────────
+
+
+const fmtUsd = (v: number, d = 0) =>
+  "$" + (v ?? 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+function CommandCenter({ cc, onGo }: { cc: any; onGo: (link: string) => void }) {
+  if (!cc) return <p className="text-sm text-gray-400">Loading command center…</p>;
+  const k = cc.kpis || {};
+  const sevCls: Record<string, string> = {
+    high: "bg-red-50 border-red-200",
+    medium: "bg-amber-50 border-amber-200",
+    low: "bg-gray-50 border-gray-200",
+  };
+  const intn: [string, string][] = [
+    ["ai", "AI briefings"], ["email", "Customer email"], ["sms", "SMS"], ["gmail_ingest", "Gmail auto-ingest"],
+  ];
+  return (
+    <div className="space-y-6">
+      {/* KPI hero */}
+      <div className="rounded-2xl bg-gradient-to-r from-[#0F1D5E] via-[#1a2d7a] to-[#2a3f96] p-6 text-white">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Verified received · all time</p>
+            <p className="text-3xl font-bold mt-1">{fmtUsd(k.total_received_alltime)}</p>
+            <p className="text-[11px] text-blue-200/70 mt-1">every dollar matched to statements</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Paying accounts</p>
+            <p className="text-3xl font-bold mt-1">{(k.paying_accounts ?? 0).toLocaleString()}</p>
+            <p className="text-[11px] text-blue-200/70 mt-1">on the latest statements</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Book value</p>
+            <p className="text-3xl font-bold mt-1">{fmtUsd(k.book_value)}</p>
+            <p className="text-[11px] text-blue-200/70 mt-1">expected lifetime commissions</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Open disputes</p>
+            <p className={`text-3xl font-bold mt-1 ${k.open_disputes ? "text-amber-300" : "text-emerald-300"}`}>
+              {fmtUsd(k.open_dispute_dollars)}
+            </p>
+            <p className="text-[11px] text-blue-200/70 mt-1">{k.open_disputes ?? 0} item{(k.open_disputes ?? 0) !== 1 ? "s" : ""} to chase</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Needs attention */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Needs your attention</p>
+        {(cc.actions || []).length === 0 ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+            ✅ Nothing urgent — every statement is reconciled and no provider issues are open.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {cc.actions.map((a: any, i: number) => (
+              <div key={i} className={`flex items-start gap-3 rounded-xl border p-3.5 ${sevCls[a.severity] || sevCls.low}`}>
+                <span className="text-lg leading-none mt-0.5">{a.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-800">{a.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{a.detail}</p>
+                </div>
+                {a.link && (
+                  <button onClick={() => onGo(a.link)}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-[#0F1D5E] hover:bg-[#EEF1FA]">
+                    Open →
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Provider scorecard */}
+      {(cc.providers || []).length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Provider scorecard</p>
+          <div className="overflow-x-auto rounded-xl border border-gray-200">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  {["Provider", "Latest stmt", "Accounts", "Received (3 mo)", "Share", "Eff. mills", "Disputes", "Not in CRM"].map(h => (
+                    <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {cc.providers.map((p: any) => (
+                  <tr key={p.name} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/60">
+                    <td className="px-4 py-2.5 font-semibold text-gray-800 whitespace-nowrap">
+                      <span className={`inline-block w-2 h-2 rounded-full mr-2 ${(p.months_not_reporting || 0) >= 2 ? "bg-red-400" : "bg-emerald-400"}`} />
+                      {p.name}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.latest_month || "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{p.accounts_latest ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{fmtUsd(p.received_3mo)}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.share_pct != null ? `${p.share_pct}%` : "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{p.effective_mills ?? "—"}</td>
+                    <td className={`px-4 py-2.5 font-semibold ${p.open_disputes ? "text-amber-600" : "text-gray-400"}`}>
+                      {p.open_disputes || 0}{p.open_dollars ? ` (${fmtUsd(p.open_dollars)})` : ""}
+                    </td>
+                    <td className={`px-4 py-2.5 ${p.unknown_accounts ? "text-blue-600 font-semibold" : "text-gray-400"}`}>{p.unknown_accounts || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Integrations */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Integrations</p>
+        <div className="flex flex-wrap gap-2">
+          {intn.map(([key, label]) => {
+            const ok = cc.integrations?.[key];
+            return (
+              <span key={key} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                ok ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-50 text-gray-400 border-gray-200"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-gray-300"}`} />
+                {label}{ok ? "" : " — not configured"}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function OverviewTab({ m, dashboard, onOpenDup }: { m: any; dashboard: Dashboard | null; onOpenDup: (type: "address" | "esiid") => void }) {
   return (
