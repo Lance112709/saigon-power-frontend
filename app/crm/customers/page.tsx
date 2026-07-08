@@ -41,6 +41,10 @@ function CrmCustomersContent() {
   const [provider, setProvider] = useState("");
   const [dealStatus, setDealStatus] = useState(() => searchParams.get("deal_status") ?? "");
   const [meterType, setMeterType] = useState("");
+  const [source, setSource] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sources, setSources] = useState<any[]>([]);
   const [providers, setProviders] = useState<string[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [offset, setOffset] = useState(0);
@@ -62,6 +66,7 @@ function CrmCustomersContent() {
   useEffect(() => {
     api.getCrmProviders().then(setProviders).catch(() => {});
     api.getCrmStats().then(setStats).catch(() => {});
+    (api as any).getCrmCustomerSources().then(setSources).catch(() => {});
   }, []);
 
   const loadCustomers = useCallback(async (off = 0) => {
@@ -72,6 +77,9 @@ function CrmCustomersContent() {
       if (provider) params.provider = provider;
       if (dealStatus) params.deal_status = dealStatus;
       if (meterType) params.meter_type = meterType;
+      if (source) params.source = source;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
       const data = await api.getCrmCustomers(params);
       setCustomers(off === 0 ? data : prev => {
         const seen = new Set(prev.map((c: any) => c.id));
@@ -80,7 +88,7 @@ function CrmCustomersContent() {
       setOffset(off);
     } catch {}
     setLoading(false);
-  }, [search, provider, dealStatus, meterType]);
+  }, [search, provider, dealStatus, meterType, source, dateFrom, dateTo]);
 
   useEffect(() => { loadCustomers(0); }, [loadCustomers]);
 
@@ -257,6 +265,27 @@ function CrmCustomersContent() {
               <option value="Small Commercial">Small Commercial</option>
             </select>
           </div>
+          <div className="flex flex-col sm:flex-row gap-3 mt-3 sm:items-center">
+            <select value={source} onChange={e => setSource(e.target.value)} className={selectClass}>
+              <option value="">All Sources</option>
+              {sources.map((s: any) => (
+                <option key={s.value} value={s.value}>{s.label} ({s.count})</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Added</span>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={selectClass} />
+              <span className="text-slate-300">→</span>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={selectClass} />
+            </div>
+            {(source || dateFrom || dateTo || provider || dealStatus || meterType || search) && (
+              <button
+                onClick={() => { setSearch(""); setProvider(""); setDealStatus(""); setMeterType(""); setSource(""); setDateFrom(""); setDateTo(""); }}
+                className="text-xs font-semibold text-slate-500 hover:text-red-500 px-2 py-1 whitespace-nowrap">
+                ✕ Clear filters
+              </button>
+            )}
+          </div>
         </div>
 
         {loading && customers.length === 0 ? (
@@ -284,10 +313,13 @@ function CrmCustomersContent() {
                   >
                     <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">{c.full_name}</td>
                     <td className="px-5 py-3.5 text-slate-500 max-w-[160px] truncate">{c.business_name || <span className="text-slate-300">—</span>}</td>
-                    <td className="px-5 py-3.5">
-                      {c.notes
-                        ? <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${c.notes === "HubSpot" ? "bg-yellow-100 text-yellow-700" : "bg-violet-50 text-violet-700"}`}>{c.notes}</span>
-                        : <span className="text-slate-400 text-xs">—</span>}
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        c.source === "HubSpot" ? "bg-yellow-100 text-yellow-700"
+                        : c.source === "Direct Energy Transfer" ? "bg-blue-50 text-blue-700"
+                        : c.source === "Manual" ? "bg-slate-100 text-slate-500"
+                        : "bg-violet-50 text-violet-700"
+                      }`}>{c.source || "Manual"}</span>
                     </td>
                     <td className="px-5 py-3.5 text-slate-500">{c.phone || "—"}</td>
                     <td className="px-5 py-3.5 text-slate-500 max-w-[200px] truncate">{c.service_address || c.city || "—"}</td>
