@@ -590,7 +590,7 @@ function CommandCenter({ cc, onGo }: { cc: any; onGo: (link: string) => void }) 
     <div className="space-y-6">
       {/* KPI hero */}
       <div className="rounded-2xl bg-gradient-to-r from-[#0F1D5E] via-[#1a2d7a] to-[#2a3f96] p-6 text-white">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           <div>
             <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Verified received · all time</p>
             <p className="text-3xl font-bold mt-1">{fmtUsd(k.total_received_alltime)}</p>
@@ -605,6 +605,18 @@ function CommandCenter({ cc, onGo }: { cc: any; onGo: (link: string) => void }) 
             <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Book value</p>
             <p className="text-3xl font-bold mt-1">{fmtUsd(k.book_value)}</p>
             <p className="text-[11px] text-blue-200/70 mt-1">expected lifetime commissions</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Residential meters</p>
+            <p className="text-3xl font-bold mt-1">{(cc.meters?.residential ?? 0).toLocaleString()}</p>
+            <p className="text-[11px] text-blue-200/70 mt-1">active deals</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Commercial meters</p>
+            <p className="text-3xl font-bold mt-1">{(cc.meters?.commercial ?? 0).toLocaleString()}</p>
+            <p className="text-[11px] text-blue-200/70 mt-1">
+              active deals{cc.meters?.unknown ? ` · ${cc.meters.unknown.toLocaleString()} untyped` : ""}
+            </p>
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-wider text-blue-200/80">Open disputes</p>
