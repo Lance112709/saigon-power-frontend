@@ -194,6 +194,7 @@ export const api = {
   },
   getCurrentPricingVersion: () => request("/api/v1/commercial-pricing/current/version"),
   getPricingDashboard: () => request("/api/v1/commercial-pricing/dashboard"),
+  pollPricingEmail: () => request("/api/v1/commercial-pricing/poll-email", { method: "POST" }),
   getPricingHistory: () => request("/api/v1/commercial-pricing/history"),
   getPricingProviders: () => request("/api/v1/commercial-pricing/providers"),
   addPricingProvider: (payload: any) => request("/api/v1/commercial-pricing/providers", { method: "POST", body: JSON.stringify(payload) }),

@@ -22,6 +22,8 @@ export default function PricingAdminPage() {
   const [publishing, setPublishing] = useState<string | null>(null);
   const [savingMargin, setSavingMargin] = useState<string | null>(null);
   const [newProv, setNewProv] = useState({ code: "", name: "", margin: "0.003" });
+  const [polling, setPolling] = useState(false);
+  const [pollResult, setPollResult] = useState<any>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadAll = useCallback(async () => {
@@ -88,11 +90,33 @@ export default function PricingAdminPage() {
         <button onClick={() => router.push("/pricing")} className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1D5E]">
           <ArrowLeft className="w-4 h-4" /> Agent pricing view
         </button>
-        <button onClick={() => setWizard({ step: 1, provider: "NRG" })}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90">
-          <Upload className="w-4 h-4" /> Upload Matrix
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={async () => {
+              setPolling(true); setPollResult(null);
+              try { setPollResult(await (api as any).pollPricingEmail()); await loadAll(); }
+              catch { setPollResult({ ok: false, error: "Request failed" }); }
+              setPolling(false);
+            }} disabled={polling}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[#0F1D5E]/30 text-[#0F1D5E] text-sm font-semibold hover:bg-[#EEF1FA] disabled:opacity-50">
+            <RefreshCw className={`w-4 h-4 ${polling ? "animate-spin" : ""}`} />
+            {polling ? "Checking inbox…" : "Check Email Now"}
+          </button>
+          <button onClick={() => setWizard({ step: 1, provider: "NRG" })}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90">
+            <Upload className="w-4 h-4" /> Upload Matrix
+          </button>
+        </div>
       </div>
+
+      {pollResult && (
+        <div className={`rounded-xl border p-3.5 text-sm ${pollResult.ok ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+          {pollResult.ok ? (
+            (pollResult.imported || []).length
+              ? <>📬 Imported {pollResult.imported.length} matrix file(s): {pollResult.imported.map((i: any) => `${i.provider} v${i.version} (${Number(i.rows).toLocaleString()} rates)`).join(", ")}{(pollResult.published || []).length ? " — published to agents." : " — saved as drafts."}</>
+              : <>Inbox checked — no new pricing emails found{pollResult.already_imported ? ` (${pollResult.already_imported} already imported)` : ""}.</>
+          ) : <>⚠️ {pollResult.error}</>}
+        </div>
+      )}
 
       {/* Today's status per provider */}
       <div>
@@ -190,7 +214,8 @@ export default function PricingAdminPage() {
         </div>
         <div className="divide-y divide-slate-100">
           {providers.map((p: any) => (
-            <ProviderRow key={p.id} p={p} saving={savingMargin === p.id} onSave={saveMargin} />
+            <ProviderRow key={p.id} p={p} saving={savingMargin === p.id} onSave={saveMargin}
+              onToggleAuto={async (prov, v) => { try { await (api as any).updatePricingProvider(prov.id, { auto_publish: v }); await loadAll(); } catch {} }} />
           ))}
           <div className="px-5 py-4 flex flex-wrap items-center gap-3 bg-slate-50/50">
             <Plus className="w-4 h-4 text-slate-400" />
@@ -316,7 +341,7 @@ export default function PricingAdminPage() {
   );
 }
 
-function ProviderRow({ p, saving, onSave }: { p: any; saving: boolean; onSave: (p: any, m: string) => void }) {
+function ProviderRow({ p, saving, onSave, onToggleAuto }: { p: any; saving: boolean; onSave: (p: any, m: string) => void; onToggleAuto: (p: any, v: boolean) => void }) {
   const [margin, setMargin] = useState(String(p.margin));
   return (
     <div className="px-5 py-3 flex flex-wrap items-center gap-4">
@@ -335,6 +360,11 @@ function ProviderRow({ p, saving, onSave }: { p: any; saving: boolean; onSave: (
           </button>
         )}
       </div>
+      <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+        <input type="checkbox" checked={p.auto_publish !== false}
+          onChange={e => onToggleAuto(p, e.target.checked)} className="accent-[#0F1D5E]" />
+        Auto-publish from email
+      </label>
       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${p.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
         {p.active ? "Active" : "Disabled"}
       </span>
