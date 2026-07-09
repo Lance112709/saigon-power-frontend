@@ -42,6 +42,7 @@ function CrmCustomersContent() {
   const [dealStatus, setDealStatus] = useState(() => searchParams.get("deal_status") ?? "");
   const [meterType, setMeterType] = useState("");
   const [source, setSource] = useState("");
+  const [missingInfo, setMissingInfo] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sources, setSources] = useState<any[]>([]);
@@ -78,6 +79,7 @@ function CrmCustomersContent() {
       if (dealStatus) params.deal_status = dealStatus;
       if (meterType) params.meter_type = meterType;
       if (source) params.source = source;
+      if (missingInfo) params.missing_contact = "true";
       if (dateFrom) params.date_from = dateFrom;
       if (dateTo) params.date_to = dateTo;
       const data = await api.getCrmCustomers(params);
@@ -88,7 +90,7 @@ function CrmCustomersContent() {
       setOffset(off);
     } catch {}
     setLoading(false);
-  }, [search, provider, dealStatus, meterType, source, dateFrom, dateTo]);
+  }, [search, provider, dealStatus, meterType, source, missingInfo, dateFrom, dateTo]);
 
   useEffect(() => { loadCustomers(0); }, [loadCustomers]);
 
@@ -272,15 +274,22 @@ function CrmCustomersContent() {
                 <option key={s.value} value={s.value}>{s.label} ({s.count})</option>
               ))}
             </select>
+            <button
+              onClick={() => setMissingInfo(v => !v)}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold border whitespace-nowrap transition-colors ${
+                missingInfo ? "bg-amber-500 text-white border-amber-500" : "bg-white text-amber-600 border-amber-300 hover:bg-amber-50"
+              }`}>
+              {missingInfo ? "✓ " : ""}Needs contact info
+            </button>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Added</span>
               <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={selectClass} />
               <span className="text-slate-300">→</span>
               <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={selectClass} />
             </div>
-            {(source || dateFrom || dateTo || provider || dealStatus || meterType || search) && (
+            {(source || missingInfo || dateFrom || dateTo || provider || dealStatus || meterType || search) && (
               <button
-                onClick={() => { setSearch(""); setProvider(""); setDealStatus(""); setMeterType(""); setSource(""); setDateFrom(""); setDateTo(""); }}
+                onClick={() => { setSearch(""); setProvider(""); setDealStatus(""); setMeterType(""); setSource(""); setMissingInfo(false); setDateFrom(""); setDateTo(""); }}
                 className="text-xs font-semibold text-slate-500 hover:text-red-500 px-2 py-1 whitespace-nowrap">
                 ✕ Clear filters
               </button>
@@ -311,11 +320,17 @@ function CrmCustomersContent() {
                     className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 cursor-pointer"
                     onClick={() => router.push(`/crm/customers/${c.id}`)}
                   >
-                    <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">{c.full_name}</td>
+                    <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">
+                      {c.full_name}
+                      {!c.phone && !c.email && (
+                        <span className="ml-2 inline-block w-2 h-2 rounded-full bg-amber-400 align-middle" title="No contact info on file — click to complete profile" />
+                      )}
+                    </td>
                     <td className="px-5 py-3.5 text-slate-500 max-w-[160px] truncate">{c.business_name || <span className="text-slate-300">—</span>}</td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                         c.source === "HubSpot" ? "bg-yellow-100 text-yellow-700"
+                        : c.source === "GiaDienRe" ? "bg-teal-50 text-teal-700"
                         : c.source === "Direct Energy Transfer" ? "bg-blue-50 text-blue-700"
                         : c.source === "Manual" ? "bg-slate-100 text-slate-500"
                         : "bg-violet-50 text-violet-700"
