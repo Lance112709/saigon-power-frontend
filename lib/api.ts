@@ -187,6 +187,33 @@ export const api = {
     a.href = url; a.download = "crm_import_template.xlsx"; a.click();
     URL.revokeObjectURL(url);
   },
+  // ── Commercial Pricing ──
+  getCurrentPricing: (params?: Record<string, string>) => {
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/commercial-pricing/current${qs}`);
+  },
+  getCurrentPricingVersion: () => request("/api/v1/commercial-pricing/current/version"),
+  getPricingDashboard: () => request("/api/v1/commercial-pricing/dashboard"),
+  getPricingHistory: () => request("/api/v1/commercial-pricing/history"),
+  getPricingProviders: () => request("/api/v1/commercial-pricing/providers"),
+  addPricingProvider: (payload: any) => request("/api/v1/commercial-pricing/providers", { method: "POST", body: JSON.stringify(payload) }),
+  updatePricingProvider: (id: string, payload: any) => request(`/api/v1/commercial-pricing/providers/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  getPricingUploadPreview: (id: string) => request(`/api/v1/commercial-pricing/uploads/${id}/preview`),
+  publishPricingUpload: (id: string) => request(`/api/v1/commercial-pricing/uploads/${id}/publish`, { method: "POST" }),
+  uploadPricingMatrix: async (providerCode: string, file: File) => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const form = new FormData();
+    form.append("provider_code", providerCode);
+    form.append("file", file);
+    const res = await fetch(`${API_URL}/api/v1/commercial-pricing/upload`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!res.ok) { const b = await res.text(); throw new Error(b); }
+    return res.json();
+  },
   importCrmExcel: async (file: File) => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
@@ -202,6 +229,23 @@ export const api = {
   },
   clearCrmData: () => request("/api/v1/crm/clear", { method: "DELETE" }),
   deduplicateCrmDeals: () => request("/api/v1/crm/deduplicate-deals", { method: "POST" }),
+
+  // GiaDienRe website subscriptions
+  getGdrSubscriptions: (params?: Record<string, string>) => {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/giadienre/subscriptions${q}`);
+  },
+  getGdrStats: () => request("/api/v1/giadienre/subscriptions/stats"),
+  getGdrNewCount: (since: string) =>
+    request(`/api/v1/giadienre/subscriptions/new-count?since=${encodeURIComponent(since)}`),
+  getGdrSubscription: (id: string) => request(`/api/v1/giadienre/subscriptions/${id}`),
+  updateGdrSubscription: (id: string, data: any) =>
+    request(`/api/v1/giadienre/subscriptions/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  getGdrNotes: (id: string) => request(`/api/v1/giadienre/subscriptions/${id}/notes`),
+  createGdrNote: (id: string, data: any) =>
+    request(`/api/v1/giadienre/subscriptions/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
+  deleteGdrNote: (id: string, noteId: string) =>
+    request(`/api/v1/giadienre/subscriptions/${id}/notes/${noteId}`, { method: "DELETE" }),
 
   // Leads
   getAllLeadDeals: (params?: Record<string, string>) => {

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase } from "lucide-react";
+  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase, PlugZap } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
 interface NavItem {
@@ -24,6 +24,7 @@ const links: NavItem[] = [
   { href: "/tasks",          label: "Tasks & Follow-Ups", icon: Bell },
   { href: "/rates",          label: "Today's Rates",     icon: Tag },
   { href: "/forecast",       label: "Revenue Forecast",  icon: TrendingUp, perm: "view_forecast" },
+  { href: "/pricing",        label: "Commercial Pricing", icon: Tag },
   { href: "/uploads",        label: "Upload Statements", icon: Upload, perm: "view_uploads" },
   { href: "/admin/enrollments", label: "Enrollments",     icon: FileSignature, roles: ["admin", "manager"] },
   { href: "/reconciliation", label: "Reconciliation",    icon: RefreshCw, perm: "view_reconciliation" },
@@ -36,6 +37,7 @@ const crmLinks: NavItem[] = [
   { href: "/proposals",           label: "Proposals",          icon: FileSignature, perm: "view_proposals" },
   { href: "/crm/agents",          label: "Sales Agents",       icon: UserCog,       roles: ["admin"] },
   { href: "/crm/customers",       label: "Imported Customers", icon: Users,         perm: "view_all_customers" },
+  { href: "/crm/giadienre",       label: "GiaDienRe Subscription", icon: PlugZap,   perm: "view_all_customers" },
   { href: "/renewals",            label: "Renewals",           icon: CalendarClock, perm: "view_all_customers" },
   { href: "/crm/deals",           label: "All Deals",          icon: FileText,      perm: "view_all_deals" },
   { href: "/crm/dropped",         label: "Dropped Deals",      icon: XCircle,       perm: "view_all_deals" },
@@ -65,6 +67,7 @@ export default function Sidebar() {
   const { user, logout, loading, can } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
+  const [newGdrCount, setNewGdrCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -72,6 +75,11 @@ export default function Sidebar() {
     const lastSeen = localStorage.getItem(key) || new Date(0).toISOString();
     api.getNewLeadsCount(lastSeen)
       .then((res: any) => setNewLeadsCount(res?.count || 0))
+      .catch(() => {});
+    const gdrKey = `gdr_last_seen_${user.id || user.name}`;
+    const gdrLastSeen = localStorage.getItem(gdrKey) || new Date(0).toISOString();
+    api.getGdrNewCount(gdrLastSeen)
+      .then((res: any) => setNewGdrCount(res?.count || 0))
       .catch(() => {});
   }, [user, pathname]);
 
@@ -146,7 +154,9 @@ export default function Sidebar() {
           <>
             <SectionLabel>CRM</SectionLabel>
             {crmLinks.filter(canSee).map(item => (
-              <NavLink key={item.href} {...item} badge={item.href === "/crm/leads" ? newLeadsCount : undefined} />
+              <NavLink key={item.href} {...item}
+                badge={item.href === "/crm/leads" ? newLeadsCount
+                  : item.href === "/crm/giadienre" ? newGdrCount : undefined} />
             ))}
           </>
         )}
