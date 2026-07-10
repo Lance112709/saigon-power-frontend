@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import {
   DollarSign, AlertTriangle, CheckCircle, TrendingDown, Copy, HelpCircle,
-  RefreshCw, X, Search, Download, Banknote,
+  RefreshCw, X, Search, Download, Banknote, Siren, Scale, ShieldAlert,
+  ChevronDown, ChevronUp, History,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -53,6 +55,363 @@ const STATUS_META: Record<string, { label: string; badge: string; icon: any }> =
 };
 
 const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+
+const WORKFLOW_META: Record<string, { label: string; badge: string }> = {
+  open:                { label: "Open",                badge: "bg-red-100 text-red-800" },
+  investigating:       { label: "Investigating",       badge: "bg-amber-100 text-amber-800" },
+  waiting_on_provider: { label: "Waiting on Provider", badge: "bg-blue-100 text-blue-800" },
+  resolved:            { label: "Resolved",            badge: "bg-emerald-100 text-emerald-700" },
+  recovered:           { label: "Recovered",           badge: "bg-emerald-100 text-emerald-800" },
+  ignored:             { label: "Ignored",             badge: "bg-slate-100 text-slate-500" },
+};
+
+const FINDING_ICONS: Record<string, any> = {
+  systemic_rate_change: Siren,
+  payment_stopped: AlertTriangle,
+  clawback_anomaly: ShieldAlert,
+};
+
+/** Grouped systemic findings — one card per pattern (e.g. "455 accounts cut
+ * from 0.008 to 0.005"). */
+function SystemicFindings({ findings, onCreateDispute, onUpdate }: {
+  findings: any[];
+  onCreateDispute: (f: any) => void;
+  onUpdate: (id: string, status: string) => void;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+  if (findings.length === 0) return null;
+  return (
+    <div className="space-y-3">
+      {findings.map(f => {
+        const Icon = FINDING_ICONS[f.finding_type] ?? AlertTriangle;
+        const critical = f.severity === "critical";
+        return (
+          <div key={f.id} className={`rounded-2xl border shadow-sm overflow-hidden ${
+            critical ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
+          }`}>
+            <div className="px-5 py-4 flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                critical ? "bg-red-100" : "bg-amber-100"
+              }`}>
+                <Icon className={`w-5 h-5 ${critical ? "text-red-600" : "text-amber-600"}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className={`text-sm font-bold ${critical ? "text-red-900" : "text-amber-900"}`}>
+                    {f.title}
+                  </h3>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/70 text-slate-600">
+                    {fmtMonth(f.billing_month)}
+                  </span>
+                  {f.status !== "open" && (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/70 text-slate-600 capitalize">
+                      {f.status}
+                    </span>
+                  )}
+                </div>
+                <p className={`text-xs mt-1 leading-relaxed max-w-3xl ${critical ? "text-red-800/80" : "text-amber-800/80"}`}>
+                  {f.explanation}
+                </p>
+              </div>
+              <div className="flex items-center gap-4 shrink-0">
+                <div className="text-right">
+                  <p className={`text-xl font-bold tabular-nums ${critical ? "text-red-700" : "text-amber-700"}`}>
+                    {fmt(f.estimated_impact)}
+                  </p>
+                  <p className="text-[11px] text-slate-500">{f.affected_count} accounts</p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {f.status !== "disputed" && (
+                    <button
+                      onClick={async () => { setBusy(f.id); try { await onCreateDispute(f); } finally { setBusy(null); } }}
+                      disabled={busy === f.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#182a80] disabled:opacity-50"
+                    >
+                      <Scale className="w-3.5 h-3.5" /> {busy === f.id ? "Building…" : "Create dispute"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onUpdate(f.id, "dismissed")}
+                    className="px-3 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:bg-white/60"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Durable exception cases across every provider and month — the work queue. */
+function ExceptionCenter({ onCreateDispute }: { onCreateDispute: (supplierId: string, caseIds: string[]) => Promise<void> }) {
+  const [cases, setCases] = useState<any[]>([]);
+  const [statusChip, setStatusChip] = useState("any_open");
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [history, setHistory] = useState<Record<string, any[]>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const load = useCallback(async (chip: string) => {
+    setLoading(true);
+    setSelected(new Set());
+    try {
+      const data = await api.getExceptionCases(
+        chip === "all" ? {} : { workflow_status: chip });
+      setCases(data || []);
+    } catch { setCases([]); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(statusChip); }, [statusChip, load]);
+
+  const setStatus = async (c: any, status: string) => {
+    let recovered: number | undefined;
+    if (status === "recovered") {
+      const v = prompt("How much was recovered for this account ($)?",
+        String(c.estimated_loss ?? 0));
+      if (v == null) return;
+      recovered = parseFloat(v) || 0;
+    }
+    setSavingId(c.id);
+    try {
+      await api.updateExceptionCase(c.id, {
+        workflow_status: status,
+        ...(recovered !== undefined ? { recovered_amount: recovered } : {}),
+      });
+      await load(statusChip);
+    } catch { alert("Update failed"); }
+    setSavingId(null);
+  };
+
+  const bulkSet = async (status: string) => {
+    if (selected.size === 0) return;
+    try {
+      await api.bulkUpdateCases([...selected], status);
+      await load(statusChip);
+    } catch { alert("Bulk update failed"); }
+  };
+
+  const disputeSelected = async () => {
+    const chosen = cases.filter(c => selected.has(c.id));
+    const sups = new Set(chosen.map(c => c.supplier_id));
+    if (sups.size !== 1) { alert("Select cases from one provider at a time — a dispute goes to a single provider."); return; }
+    await onCreateDispute(chosen[0].supplier_id, chosen.map(c => c.id));
+  };
+
+  const toggleHistory = async (c: any) => {
+    if (expanded === c.id) { setExpanded(null); return; }
+    setExpanded(c.id);
+    if (!history[c.id]) {
+      try {
+        const h = await api.getSnapshotHistory(c.esiid, c.supplier_id);
+        setHistory(prev => ({ ...prev, [c.id]: h || [] }));
+      } catch {
+        setHistory(prev => ({ ...prev, [c.id]: [] }));
+      }
+    }
+  };
+
+  const openLoss = cases.reduce((s, c) => s + (c.estimated_loss ?? 0), 0);
+  const chips = [
+    { v: "any_open", l: "All open" },
+    { v: "open", l: "Open" },
+    { v: "investigating", l: "Investigating" },
+    { v: "waiting_on_provider", l: "Waiting on provider" },
+    { v: "recovered", l: "Recovered" },
+    { v: "resolved", l: "Resolved" },
+    { v: "ignored", l: "Ignored" },
+    { v: "all", l: "Everything" },
+  ];
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-[#EEF1FA] flex items-center justify-center">
+            <ShieldAlert className="w-4.5 h-4.5 text-[#0F1D5E]" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-[#0F1D5E]">Exception Center</h2>
+            <p className="text-xs text-slate-400">
+              {cases.length} case{cases.length !== 1 ? "s" : ""}
+              {statusChip !== "recovered" && statusChip !== "resolved" && statusChip !== "ignored" &&
+                <> · {fmt(openLoss)} estimated at stake</>} — statuses survive statement re-imports
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {chips.map(ch => (
+            <button key={ch.v} onClick={() => setStatusChip(ch.v)}
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
+                statusChip === ch.v ? "bg-[#0F1D5E] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}>{ch.l}</button>
+          ))}
+        </div>
+      </div>
+
+      {selected.size > 0 && (
+        <div className="px-5 py-2.5 bg-[#EEF1FA] border-b border-slate-100 flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-[#0F1D5E]">{selected.size} selected</span>
+          <button onClick={disputeSelected}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#182a80]">
+            <Scale className="w-3.5 h-3.5" /> Create dispute
+          </button>
+          <button onClick={() => bulkSet("investigating")}
+            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50">
+            Mark investigating
+          </button>
+          <button onClick={() => bulkSet("ignored")}
+            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50">
+            Ignore
+          </button>
+          <button onClick={() => setSelected(new Set())}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700">Clear</button>
+        </div>
+      )}
+
+      <div className="overflow-x-auto max-h-[560px] overflow-y-auto">
+        {loading ? (
+          <p className="p-8 text-center text-slate-400 text-sm">Loading…</p>
+        ) : cases.length === 0 ? (
+          <div className="p-10 text-center">
+            <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+            <p className="text-slate-500 text-sm font-medium">No cases in this view.</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-slate-50 z-10">
+              <tr className="border-b border-slate-100">
+                <th className="px-4 py-3 w-8">
+                  <input type="checkbox" className="rounded"
+                    checked={selected.size === cases.length && cases.length > 0}
+                    onChange={() => setSelected(selected.size === cases.length
+                      ? new Set() : new Set(cases.map(c => c.id)))} />
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Account</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Provider · Month</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Issue</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Est. $ Lost</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Recovered</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {cases.map(c => {
+                const meta = STATUS_META[c.issue_type] ?? STATUS_META.unexpected;
+                const wf = WORKFLOW_META[c.workflow_status] ?? WORKFLOW_META.open;
+                const isOpen = expanded === c.id;
+                return (
+                  <>
+                    <tr key={c.id} className="border-b border-slate-100 align-top hover:bg-slate-50/60">
+                      <td className="px-4 py-3">
+                        <input type="checkbox" className="rounded" checked={selected.has(c.id)}
+                          onChange={() => setSelected(prev => {
+                            const next = new Set(prev);
+                            next.has(c.id) ? next.delete(c.id) : next.add(c.id);
+                            return next;
+                          })} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs text-slate-700 font-semibold">{c.esiid}</span>
+                        {c.customer_name && <span className="block text-xs text-slate-500">{c.customer_name}</span>}
+                        {c.agent && <span className="block text-[11px] text-slate-400">agent {c.agent}</span>}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
+                        <span className="font-semibold text-slate-700">{c.supplier?.name ?? "—"}</span>
+                        <span className="block text-slate-400">{fmtMonth(c.billing_month)}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${meta.badge}`}>
+                          {meta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-red-600 tabular-nums">
+                        {c.estimated_loss > 0 ? fmt(c.estimated_loss) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-emerald-600 tabular-nums">
+                        {c.recovered_amount > 0 ? fmt(c.recovered_amount) : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={c.workflow_status}
+                          disabled={savingId === c.id}
+                          onChange={e => setStatus(c, e.target.value)}
+                          className={`text-xs font-semibold rounded-full px-2 py-1 border-0 cursor-pointer ${wf.badge}`}
+                        >
+                          {Object.entries(WORKFLOW_META).map(([v, m]) => (
+                            <option key={v} value={v}>{m.label}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => toggleHistory(c)} title="Details & payment history"
+                          className="text-slate-400 hover:text-[#0F1D5E]">
+                          {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr key={`${c.id}-detail`} className="border-b border-slate-100 bg-slate-50/60">
+                        <td colSpan={8} className="px-6 py-4">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
+                            <div className="space-y-2">
+                              {c.explanation && (
+                                <p className="text-slate-600 leading-relaxed"><span className="font-bold text-slate-700">Why: </span>{c.explanation}</p>
+                              )}
+                              {c.recommended_action && (
+                                <p className="text-slate-600 leading-relaxed"><span className="font-bold text-[#0F1D5E]">Recommended: </span>{c.recommended_action}</p>
+                              )}
+                              {c.notes && (
+                                <p className="text-slate-500 whitespace-pre-line"><span className="font-bold">Notes: </span>{c.notes}</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                                <History className="w-3.5 h-3.5" /> Expected vs paid by month
+                              </p>
+                              {!history[c.id] ? (
+                                <p className="text-slate-400">Loading…</p>
+                              ) : history[c.id].length === 0 ? (
+                                <p className="text-slate-400">No calculation history yet (created by each reconciliation run).</p>
+                              ) : (
+                                <table className="w-full">
+                                  <tbody>
+                                    {history[c.id].slice(0, 8).map((s: any) => (
+                                      <tr key={s.id} className="text-slate-600">
+                                        <td className="py-0.5 pr-3">{fmtMonth(s.billing_month)}</td>
+                                        <td className="py-0.5 pr-3 tabular-nums">exp {fmt(s.expected_amount)}</td>
+                                        <td className="py-0.5 pr-3 tabular-nums">paid {fmt(s.actual_amount)}</td>
+                                        <td className={`py-0.5 tabular-nums font-semibold ${
+                                          (s.variance_amount ?? 0) < -0.005 ? "text-red-600" : "text-emerald-600"
+                                        }`}>
+                                          {(s.variance_amount ?? 0) < 0 ? "−" : "+"}{fmt(Math.abs(s.variance_amount ?? 0))}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const issueCount = (r: any) =>
   (r.missing_count ?? 0) + (r.short_paid_count ?? 0) + (r.over_paid_count ?? 0);
@@ -235,7 +594,10 @@ function PaymentsReceived({ runs, onSelectRun }: { runs: any[]; onSelectRun: (r:
 }
 
 export default function ReconciliationPage() {
+  const router = useRouter();
   const [runs, setRuns] = useState<any[]>([]);
+  const [findings, setFindings] = useState<any[]>([]);
+  const [intel, setIntel] = useState<any>(null);
   const [selectedRun, setSelectedRun] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -264,11 +626,46 @@ export default function ReconciliationPage() {
     } catch { return []; }
   };
 
+  const loadFindings = useCallback(async () => {
+    try {
+      const data = await api.getAuditFindings();
+      setFindings((data || []).filter((f: any) =>
+        f.status === "open" || f.status === "investigating" || f.status === "disputed"));
+    } catch { setFindings([]); }
+  }, []);
+
   useEffect(() => {
     loadRuns().then((real) => {
       if (real.length > 0) setSelectedRun((cur: any) => cur ?? real[0]);
     });
-  }, []);
+    loadFindings();
+    api.getCommissionIntelligence().then(setIntel).catch(() => {});
+  }, [loadFindings]);
+
+  const createDisputeFromFinding = async (f: any) => {
+    try {
+      const d = await api.createDispute({ supplier_id: f.supplier_id, finding_id: f.id });
+      router.push(`/disputes/${d.id}`);
+    } catch (e: any) {
+      alert(`Could not build the dispute: ${String(e?.message ?? e).slice(0, 160)}`);
+    }
+  };
+
+  const createDisputeFromCases = async (supplierId: string, caseIds: string[]) => {
+    try {
+      const d = await api.createDispute({ supplier_id: supplierId, case_ids: caseIds });
+      router.push(`/disputes/${d.id}`);
+    } catch (e: any) {
+      alert(`Could not build the dispute: ${String(e?.message ?? e).slice(0, 160)}`);
+    }
+  };
+
+  const updateFindingStatus = async (id: string, status: string) => {
+    try {
+      await api.updateFinding(id, { status });
+      await loadFindings();
+    } catch { alert("Update failed"); }
+  };
 
   const providers = useMemo(() => {
     const names = new Set<string>();
@@ -468,10 +865,58 @@ export default function ReconciliationPage() {
             <p className="text-[11px] text-white/50 mt-0.5">{kpi.wrongRate} wrong-rate accounts · latest month</p>
           </div>
         </div>
+
+        {/* Commission-intelligence tiles (populated once migration 008 is live) */}
+        {intel && (
+          <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+            <div className={heroTile}>
+              <p className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-300" /> Money At Risk
+              </p>
+              <p className={`text-2xl font-bold mt-1 tabular-nums ${intel.money_at_risk > 0 ? "text-rose-300" : "text-emerald-300"}`}>
+                {fmt(intel.money_at_risk)}
+              </p>
+              <p className="text-[11px] text-white/50 mt-0.5">{intel.open_cases} open exception cases</p>
+            </div>
+            <div className={heroTile}>
+              <p className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5" /> Pending Disputes
+              </p>
+              <p className="text-2xl font-bold mt-1 tabular-nums">{intel.pending_disputes?.count ?? 0}</p>
+              <p className="text-[11px] text-white/50 mt-0.5">{fmt(intel.pending_disputes?.claimed)} claimed</p>
+            </div>
+            <div className={heroTile}>
+              <p className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+                <Banknote className="w-3.5 h-3.5 text-emerald-300" /> Recovered
+              </p>
+              <p className="text-2xl font-bold mt-1 tabular-nums text-emerald-300">{fmt(intel.recovered_total)}</p>
+              <p className="text-[11px] text-white/50 mt-0.5">via disputes & true-ups</p>
+            </div>
+            <div className={heroTile}>
+              <p className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5" /> Recovery Rate
+              </p>
+              <p className="text-2xl font-bold mt-1 tabular-nums">
+                {intel.recovery_rate != null ? `${intel.recovery_rate}%` : "—"}
+              </p>
+              <p className="text-[11px] text-white/50 mt-0.5">of identified losses recovered</p>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Systemic findings — provider-wide patterns needing action */}
+      <SystemicFindings
+        findings={findings}
+        onCreateDispute={createDisputeFromFinding}
+        onUpdate={updateFindingStatus}
+      />
 
       {/* Payments received by month × provider */}
       {runs.length > 0 && <PaymentsReceived runs={runs} onSelectRun={setSelectedRun} />}
+
+      {/* Exception Center — durable case workflow */}
+      <ExceptionCenter onCreateDispute={createDisputeFromCases} />
 
       {/* Runs + Items */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

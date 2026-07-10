@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Mail, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase, PlugZap } from "lucide-react";
+  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Mail, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase, PlugZap, Sparkles, Scale, BookOpenCheck } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
 interface NavItem {
@@ -28,6 +28,7 @@ const links: NavItem[] = [
   { href: "/uploads",        label: "Upload Statements", icon: Upload, perm: "view_uploads" },
   { href: "/admin/enrollments", label: "Enrollments",     icon: FileSignature, roles: ["admin", "manager"] },
   { href: "/reconciliation", label: "Reconciliation",    icon: RefreshCw, perm: "view_reconciliation" },
+  { href: "/disputes",       label: "Disputes",          icon: Scale, roles: ["admin"] },
   { href: "/suppliers",      label: "Suppliers",         icon: Building2, roles: ["admin", "manager"] },
 ];
 
@@ -38,6 +39,7 @@ const crmLinks: NavItem[] = [
   { href: "/crm/agents",          label: "Sales Agents",       icon: UserCog,       roles: ["admin"] },
   { href: "/crm/customers",       label: "Imported Customers", icon: Users,         perm: "view_all_customers" },
   { href: "/crm/giadienre",       label: "GiaDienRe Subscription", icon: PlugZap,   perm: "view_all_customers" },
+  { href: "/crm/giadienre?source=saigonllc", label: "SAIGON Subscription", icon: Sparkles, perm: "view_all_customers" },
   { href: "/renewals",            label: "Renewals",           icon: CalendarClock, perm: "view_all_customers" },
   { href: "/crm/deals",           label: "All Deals",          icon: FileText,      perm: "view_all_deals" },
   { href: "/crm/dropped",         label: "Dropped Deals",      icon: XCircle,       perm: "view_all_deals" },
@@ -167,6 +169,7 @@ export default function Sidebar() {
             <SectionLabel>Admin</SectionLabel>
             <NavLink href="/admin/users" label="User Management" icon={Shield} />
             <NavLink href="/admin/commissions" label="Commissions" icon={DollarSign} />
+            <NavLink href="/admin/commission-rules" label="Commission Rules" icon={BookOpenCheck} />
             <NavLink href="/admin/contract-template" label="Contract Template" icon={FileText} />
             <NavLink href="/admin/ai" label="AI Operations" icon={Bot} />
             <NavLink href="/admin/ai/chat" label="AI Chat Bot" icon={MessageSquare} />

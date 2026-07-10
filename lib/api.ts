@@ -236,7 +236,10 @@ export const api = {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/giadienre/subscriptions${q}`);
   },
-  getGdrStats: () => request("/api/v1/giadienre/subscriptions/stats"),
+  getGdrStats: (params?: Record<string, string>) => {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/giadienre/subscriptions/stats${q}`);
+  },
   getGdrNewCount: (since: string) =>
     request(`/api/v1/giadienre/subscriptions/new-count?since=${encodeURIComponent(since)}`),
   getGdrSubscription: (id: string) => request(`/api/v1/giadienre/subscriptions/${id}`),
@@ -412,6 +415,65 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ item_ids: itemIds, resolution_notes: notes }),
     }),
+
+  // Commission Intelligence: audit findings, exception cases, snapshots
+  getAuditFindings: (params?: { billing_month?: string; supplier_id?: string; status?: string }) => {
+    const p = new URLSearchParams();
+    if (params?.billing_month) p.set("billing_month", params.billing_month);
+    if (params?.supplier_id) p.set("supplier_id", params.supplier_id);
+    if (params?.status) p.set("status", params.status);
+    const qs = p.toString();
+    return request(`/api/v1/reconciliation/findings${qs ? `?${qs}` : ""}`);
+  },
+  updateFinding: (id: string, patch: { status?: string; notes?: string }) =>
+    request(`/api/v1/reconciliation/findings/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  getExceptionCases: (params?: { workflow_status?: string; supplier_id?: string; billing_month?: string; issue_type?: string; min_loss?: number }) => {
+    const p = new URLSearchParams();
+    if (params?.workflow_status) p.set("workflow_status", params.workflow_status);
+    if (params?.supplier_id) p.set("supplier_id", params.supplier_id);
+    if (params?.billing_month) p.set("billing_month", params.billing_month);
+    if (params?.issue_type) p.set("issue_type", params.issue_type);
+    if (params?.min_loss !== undefined) p.set("min_loss", String(params.min_loss));
+    const qs = p.toString();
+    return request(`/api/v1/reconciliation/cases${qs ? `?${qs}` : ""}`);
+  },
+  updateExceptionCase: (id: string, patch: { workflow_status?: string; notes?: string; recovered_amount?: number }) =>
+    request(`/api/v1/reconciliation/cases/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  bulkUpdateCases: (caseIds: string[], workflowStatus: string, notes?: string) =>
+    request("/api/v1/reconciliation/cases/bulk-update", {
+      method: "POST",
+      body: JSON.stringify({ case_ids: caseIds, workflow_status: workflowStatus, notes: notes || "" }),
+    }),
+  getSnapshotHistory: (esiid: string, supplierId?: string) =>
+    request(`/api/v1/reconciliation/snapshots?esiid=${encodeURIComponent(esiid)}${supplierId ? `&supplier_id=${supplierId}` : ""}`),
+
+  // Commission rules (versioned, per provider)
+  getCommissionRules: (supplierId?: string) =>
+    request(`/api/v1/commission-rules${supplierId ? `?supplier_id=${supplierId}` : ""}`),
+  getCommissionRuleHistory: (supplierId: string) =>
+    request(`/api/v1/commission-rules/history?supplier_id=${supplierId}`),
+  createCommissionRule: (body: { supplier_id: string; name?: string; rule_type: string; config: Record<string, unknown>; effective_from: string; notes?: string }) =>
+    request("/api/v1/commission-rules", { method: "POST", body: JSON.stringify(body) }),
+  previewCommissionRule: (body: { rule_type: string; config: Record<string, unknown>; samples: { kwh?: number; adder?: number }[] }) =>
+    request("/api/v1/commission-rules/preview", { method: "POST", body: JSON.stringify(body) }),
+
+  // Disputes
+  getDisputes: (status?: string) =>
+    request(`/api/v1/disputes${status ? `?status=${status}` : ""}`),
+  getDispute: (id: string) => request(`/api/v1/disputes/${id}`),
+  createDispute: (body: { supplier_id: string; case_ids?: string[]; finding_id?: string; title?: string }) =>
+    request("/api/v1/disputes", { method: "POST", body: JSON.stringify(body) }),
+  editDispute: (id: string, patch: { title?: string; email_to?: string; email_subject?: string; email_body?: string; notes?: string }) =>
+    request(`/api/v1/disputes/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  sendDispute: (id: string) => request(`/api/v1/disputes/${id}/send`, { method: "POST" }),
+  recordDisputeOutcome: (id: string, body: { status: string; recovered_amount?: number; notes?: string }) =>
+    request(`/api/v1/disputes/${id}/outcome`, { method: "POST", body: JSON.stringify(body) }),
+
+  // Executive commission-intelligence dashboard
+  getCommissionIntelligence: (billingMonth?: string) =>
+    request(`/api/v1/dashboard/commission-intelligence${billingMonth ? `?billing_month=${billingMonth}` : ""}`),
+  getProviderScorecards: (months = 6) =>
+    request(`/api/v1/dashboard/provider-scorecards?months=${months}`),
 
   // AI Operations Agent (admin only)
   getAiDashboard: () => request("/api/v1/ai-agent/dashboard"),

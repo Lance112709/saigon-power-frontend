@@ -11,7 +11,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import {
-  Building2, PhoneCall, Award, Wallet,
+  Building2, PhoneCall, Award, Wallet, PlugZap,
 } from "lucide-react";
 
 function greeting() {
@@ -461,6 +461,8 @@ export default function DashboardPage() {
   const [overview, setOverview] = useState<any>(null);
   const [expiring, setExpiring] = useState<any[]>([]);
   const [health, setHealth]   = useState<any>(null);
+  const [gdr, setGdr]         = useState<any>(null);
+  const [intel, setIntel]     = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -478,7 +480,9 @@ export default function DashboardPage() {
     // heavier aggregate loads separately so the page paints fast
     if (user?.role === "admin") {
       api.getBusinessHealth().then(setHealth).catch(() => {});
+      api.getCommissionIntelligence().then(setIntel).catch(() => {});
     }
+    api.getGdrStats().then(setGdr).catch(() => {});
   }, [user?.role]);
 
   // Prefer REAL received dollars (from reconciliation) over signup-month estimates
@@ -705,8 +709,87 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Commission Intelligence — is every dollar owed actually arriving? */}
+        {showFinance && intel && (
+          <Card title="Commission Intelligence" action="Open Reconciliation" actionHref="/reconciliation">
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {[
+                  { label: "Expected (latest stmts)", value: fmt$(intel.total_expected ?? 0),   color: "text-[#0F1D5E]",   bg: "bg-[#EEF1FA]" },
+                  { label: "Received",                value: fmt$(intel.total_received ?? 0),   color: "text-emerald-600", bg: "bg-emerald-50" },
+                  { label: "Money At Risk",           value: fmt$(intel.money_at_risk ?? 0),    color: (intel.money_at_risk ?? 0) > 0 ? "text-red-600" : "text-emerald-600", bg: "bg-red-50" },
+                  { label: "Open Cases",              value: String(intel.open_cases ?? 0),     color: "text-amber-600",   bg: "bg-amber-50" },
+                  { label: "Pending Disputes",        value: String(intel.pending_disputes?.count ?? 0), color: "text-violet-600", bg: "bg-violet-50" },
+                  { label: "Recovered",               value: fmt$(intel.recovered_total ?? 0),  color: "text-emerald-600", bg: "bg-emerald-50" },
+                ].map(({ label, value, color, bg }) => (
+                  <div key={label} className={`rounded-xl ${bg} px-3 py-3 text-center`}>
+                    <p className={`text-lg font-black tabular-nums ${color}`}>{value}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">{label}</p>
+                  </div>
+                ))}
+              </div>
+              {(intel.open_findings ?? []).length > 0 && (
+                <div className="rounded-xl border border-red-100 bg-red-50/60 px-4 py-3 space-y-1.5">
+                  <p className="text-xs font-bold text-red-800">Biggest open findings</p>
+                  {intel.open_findings.slice(0, 3).map((f: any) => (
+                    <button key={f.id} onClick={() => router.push("/reconciliation")}
+                      className="w-full text-left text-xs text-red-700 hover:underline flex justify-between gap-3">
+                      <span className="truncate">{f.title}</span>
+                      <span className="font-bold tabular-nums shrink-0">{fmt$(f.estimated_impact ?? 0)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
         {/* Business Health */}
         {showFinance && health && <BusinessHealth data={health} />}
+
+        {/* GiaDienRe Website */}
+        {gdr && (
+          <Card title="GiaDienRe Website — Subscriptions" action="Open module" actionHref="/crm/giadienre">
+            <div className="p-5 space-y-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                {[
+                  { label: "Total Subscribers", value: gdr.total ?? 0,        color: "text-[#0F1D5E]",  bg: "bg-[#EEF1FA]" },
+                  { label: "New Today",         value: gdr.today ?? 0,        color: "text-blue-600",   bg: "bg-blue-50" },
+                  { label: "This Week",         value: gdr.this_week ?? 0,    color: "text-cyan-600",   bg: "bg-cyan-50" },
+                  { label: "This Month",        value: gdr.this_month ?? 0,   color: "text-violet-600", bg: "bg-violet-50" },
+                  { label: "Active",            value: gdr.active ?? 0,       color: "text-emerald-600", bg: "bg-emerald-50" },
+                  { label: "Cancelled",         value: gdr.cancelled ?? 0,    color: "text-red-500",    bg: "bg-red-50" },
+                  { label: "Conversion Rate",   value: `${gdr.conversion_rate ?? 0}%`, color: "text-amber-600", bg: "bg-amber-50" },
+                ].map(({ label, value, color, bg }) => (
+                  <div key={label} className={`rounded-xl ${bg} p-3.5 cursor-pointer hover:opacity-80 transition-opacity`}
+                    onClick={() => router.push("/crm/giadienre")}>
+                    <p className={`text-xl font-black ${color}`}>{value}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {Array.isArray(gdr.monthly) && gdr.monthly.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <PlugZap className="w-3.5 h-3.5 text-teal-500" />
+                    <p className="text-xs font-semibold text-slate-500">Monthly growth · last 12 months</p>
+                  </div>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <BarChart data={gdr.monthly.map((m: any) => ({ ...m, month: fmtMonth(m.month) }))}
+                      margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: "#f8fafc" }} />
+                      <Bar dataKey="count" name="Subscribers" fill="#14b8a6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         {/* Recent Leads */}
         <Card title={`Recent Leads · ${recentLeads.length} shown`} action="View all" actionHref="/crm/leads">
