@@ -9,6 +9,7 @@ import {
   Paperclip, Upload, Download, FileText, Loader2,
 } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
+import SendEmailModal from "@/components/SendEmailModal";
 import CommissionPayments from "@/components/CommissionPayments";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -860,6 +861,7 @@ export default function CustomerProfilePage() {
   const [error, setError] = useState("");
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [showSms, setShowSms] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
   const [renewDeal, setRenewDeal] = useState<any>(null);
   const [terminateDeal, setTerminateDeal] = useState<any>(null);
   const [editDeal, setEditDeal] = useState<any>(null);
@@ -1112,19 +1114,38 @@ export default function CustomerProfilePage() {
         />
       )}
 
+      {showEmail && customer?.email && (
+        <SendEmailModal
+          to={customer.email}
+          contactName={customer.full_name || customer.name || "Customer"}
+          customerId={id}
+          onClose={() => setShowEmail(false)}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <button onClick={() => router.back()}
           className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1D5E] transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Customers
         </button>
-        {customer?.phone && (
-          <button
-            onClick={() => setShowSms(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
-          >
-            <MessageSquare className="w-4 h-4" /> Send SMS
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {customer?.email && (
+            <button
+              onClick={() => setShowEmail(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 transition-colors"
+            >
+              <Mail className="w-4 h-4" /> Send Email
+            </button>
+          )}
+          {customer?.phone && (
+            <button
+              onClick={() => setShowSms(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
+            >
+              <MessageSquare className="w-4 h-4" /> Send SMS
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Customer Hero ── */}

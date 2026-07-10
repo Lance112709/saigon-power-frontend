@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase, PlugZap } from "lucide-react";
+  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Mail, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase, PlugZap } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
 interface NavItem {
@@ -42,6 +42,7 @@ const crmLinks: NavItem[] = [
   { href: "/crm/deals",           label: "All Deals",          icon: FileText,      perm: "view_all_deals" },
   { href: "/crm/dropped",         label: "Dropped Deals",      icon: XCircle,       perm: "view_all_deals" },
   { href: "/sms",                 label: "SMS",                icon: MessageSquare, roles: ["admin", "manager"] },
+  { href: "/email",               label: "Email",              icon: Mail,          roles: ["admin", "manager"] },
   { href: "/admin/landing-rates", label: "Landing Page Rates", icon: Globe,         roles: ["admin", "manager"] },
 ];
 

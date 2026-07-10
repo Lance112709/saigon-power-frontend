@@ -458,5 +458,17 @@ export const api = {
   toggleCustomerSmsOptOut: (customerId: string, optOut: boolean) =>
     request(`/api/v1/sms/opt-out/customer/${customerId}`, { method: "POST", body: JSON.stringify({ opt_out: optOut }) }),
 
+  // ── Customer email ──
+  sendEmail: (data: object) => request("/api/v1/email/send", { method: "POST", body: JSON.stringify(data) }),
+  previewEmail: (data: object) => request("/api/v1/email/preview", { method: "POST", body: JSON.stringify(data) }),
+  getEmailLogs: (params?: Record<string, string>) => {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/email/logs${q}`);
+  },
+  getEmailTemplates: () => request("/api/v1/email/templates"),
+  createEmailTemplate: (data: object) => request("/api/v1/email/templates", { method: "POST", body: JSON.stringify(data) }),
+  updateEmailTemplate: (id: string, data: object) => request(`/api/v1/email/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteEmailTemplate: (id: string) => request(`/api/v1/email/templates/${id}`, { method: "DELETE" }),
+
   globalSearch: (q: string) => request(`/api/v1/search?q=${encodeURIComponent(q)}`),
 };

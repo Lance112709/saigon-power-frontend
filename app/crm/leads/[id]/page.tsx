@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare, Paperclip, Upload, Download, FileText, Loader2, Hash, Calendar } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
+import SendEmailModal from "@/components/SendEmailModal";
 import CommissionPayments from "@/components/CommissionPayments";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -736,6 +737,7 @@ export default function LeadDetailPage() {
   const [error, setError] = useState("");
   const [showProposal, setShowProposal] = useState(false);
   const [showSms, setShowSms] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
   const [showDeal, setShowDeal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<any>(null);
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
@@ -981,6 +983,15 @@ export default function LeadDetailPage() {
         />
       )}
 
+      {showEmail && lead?.email && (
+        <SendEmailModal
+          to={lead.email}
+          contactName={lead.full_name}
+          leadId={id}
+          onClose={() => setShowEmail(false)}
+        />
+      )}
+
       {terminatingDeal && (
         <TerminateModal
           deal={terminatingDeal}
@@ -995,6 +1006,14 @@ export default function LeadDetailPage() {
           <ArrowLeft className="w-4 h-4" /> {fromCustomers ? "Back to Customers" : "Back to Leads"}
         </button>
         <div className="flex items-center gap-2">
+          {lead?.email && (
+            <button
+              onClick={() => setShowEmail(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 transition-colors"
+            >
+              <Mail className="w-4 h-4" /> Send Email
+            </button>
+          )}
           {lead?.phone && (
             <button
               onClick={() => setShowSms(true)}
