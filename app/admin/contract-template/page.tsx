@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import DOMPurify from "isomorphic-dompurify";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { FileText, Save, Eye, EyeOff, RefreshCw } from "lucide-react";
@@ -264,7 +265,7 @@ export default function ContractTemplatePage() {
             <div className="p-6">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Preview (sample data)</p>
               <div className="border border-slate-100 rounded-xl overflow-auto bg-white shadow-inner"
-                dangerouslySetInnerHTML={{ __html: applyPreview(html) }} />
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(applyPreview(html)) }} />
             </div>
           ) : (
             <textarea

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
+import DOMPurify from "isomorphic-dompurify";
 import { api } from "@/lib/api";
 import { Zap, CheckCircle, AlertCircle, Shield, FileText, ChevronDown } from "lucide-react";
 
@@ -61,7 +62,9 @@ export default function ProposalAcceptPage() {
 
   const mergedHtml = useMemo(() => {
     if (!template?.html_content || !proposal) return "";
-    return applyMergeTags(template.html_content, proposal, signature);
+    // Sanitize: the template + merged proposal fields are DB-supplied and this
+    // page is public, so strip any scripts/handlers before rendering as HTML.
+    return DOMPurify.sanitize(applyMergeTags(template.html_content, proposal, signature));
   }, [template, proposal, signature]);
 
   const submit = async () => {
