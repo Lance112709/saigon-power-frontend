@@ -208,6 +208,66 @@ export default function MyBusinessPage() {
         </div>
       )}
 
+      {/* SGP tier standing — only for agents classified SGP_AGENT */}
+      {overview?.sgp && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-[#0F1D5E]">SGP Commission Tier</h2>
+              <p className="text-xs text-slate-400">
+                Earned tiers are permanent — a slow month never lowers your split.
+              </p>
+            </div>
+            {overview.sgp.tier ? (
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-full bg-[#EEF1FA] text-[#0F1D5E] text-sm font-bold">
+                  {overview.sgp.tier_name} — {overview.sgp.split}/{overview.sgp.company_split}
+                </span>
+                <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase">
+                  Permanent
+                </span>
+              </div>
+            ) : null}
+          </div>
+          <div className="p-5 space-y-3">
+            {!overview.sgp.eligible ? (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                {overview.sgp.eligibility_reason ||
+                  "Your SGP Agent Agreement is pending approval — tier commissions start once it's approved."}
+              </p>
+            ) : overview.sgp.at_max ? (
+              <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                Maximum tier achieved — you keep {overview.sgp.split}% of every eligible commission dollar, permanently.
+              </p>
+            ) : overview.sgp.next_target ? (
+              <>
+                <p className="text-sm text-slate-700">
+                  You have completed{" "}
+                  <span className="font-bold text-[#0F1D5E]">
+                    {overview.sgp.next_target.have} of {overview.sgp.next_target.needed}
+                  </span>{" "}
+                  qualifying months for the{" "}
+                  <span className="font-bold">{overview.sgp.next_target.split}% tier</span> — reach{" "}
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+                    .format(overview.sgp.next_target.threshold)}{" "}
+                  in commissionable earnings in a month to add one.
+                </p>
+                <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#2a78d6] to-[#0F1D5E]"
+                    style={{ width: `${Math.min(100, overview.sgp.next_target.have / overview.sgp.next_target.needed * 100)}%` }} />
+                </div>
+                {(overview.sgp.next_target.months || []).length > 0 && (
+                  <p className="text-xs text-slate-400">
+                    Qualified so far: {overview.sgp.next_target.months.map((m: any) => m.month).join(", ")} —
+                    months don&apos;t need to be consecutive, and progress never resets.
+                  </p>
+                )}
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
+
       {/* Earnings — what my book generates vs what providers actually paid */}
       {earnings && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

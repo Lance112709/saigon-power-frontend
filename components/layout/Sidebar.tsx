@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Upload, Building2, RefreshCw,
   UserPlus, UserCog, TrendingUp, Bell, PhoneCall, FileSignature,
-  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Mail, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase, PlugZap, Sparkles, Scale, BookOpenCheck, Award } from "lucide-react";
+  Shield, LogOut, UserCheck, Bot, XCircle, MessageSquare, Mail, Globe, Tag, Zap, CalendarClock, DollarSign, Briefcase, PlugZap, Sparkles, Scale, BookOpenCheck, Award, Trophy } from "lucide-react";
 import { useAuth, Role, PermAction } from "@/lib/auth";
 
 interface NavItem {
@@ -178,6 +178,7 @@ export default function Sidebar() {
             <NavLink href="/admin/users" label="User Management" icon={Shield} />
             <NavLink href="/admin/commissions" label="Commissions" icon={DollarSign} />
             <NavLink href="/admin/commission-rules" label="Commission Rules" icon={BookOpenCheck} />
+            <NavLink href="/admin/sgp-commission" label="SGP Agents" icon={Trophy} />
             <NavLink href="/admin/contract-template" label="Contract Template" icon={FileText} />
             <NavLink href="/admin/ai" label="AI Operations" icon={Bot} />
             <NavLink href="/admin/ai/chat" label="AI Chat Bot" icon={MessageSquare} />

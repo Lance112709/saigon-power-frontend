@@ -63,6 +63,28 @@ export const api = {
   agentPortalBreakdown: (id: string, agent?: string) => request(`/api/v1/agent-portal/commissions/${id}/breakdown${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalAlerts: (agent?: string) => request(`/api/v1/agent-portal/alerts${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalEarnings: (agent?: string) => request(`/api/v1/agent-portal/earnings${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
+
+  // SGP Agent Commission (tier structure)
+  sgpAgents: (params?: { classification?: string; agreement_status?: string; tier?: number; q?: string }) => {
+    const p = new URLSearchParams();
+    if (params?.classification) p.set("classification", params.classification);
+    if (params?.agreement_status) p.set("agreement_status", params.agreement_status);
+    if (params?.tier !== undefined) p.set("tier", String(params.tier));
+    if (params?.q) p.set("q", params.q);
+    const qs = p.toString();
+    return request(`/api/v1/sgp/agents${qs ? `?${qs}` : ""}`);
+  },
+  sgpAgent: (id: string) => request(`/api/v1/sgp/agents/${id}`),
+  sgpUpdateAgent: (id: string, body: Record<string, unknown>) =>
+    request(`/api/v1/sgp/agents/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  sgpOverrideTier: (id: string, body: { tier: number; reason: string; effective_from?: string }) =>
+    request(`/api/v1/sgp/agents/${id}/override-tier`, { method: "POST", body: JSON.stringify(body) }),
+  sgpEvaluate: (body?: { agent_id?: string; backfill_from?: string }) =>
+    request("/api/v1/sgp/evaluate", { method: "POST", body: JSON.stringify(body || {}) }),
+  sgpSettings: () => request("/api/v1/sgp/settings"),
+  sgpUpdateSettings: (body: { qualification_basis?: string; promotion_effective_rule?: string }) =>
+    request("/api/v1/sgp/settings", { method: "PATCH", body: JSON.stringify(body) }),
+  sgpTiers: () => request("/api/v1/sgp/tiers"),
   getCommissionForecast: () => request("/api/v1/dashboard/commission-forecast"),
   getRenewalFilters: () => request("/api/v1/renewals/filters"),
   getLeadsStats: () => request("/api/v1/dashboard/leads-stats"),
