@@ -134,6 +134,36 @@ export default function ForecastPage() {
           value={String(data?.contributing_deals ?? 0)} sub="lead deals + imported book" />
       </div>
 
+      {/* Actual usage you're getting paid on */}
+      <div className="relative overflow-hidden rounded-2xl p-6 text-white shadow-lg bg-gradient-to-r from-teal-500 via-cyan-600 to-sky-700">
+        <div className="pointer-events-none absolute -top-12 -right-10 w-40 h-40 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-16 -left-8 w-36 h-36 rounded-full bg-black/10" />
+        <div className="relative flex items-end justify-between flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-white/75 text-xs font-semibold uppercase tracking-wider">
+              <Zap className="w-3.5 h-3.5" /> Actual Usage You're Getting Paid On
+            </div>
+            <p className="text-4xl font-black mt-2 tabular-nums drop-shadow-sm">
+              {(data?.actual_usage_kwh_mo ?? 0).toLocaleString()}
+              <span className="text-lg font-bold text-white/80"> kWh/mo</span>
+            </p>
+            <p className="text-xs text-white/70 mt-1">
+              Metered usage from provider statements across {(data?.actual_usage_accounts ?? 0).toLocaleString()} active
+              account{(data?.actual_usage_accounts ?? 0) === 1 ? "" : "s"} on statements
+              {data?.active_accounts_total ? ` (of ${data.active_accounts_total.toLocaleString()} active)` : ""} ·
+              trailing {data?.usage_window_months ?? 5}-month average
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] uppercase tracking-wider text-white/70">Annualized</p>
+            <p className="text-2xl font-black tabular-nums">
+              {(data?.actual_usage_kwh_yr ?? 0).toLocaleString()}
+              <span className="text-sm font-bold text-white/80"> kWh/yr</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Main chart */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
