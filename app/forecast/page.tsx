@@ -148,10 +148,10 @@ export default function ForecastPage() {
               <span className="text-lg font-bold text-white/80"> kWh/mo</span>
             </p>
             <p className="text-xs text-white/70 mt-1">
-              Metered usage from provider statements across {(data?.actual_usage_accounts ?? 0).toLocaleString()} active
+              Actual metered usage from each meter's latest monthly commission statement, across {(data?.actual_usage_accounts ?? 0).toLocaleString()} active
               account{(data?.actual_usage_accounts ?? 0) === 1 ? "" : "s"} on statements
-              {data?.active_accounts_total ? ` (of ${data.active_accounts_total.toLocaleString()} active)` : ""} ·
-              trailing {data?.usage_window_months ?? 5}-month average
+              {data?.active_accounts_total ? ` (of ${data.active_accounts_total.toLocaleString()} active)` : ""}
+              {data?.latest_statement_month ? ` · latest ${data.latest_statement_month}` : ""}
             </p>
           </div>
           <div className="text-right">
