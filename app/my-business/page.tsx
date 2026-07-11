@@ -52,6 +52,7 @@ export default function MyBusinessPage() {
   const [comms, setComms] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [renewals, setRenewals] = useState<any[]>([]);
+  const [earnings, setEarnings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [bookSearch, setBookSearch] = useState("");
@@ -84,6 +85,9 @@ export default function MyBusinessPage() {
       setAlerts(al.alerts ?? []);
       const qs = isAgent ? "" : `?sales_agent=${encodeURIComponent(previewAgent)}`;
       api.getRenewals(qs).then(setRenewals).catch(() => {});
+      // heavier aggregate — loads after the page paints
+      setEarnings(null);
+      api.agentPortalEarnings(agentParam).then(setEarnings).catch(() => {});
     } catch (e: any) {
       setErr(e?.message || "Failed to load");
     }
@@ -201,6 +205,67 @@ export default function MyBusinessPage() {
       {!isAgent && !previewAgent && !loading && (
         <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-400 text-sm">
           Select an agent above to preview their portal.
+        </div>
+      )}
+
+      {/* Earnings — what my book generates vs what providers actually paid */}
+      {earnings && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-[#0F1D5E]">My Book&apos;s Earnings</h2>
+              <p className="text-xs text-slate-400">
+                Gross commission the providers pay on my accounts — payouts to me are under Commission Payouts below
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-right">
+              <div>
+                <p className="text-lg font-bold text-[#0F1D5E] tabular-nums">{fmt(earnings.expected_monthly)}</p>
+                <p className="text-[11px] text-slate-400">expected / month (active book)</p>
+              </div>
+              {earnings.open_issue_cases > 0 && (
+                <div>
+                  <p className="text-lg font-bold text-red-600 tabular-nums">{fmt(earnings.open_issue_dollars)}</p>
+                  <p className="text-[11px] text-slate-400">{earnings.open_issue_cases} open money issues</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-5 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Statement Month</th>
+                  <th className="px-5 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Received</th>
+                  <th className="px-5 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Accounts Paid</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Coverage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(earnings.months ?? []).map((m: any) => {
+                  const pct = m.accounts_active ? Math.round(m.accounts_paid / m.accounts_active * 100) : 0;
+                  return (
+                    <tr key={m.month} className="border-t border-slate-100">
+                      <td className="px-5 py-2.5 font-semibold text-[#0F1D5E]">{m.month}</td>
+                      <td className="px-5 py-2.5 text-right font-semibold tabular-nums text-emerald-600">{fmt(m.received)}</td>
+                      <td className="px-5 py-2.5 text-right tabular-nums text-slate-600">
+                        {m.accounts_paid} / {m.accounts_active}
+                      </td>
+                      <td className="px-5 py-2.5 w-48">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div className={`h-full rounded-full ${pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-400" : "bg-red-400"}`}
+                              style={{ width: `${Math.min(pct, 100)}%` }} />
+                          </div>
+                          <span className="text-xs text-slate-500 tabular-nums w-9">{pct}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {loading && <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-400 text-sm">Loading…</div>}

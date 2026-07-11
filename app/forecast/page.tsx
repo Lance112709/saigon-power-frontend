@@ -49,6 +49,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function ForecastPage() {
   const [data, setData] = useState<any>(null);
+  const [cf, setCf] = useState<any>(null); // verified-base commission forecast (manager+)
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -57,6 +58,7 @@ export default function ForecastPage() {
       .then(setData)
       .catch((e: any) => { setErr(e?.message || String(e)); setData(null); })
       .finally(() => setLoading(false));
+    api.getCommissionForecast().then(setCf).catch(() => {}); // 403 for non-managers — section just hides
   }, []);
 
   if (loading) return (
@@ -173,6 +175,69 @@ export default function ForecastPage() {
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Verified-base commission forecast: trailing received - contract roll-offs */}
+      {cf && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-[#0F1D5E]">Verified-Base Forecast — what happens if nobody renews</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Starts from real provider payments (avg of {cf.trailing_months?.join(", ")}) and subtracts each
+                contract as it ends. Every dollar below the line is recoverable by renewing.
+              </p>
+            </div>
+            <div className="flex gap-6 text-right">
+              <div>
+                <p className="text-xl font-bold text-[#0F1D5E] tabular-nums">{fmt$(cf.base_monthly)}</p>
+                <p className="text-[11px] text-slate-400">verified $/mo today</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-amber-600 tabular-nums">{fmt$(cf.renewals_at_stake_12mo)}<span className="text-sm font-semibold">/mo</span></p>
+                <p className="text-[11px] text-slate-400">{cf.renewal_accounts_12mo} accounts renew in 12mo</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-red-600 tabular-nums">{fmt$(cf.clawback_exposure)}</p>
+                <p className="text-[11px] text-slate-400">clawback exposure</p>
+              </div>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={(cf.months ?? []).map((m: any) => ({ ...m, label: fmtMonth(m.month) }))}
+              margin={{ top: 5, right: 10, left: 10, bottom: 5 }} barSize={26}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
+                tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip cursor={{ fill: "#f8fafc" }} content={({ active, payload }: any) => {
+                if (!active || !payload?.length) return null;
+                const p = payload[0].payload;
+                return (
+                  <div className="bg-white border border-slate-200 rounded-xl shadow-lg px-4 py-3 text-sm">
+                    <p className="font-semibold text-slate-700 mb-1">{p.label}</p>
+                    <p className="text-[#0F1D5E] font-bold">{fmt$(p.projected)} if no renewals</p>
+                    {p.accounts_ending > 0 && (
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        {p.accounts_ending} contracts end this month ({fmt$(p.rolling_off_this_month)}/mo at stake)
+                      </p>
+                    )}
+                  </div>
+                );
+              }} />
+              <Bar dataKey="projected" radius={[6, 6, 0, 0]} isAnimationActive={false}>
+                {(cf.months ?? []).map((m: any, i: number) => (
+                  <Cell key={i} fill={m.accounts_ending > 100 ? "#f59e0b" : "#0F1D5E"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
+            <span>12-month outlook: <span className="font-bold text-red-600">{fmt$(cf.projected_12mo_no_renewals)}</span> if nothing renews</span>
+            <span>vs <span className="font-bold text-emerald-600">{fmt$(cf.projected_12mo_all_renewed)}</span> if everything renews</span>
+            <span className="text-slate-400">— the gap is what the Who To Call Today list protects</span>
+          </div>
+        </div>
+      )}
 
       {/* Bottom: supplier breakdown + monthly table */}
       <div className="grid grid-cols-5 gap-4">

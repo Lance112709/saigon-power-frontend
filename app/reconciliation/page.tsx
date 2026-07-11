@@ -112,6 +112,11 @@ function SystemicFindings({ findings, onCreateDispute, onUpdate }: {
                 <p className={`text-xs mt-1 leading-relaxed max-w-3xl ${critical ? "text-red-800/80" : "text-amber-800/80"}`}>
                   {f.explanation}
                 </p>
+                {f.recovery_hint && (
+                  <p className="text-[11px] mt-1.5 font-semibold text-slate-600">
+                    {f.recovery_hint}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-4 shrink-0">
                 <div className="text-right">
