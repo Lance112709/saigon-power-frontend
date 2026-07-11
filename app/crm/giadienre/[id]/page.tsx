@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, PlugZap, Mail, Phone, MapPin, Zap, CalendarClock,
-  User, Trash2, Lock, ExternalLink, Loader2, Pencil, X, Check,
+  User, Trash2, Lock, ExternalLink, Loader2, Pencil, X, Check, FileText,
 } from "lucide-react";
 
 const STATUSES = ["NEW", "CONTACTED", "ACTIVE", "CANCELLED"] as const;
@@ -296,6 +296,11 @@ export default function GiaDienReDetailPage() {
               <InfoRow icon={User} label="Submissions"
                 value={`${sub.submission_count || 1}× (last: ${fmtDateTime(sub.last_submission_at)})`} />
             </div>
+            {sub.extra?.smt_interest && (
+              <p className="mt-2 inline-flex items-center px-2.5 py-1 rounded-full bg-sky-50 text-xs font-semibold text-sky-600">
+                📡 Wants Smart Meter Texas when it launches
+              </p>
+            )}
             {(sub.card_last4 || sub.last_payment_at) && (
               <div className="mt-3 pt-3 border-t border-slate-100 grid sm:grid-cols-2 gap-x-6">
                 <InfoRow icon={CalendarClock} label="Card on File"
@@ -312,11 +317,13 @@ export default function GiaDienReDetailPage() {
                 )}
               </div>
             )}
-            {sub.extra && Object.keys(sub.extra).length > 0 && (
+            {sub.extra && Object.keys(sub.extra).filter(k => !["latest_bill", "bills", "smt_interest"].includes(k)).length > 0 && (
               <div className="mt-3 pt-3 border-t border-slate-100">
                 <p className="text-xs text-slate-400 mb-1.5">Additional website fields</p>
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(sub.extra).map(([k, v]) => (
+                  {Object.entries(sub.extra)
+                    .filter(([k]) => !["latest_bill", "bills", "smt_interest"].includes(k))
+                    .map(([k, v]) => (
                     <span key={k} className="px-2.5 py-1 rounded-full bg-slate-100 text-xs text-slate-600">
                       {k}: {String(v)}
                     </span>
@@ -325,6 +332,34 @@ export default function GiaDienReDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Utility bill — uploaded in the customer portal, extracted by AI */}
+          {sub.extra?.latest_bill && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-[#0F1D5E]">Utility Bill (portal upload)</h2>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-xs font-semibold text-emerald-600">
+                  {sub.extra.latest_bill.source === "portal_manual" ? "Entered manually" : "AI-extracted"}
+                  {Array.isArray(sub.extra.bills) && sub.extra.bills.length > 1
+                    ? ` · ${sub.extra.bills.length} bills on file`
+                    : ""}
+                </span>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-x-6">
+                <InfoRow icon={Zap} label="REP (from bill)" value={sub.extra.latest_bill.provider} />
+                <InfoRow icon={Zap} label="TDU" value={sub.extra.latest_bill.tdu} />
+                <InfoRow icon={Zap} label="ESI ID" value={sub.extra.latest_bill.esi_id} />
+                <InfoRow icon={Zap} label="Current Rate"
+                  value={sub.extra.latest_bill.current_rate != null ? `${sub.extra.latest_bill.current_rate}¢/kWh` : null} />
+                <InfoRow icon={Zap} label="Usage"
+                  value={sub.extra.latest_bill.average_kwh != null ? `${sub.extra.latest_bill.average_kwh} kWh/mo` : null} />
+                <InfoRow icon={CalendarClock} label="Contract Ends" value={sub.extra.latest_bill.contract_end_date} />
+                <InfoRow icon={Zap} label="Meter #" value={sub.extra.latest_bill.meter_number} />
+                <InfoRow icon={CalendarClock} label="Received" value={fmtDateTime(sub.extra.latest_bill.received_at)} />
+                <InfoRow icon={FileText} label="File" value={sub.extra.latest_bill.bill_file_name} />
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
