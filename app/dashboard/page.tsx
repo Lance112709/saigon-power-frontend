@@ -463,6 +463,7 @@ export default function DashboardPage() {
   const [health, setHealth]   = useState<any>(null);
   const [gdr, setGdr]         = useState<any>(null);
   const [intel, setIntel]     = useState<any>(null);
+  const [usage, setUsage]     = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -481,6 +482,7 @@ export default function DashboardPage() {
     if (user?.role === "admin") {
       api.getBusinessHealth().then(setHealth).catch(() => {});
       api.getCommissionIntelligence().then(setIntel).catch(() => {});
+      api.getRevenueForecast().then(setUsage).catch(() => {});  // actual usage billed on
     }
     api.getGdrStats().then(setGdr).catch(() => {});
   }, [user?.role]);
@@ -560,7 +562,7 @@ export default function DashboardPage() {
       <div className="p-6 space-y-6">
 
         {/* Stat cards */}
-        <div className={`grid gap-4 -mt-5 ${showFinance ? "grid-cols-4" : "grid-cols-2"}`}>
+        <div className={`grid gap-4 -mt-5 ${showFinance ? "grid-cols-5" : "grid-cols-2"}`}>
           <StatCard
             gradient="bg-gradient-to-br from-blue-600 to-blue-500 shadow-lg shadow-blue-500/25"
             icon={<UserPlus className="w-5 h-5 text-white" />}
@@ -591,6 +593,18 @@ export default function DashboardPage() {
                 ? `${stats.finance.providers_reported} of ${stats.finance.total_providers} providers reported so far`
                 : "verified from provider statements"}
               onClick={() => router.push("/reconciliation")}
+            />
+          )}
+          {showFinance && (
+            <StatCard
+              gradient="bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg shadow-cyan-500/25"
+              icon={<PlugZap className="w-5 h-5 text-white" />}
+              label="Usage Billed On"
+              value={usage ? `${(usage.actual_usage_kwh_mo ?? 0).toLocaleString()}` : "…"}
+              sub={usage
+                ? `kWh/mo · ${(usage.actual_usage_accounts ?? 0).toLocaleString()} accounts on statements`
+                : "loading actual usage…"}
+              onClick={() => router.push("/forecast")}
             />
           )}
           <StatCard
