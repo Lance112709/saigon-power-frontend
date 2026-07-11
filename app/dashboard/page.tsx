@@ -560,7 +560,7 @@ export default function DashboardPage() {
       <div className="p-6 space-y-6">
 
         {/* Stat cards */}
-        <div className={`grid gap-4 -mt-5 ${showFinance ? "grid-cols-4" : "grid-cols-3"}`}>
+        <div className={`grid gap-4 -mt-5 ${showFinance ? "grid-cols-4" : "grid-cols-2"}`}>
           <StatCard
             gradient="bg-gradient-to-br from-blue-600 to-blue-500 shadow-lg shadow-blue-500/25"
             icon={<UserPlus className="w-5 h-5 text-white" />}
@@ -569,14 +569,16 @@ export default function DashboardPage() {
             sub={`${stats?.leads_this_week ?? 0} this week`}
             onClick={() => router.push("/crm/leads")}
           />
-          <StatCard
-            gradient="bg-gradient-to-br from-emerald-600 to-green-500 shadow-lg shadow-emerald-500/25"
-            icon={<Zap className="w-5 h-5 text-white" />}
-            label="Active Deals"
-            value={(stats?.active_deals ?? 0).toLocaleString()}
-            sub={`${(stats?.active_deals_pipeline ?? 0).toLocaleString()} pipeline · ${(stats?.active_deals_imported ?? 0).toLocaleString()} imported`}
-            onClick={() => router.push("/crm/deals")}
-          />
+          {showFinance && (
+            <StatCard
+              gradient="bg-gradient-to-br from-emerald-600 to-green-500 shadow-lg shadow-emerald-500/25"
+              icon={<Zap className="w-5 h-5 text-white" />}
+              label="Active Deals"
+              value={(stats?.active_deals ?? 0).toLocaleString()}
+              sub={`${(stats?.active_deals_pipeline ?? 0).toLocaleString()} pipeline · ${(stats?.active_deals_imported ?? 0).toLocaleString()} imported`}
+              onClick={() => router.push("/crm/deals")}
+            />
+          )}
           {showFinance && (
             <StatCard
               gradient="bg-gradient-to-br from-violet-600 to-purple-500 shadow-lg shadow-violet-500/25"

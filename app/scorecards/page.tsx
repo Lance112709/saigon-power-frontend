@@ -37,7 +37,7 @@ export default function ScorecardsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user && user.role !== "admin" && user.role !== "manager") router.push("/dashboard");
+    if (user && user.role !== "admin") router.push("/dashboard");
   }, [user, router]);
 
   useEffect(() => {
