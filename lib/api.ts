@@ -482,6 +482,7 @@ export const api = {
   getAiCommandCenter: () => request("/api/v1/ai-agent/command-center"),
   runAiScan: () => request("/api/v1/ai-agent/scan", { method: "POST" }),
   getAiAlerts: () => request("/api/v1/ai-agent/alerts"),
+  getAiAlertsCount: () => request("/api/v1/ai-agent/alerts/count"),
   resolveAiAlert: (id: string) => request(`/api/v1/ai-agent/alerts/${id}/resolve`, { method: "PATCH" }),
   triggerDailyReport: () => request("/api/v1/ai-agent/reports/daily", { method: "POST" }),
   triggerMonthlyReport: () => request("/api/v1/ai-agent/reports/monthly", { method: "POST" }),

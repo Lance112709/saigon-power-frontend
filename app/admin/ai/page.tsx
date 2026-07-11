@@ -88,7 +88,15 @@ export default function AiOperationsPage() {
   const [scanning,     setScanning]     = useState(false);
   const [scanResult,   setScanResult]   = useState<any>(null);
   const [resolving,    setResolving]    = useState<string | null>(null);
-  const [activeTab,    setActiveTab]    = useState<Tab>("overview");
+  const [activeTab,    setActiveTab]    = useState<Tab>(() => {
+    // deep-link support, e.g. the sidebar Alerts bell -> /admin/ai?tab=alerts
+    if (typeof window !== "undefined") {
+      const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+      if (t && ["overview", "leaderboard", "pipeline", "performance", "recon",
+                "commission", "alerts", "reports", "chat"].includes(t)) return t;
+    }
+    return "overview";
+  });
 
   const [leaderboard,  setLeaderboard]  = useState<any[]>([]);
   const [lbLoading,    setLbLoading]    = useState(false);

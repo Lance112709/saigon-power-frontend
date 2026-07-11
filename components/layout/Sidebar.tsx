@@ -72,6 +72,7 @@ export default function Sidebar() {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [newGdrCount, setNewGdrCount] = useState(0);
+  const [openAlerts, setOpenAlerts] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -85,6 +86,11 @@ export default function Sidebar() {
     api.getGdrNewCount(gdrLastSeen)
       .then((res: any) => setNewGdrCount(res?.count || 0))
       .catch(() => {});
+    if (user.role === "admin") {
+      api.getAiAlertsCount()
+        .then((res: any) => setOpenAlerts(res?.open || 0))
+        .catch(() => {});
+    }
   }, [user, pathname]);
 
   const canSee = (item: NavItem) => {
@@ -168,6 +174,7 @@ export default function Sidebar() {
         {user?.role === "admin" && (
           <>
             <SectionLabel>Admin</SectionLabel>
+            <NavLink href="/admin/ai?tab=alerts" label="Alerts" icon={Bell} badge={openAlerts} />
             <NavLink href="/admin/users" label="User Management" icon={Shield} />
             <NavLink href="/admin/commissions" label="Commissions" icon={DollarSign} />
             <NavLink href="/admin/commission-rules" label="Commission Rules" icon={BookOpenCheck} />
