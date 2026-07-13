@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/apply", "/proposal", "/enroll", "/en", "/refer", "/my", "/api"];
+const PUBLIC = ["/login", "/apply", "/proposal", "/enroll", "/en", "/refer", "/my", "/api", "/membership"];
 
 // Hosts that serve the public marketing site (root shows the landing page)
 const MARKETING_HOSTS = ["saigonpowertx.com", "www.saigonpowertx.com"];

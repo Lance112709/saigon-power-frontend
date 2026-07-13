@@ -8,13 +8,18 @@ const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://larwckswepsgvt
 // 'unsafe-inline' is required for those to work; the value of this CSP is that
 // it forbids loading scripts/frames from any *other* origin and blocks the page
 // from being framed — meaningful defense-in-depth on top of output sanitization.
+// HelcimPay.js (membership card payments) loads a script + checkout iframe
+// from secure.helcim.app — card data goes straight to Helcim, never to us.
+const HELCIM = "https://secure.helcim.app";
+
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${HELCIM}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${API} ${SUPABASE}`,
+  `connect-src 'self' ${API} ${SUPABASE} ${HELCIM}`,
+  `frame-src 'self' ${HELCIM}`,
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
