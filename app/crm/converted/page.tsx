@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Search, ChevronRight, Trash2, SlidersHorizontal, Mail, Megaphone, X } from "lucide-react";
+import { Search, ChevronRight, Trash2, SlidersHorizontal, Mail, Megaphone, X, Download } from "lucide-react";
 import BulkEmailModal from "@/components/BulkEmailModal";
 
 const EMPTY_FILTERS = {
@@ -23,6 +23,7 @@ export default function ConvertedCustomersPage() {
   const [options, setOptions] = useState<{ providers: string[]; last_names: string[]; cities: string[]; zips: string[] }>({ providers: [], last_names: [], cities: [], zips: [] });
   const [count, setCount] = useState<{ total: number; with_email: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<null | { mode: "selected" | "filter"; leadIds: string[]; audience: number }>(null);
 
@@ -113,12 +114,25 @@ export default function ConvertedCustomersPage() {
           <h1 className="text-2xl font-bold text-[#0F1D5E]">Customers</h1>
           <p className="text-slate-500 mt-1 text-sm">Leads that have been converted to active customers</p>
         </div>
-        {canEmail && (
-          <button onClick={() => router.push("/crm/campaigns")}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50">
-            <Megaphone className="w-4 h-4" /> Email Campaigns
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {user?.role === "admin" && (
+            <button onClick={async () => {
+              setExporting(true);
+              try { await (api as any).exportConvertedCustomers(params); }
+              catch (e: any) { alert(e?.message || "Export failed."); }
+              setExporting(false);
+            }} disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+              <Download className="w-4 h-4" /> {exporting ? "Exporting…" : "Export CSV"}
+            </button>
+          )}
+          {canEmail && (
+            <button onClick={() => router.push("/crm/campaigns")}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50">
+              <Megaphone className="w-4 h-4" /> Email Campaigns
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

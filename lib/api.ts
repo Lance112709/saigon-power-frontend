@@ -215,6 +215,26 @@ export const api = {
     a.href = url; a.download = "crm_import_template.xlsx"; a.click();
     URL.revokeObjectURL(url);
   },
+  // ── CSV exports (admin) ──
+  downloadCsv: async (path: string, params?: Record<string, string>, filename = "export.csv") => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const qs = params && Object.keys(params).length ? "?" + new URLSearchParams(params).toString() : "";
+    const res = await fetch(`${API_URL}${path}${qs}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new Error(res.status === 403 ? "Admin access required." : "Export failed.");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  },
+  exportRenewals: (params?: Record<string, string>) =>
+    api.downloadCsv("/api/v1/renewals/export", params, `renewals_${new Date().toISOString().slice(0, 10)}.csv`),
+  exportImportedCustomers: (params?: Record<string, string>) =>
+    api.downloadCsv("/api/v1/crm/customers/export", params, `imported_customers_${new Date().toISOString().slice(0, 10)}.csv`),
+  exportConvertedCustomers: (params?: Record<string, string>) =>
+    api.downloadCsv("/api/v1/leads/customers/export", params, `customers_${new Date().toISOString().slice(0, 10)}.csv`),
+
   // ── Commercial Pricing ──
   getCurrentPricing: (params?: Record<string, string>) => {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";

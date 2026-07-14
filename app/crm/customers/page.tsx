@@ -71,6 +71,7 @@ function CrmCustomersContent() {
     (api as any).getCrmCustomerSources().then(setSources).catch(() => {});
   }, []);
 
+  const [exporting, setExporting] = useState(false);
   // Bulk email
   const canEmail = user?.role === "admin" || user?.role === "manager";
   const [count, setCount] = useState<{ total: number; with_email: number } | null>(null);
@@ -185,9 +186,22 @@ function CrmCustomersContent() {
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-6">
 
-      <div>
-        <h1 className="text-2xl font-bold text-[#0F1D5E]">Imported Customers</h1>
-        <p className="text-slate-500 mt-1 text-sm">All active and inactive customer accounts</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-[#0F1D5E]">Imported Customers</h1>
+          <p className="text-slate-500 mt-1 text-sm">All active and inactive customer accounts</p>
+        </div>
+        {isAdmin && (
+          <button onClick={async () => {
+            setExporting(true);
+            try { await (api as any).exportImportedCustomers(filterParams); }
+            catch (e: any) { alert(e?.message || "Export failed."); }
+            setExporting(false);
+          }} disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+            <Download className="w-4 h-4" /> {exporting ? "Exporting…" : "Export CSV"}
+          </button>
+        )}
       </div>
 
       {/* ── Import Panel (admin only) ── */}

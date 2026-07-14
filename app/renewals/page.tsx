@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Mail, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { RefreshCw, Search, X, ChevronRight } from "lucide-react";
+import { RefreshCw, Search, X, ChevronRight, Download } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 const inputCls = "border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 text-slate-700";
 
@@ -18,6 +19,9 @@ function DaysChip({ days }: { days: number | null }) {
 
 export default function RenewalsPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const [exporting, setExporting] = useState(false);
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [providers, setProviders] = useState<string[]>([]);
@@ -107,11 +111,30 @@ export default function RenewalsPage() {
           </h1>
           <p className="text-slate-500 mt-1 text-sm">All active deals from CRM + Imported Customers — sorted by contract end date</p>
         </div>
-        {hasFilters && (
-          <button onClick={clearFilters} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-red-500 transition-colors">
-            <X className="w-4 h-4" /> Clear filters
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {hasFilters && (
+            <button onClick={clearFilters} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-red-500 transition-colors">
+              <X className="w-4 h-4" /> Clear filters
+            </button>
+          )}
+          {isAdmin && (
+            <button onClick={async () => {
+              setExporting(true);
+              try {
+                const p: Record<string, string> = {};
+                if (startDate) p.start_date = startDate;
+                if (endDate) p.end_date = endDate;
+                if (provider) p.provider = provider;
+                if (salesAgent) p.sales_agent = salesAgent;
+                await (api as any).exportRenewals(p);
+              } catch (e: any) { alert(e?.message || "Export failed."); }
+              setExporting(false);
+            }} disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+              <Download className="w-4 h-4" /> {exporting ? "Exporting…" : "Export CSV"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary chips */}
