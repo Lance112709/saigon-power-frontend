@@ -42,7 +42,7 @@ export default function ConvertedCustomersPage() {
     setLoading(true);
     try {
       const [list, cnt] = await Promise.all([
-        api.getLeadCustomers({ ...params, limit: "500" }),
+        api.getLeadCustomers({ ...params, limit: "200" }),
         canEmail ? api.getLeadCustomersCount(params) : Promise.resolve(null),
       ]);
       setCustomers(list);
