@@ -983,10 +983,10 @@ export default function LeadDetailPage() {
         />
       )}
 
-      {showEmail && lead?.email && (
+      {showEmail && (
         <SendEmailModal
-          to={lead.email}
-          contactName={lead.full_name}
+          to={lead?.email || ""}
+          contactName={lead?.full_name}
           leadId={id}
           onClose={() => setShowEmail(false)}
         />
@@ -1006,14 +1006,12 @@ export default function LeadDetailPage() {
           <ArrowLeft className="w-4 h-4" /> {fromCustomers ? "Back to Customers" : "Back to Leads"}
         </button>
         <div className="flex items-center gap-2">
-          {lead?.email && (
-            <button
-              onClick={() => setShowEmail(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 transition-colors"
-            >
-              <Mail className="w-4 h-4" /> Send Email
-            </button>
-          )}
+          <button
+            onClick={() => setShowEmail(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 transition-colors"
+          >
+            <Mail className="w-4 h-4" /> Send Email
+          </button>
           {lead?.phone && (
             <button
               onClick={() => setShowSms(true)}

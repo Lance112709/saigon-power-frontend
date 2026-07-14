@@ -4,7 +4,7 @@ import { X, Mail, Send, Eye } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface Props {
-  to: string;
+  to?: string;
   contactName: string;
   leadId?: string;
   customerId?: string;
@@ -18,6 +18,7 @@ interface MergeTag { tag: string; label: string; }
 
 export default function SendEmailModal({ to, contactName, leadId, customerId, dealId, onClose, onSent }: Props) {
   const firstName = (contactName || "").trim().split(/\s+/)[0] || "there";
+  const [recipient, setRecipient] = useState(to || "");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -32,7 +33,8 @@ export default function SendEmailModal({ to, contactName, leadId, customerId, de
   const lastFocused = useRef<"subject" | "body">("body");
 
   // Fetched values take precedence; keep name/to for backwards compatibility.
-  const variables = { first_name: firstName, name: contactName || "", to, ...mergeVars };
+  const variables = { first_name: firstName, name: contactName || "", to: recipient, ...mergeVars };
+  const validRecipient = /.+@.+\..+/.test(recipient.trim());
 
   useEffect(() => {
     api.getEmailTemplates().then((t: Template[]) => setTemplates((t || []).filter(x => x.is_active))).catch(() => {});
@@ -44,6 +46,8 @@ export default function SendEmailModal({ to, contactName, leadId, customerId, de
         .then((r: { variables: Record<string, string>; tags: MergeTag[] }) => {
           setMergeVars(r.variables || {});
           setTags(r.tags || []);
+          // If no address was passed in, fall back to the (cleaned) one on file.
+          if (!recipient && r.variables?.email) setRecipient(r.variables.email);
         })
         .catch(() => {});
     }
@@ -82,11 +86,11 @@ export default function SendEmailModal({ to, contactName, leadId, customerId, de
   }
 
   async function handleSend() {
-    if (!subject.trim() || !body.trim()) return;
+    if (!subject.trim() || !body.trim() || !validRecipient) return;
     setSending(true);
     setResult(null);
     try {
-      const res = await api.sendEmail({ to, subject: subject.trim(), body: body.trim(), variables, lead_id: leadId, customer_id: customerId, deal_id: dealId });
+      const res = await api.sendEmail({ to: recipient.trim(), subject: subject.trim(), body: body.trim(), variables, lead_id: leadId, customer_id: customerId, deal_id: dealId });
       setResult({ ok: res.ok ?? true });
       if (res.ok ?? true) { onSent?.(); setTimeout(onClose, 1200); }
     } catch (err: any) {
@@ -109,7 +113,13 @@ export default function SendEmailModal({ to, contactName, leadId, customerId, de
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="text-xs text-slate-500">To <span className="font-semibold text-slate-700">{to}</span></div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">To</label>
+            <input type="email" value={recipient} onChange={e => { setRecipient(e.target.value); setPreview(null); }}
+              placeholder="customer@email.com"
+              className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 ${recipient && !validRecipient ? "border-amber-300" : "border-slate-200"}`} />
+            {!to && <p className="text-[11px] text-amber-500 mt-1">No email on file for this account — enter one to send.</p>}
+          </div>
 
           {templates.length > 0 && (
             <div>
@@ -177,7 +187,7 @@ export default function SendEmailModal({ to, contactName, leadId, customerId, de
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
             <Eye className="w-4 h-4" /> Preview
           </button>
-          <button onClick={handleSend} disabled={sending || !subject.trim() || !body.trim()}
+          <button onClick={handleSend} disabled={sending || !subject.trim() || !body.trim() || !validRecipient}
             className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
             <Send className="w-4 h-4" /> {sending ? "Sending…" : "Send Email"}
           </button>

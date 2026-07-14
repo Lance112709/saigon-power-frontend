@@ -1114,10 +1114,10 @@ export default function CustomerProfilePage() {
         />
       )}
 
-      {showEmail && customer?.email && (
+      {showEmail && (
         <SendEmailModal
-          to={customer.email}
-          contactName={customer.full_name || customer.name || "Customer"}
+          to={customer?.email || ""}
+          contactName={customer?.full_name || customer?.name || "Customer"}
           customerId={id}
           onClose={() => setShowEmail(false)}
         />
@@ -1129,14 +1129,12 @@ export default function CustomerProfilePage() {
           <ArrowLeft className="w-4 h-4" /> Back to Customers
         </button>
         <div className="flex items-center gap-2">
-          {customer?.email && (
-            <button
-              onClick={() => setShowEmail(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 transition-colors"
-            >
-              <Mail className="w-4 h-4" /> Send Email
-            </button>
-          )}
+          <button
+            onClick={() => setShowEmail(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 transition-colors"
+          >
+            <Mail className="w-4 h-4" /> Send Email
+          </button>
           {customer?.phone && (
             <button
               onClick={() => setShowSms(true)}
