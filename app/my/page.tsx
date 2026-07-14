@@ -318,7 +318,7 @@ export default function CustomerPortal() {
 
   const loadMe = async (t: string) => {
     const r = await fetch(`${API}/api/v1/portal/me`, { headers: { Authorization: `Bearer ${t}` } });
-    if (!r.ok) throw new Error("expired");
+    if (!r.ok) throw new Error(r.status === 401 ? "expired" : "transient");
     setMe(await r.json());
     setStep("home");
   };
@@ -329,7 +329,9 @@ export default function CustomerPortal() {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
     const t = localStorage.getItem(TOKEN_KEY);
-    if (t) loadMe(t).catch(() => localStorage.removeItem(TOKEN_KEY));
+    // only drop the session when the token is actually rejected — a deploy blip
+    // or flaky network shouldn't sign the customer out
+    if (t) loadMe(t).catch(e => { if (e?.message === "expired") localStorage.removeItem(TOKEN_KEY); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const requestCode = async () => {
