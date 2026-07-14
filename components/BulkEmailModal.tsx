@@ -6,7 +6,9 @@ import { useAuth } from "@/lib/auth";
 
 interface Props {
   mode: "selected" | "filter";
-  leadIds: string[];
+  leadIds?: string[];
+  customerIds?: string[];
+  dataset?: "leads" | "crm";
   filters?: Record<string, string>;
   audienceCount: number;
   sampleVariables?: Record<string, string>;
@@ -31,7 +33,7 @@ const TAGS: { tag: string; label: string }[] = [
   { tag: "contract_end_date", label: "Contract end date" },
 ];
 
-export default function BulkEmailModal({ mode, leadIds, filters, audienceCount, sampleVariables, onClose, onSent }: Props) {
+export default function BulkEmailModal({ mode, leadIds, customerIds, dataset = "leads", filters, audienceCount, sampleVariables, onClose, onSent }: Props) {
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
@@ -95,9 +97,13 @@ export default function BulkEmailModal({ mode, leadIds, filters, audienceCount, 
     if (!name.trim() || !subject.trim() || !body.trim()) { setError("Name, subject, and message are all required."); return; }
     setLaunching(true); setError("");
     try {
-      const payload: any = { name: name.trim(), subject: subject.trim(), body: body.trim(), mode };
-      if (mode === "selected") payload.lead_ids = leadIds;
-      else payload.filters = filters || {};
+      const payload: any = { name: name.trim(), subject: subject.trim(), body: body.trim(), mode, dataset };
+      if (mode === "selected") {
+        if (dataset === "crm") payload.customer_ids = customerIds || [];
+        else payload.lead_ids = leadIds || [];
+      } else {
+        payload.filters = filters || {};
+      }
       const r = await api.createCampaign(payload);
       setResult(r);
     } catch (err: any) {

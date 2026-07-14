@@ -138,6 +138,10 @@ export const api = {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/crm/customers${q}`);
   },
+  getCrmCustomersCount: (params?: Record<string, string>) => {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request(`/api/v1/crm/customers/count${q}`);
+  },
   getCrmCustomer: (id: string) => request(`/api/v1/crm/customers/${id}`),
   updateCrmCustomer: (id: string, data: object) =>
     request(`/api/v1/crm/customers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),

@@ -1,12 +1,13 @@
 "use client";
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   Search, Users, FileCheck, TrendingUp, ChevronRight, Trash2,
-  Download, Upload, AlertTriangle, CheckCircle, X,
+  Download, Upload, AlertTriangle, CheckCircle, X, Mail, Megaphone,
 } from "lucide-react";
+import BulkEmailModal from "@/components/BulkEmailModal";
 
 function StatCard({ title, value, sub, icon: Icon, valueColor = "text-[#0F1D5E]", onClick }: {
   title: string; value: string; sub?: string; icon: any; valueColor?: string; onClick?: () => void;
@@ -70,19 +71,41 @@ function CrmCustomersContent() {
     (api as any).getCrmCustomerSources().then(setSources).catch(() => {});
   }, []);
 
+  // Bulk email
+  const canEmail = user?.role === "admin" || user?.role === "manager";
+  const [count, setCount] = useState<{ total: number; with_email: number } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulk, setBulk] = useState<null | { mode: "selected" | "filter"; ids: string[]; audience: number; sampleVariables?: any }>(null);
+
+  async function openBulk(mode: "selected" | "filter") {
+    const ids = mode === "selected" ? [...selected] : [];
+    const sampleId = mode === "selected" ? ids[0] : customers.find((c: any) => c.email)?.id;
+    let sampleVariables: any = undefined;
+    if (sampleId) {
+      try { sampleVariables = (await api.getEmailMergeVars({ customer_id: sampleId })).variables; } catch {}
+    }
+    setBulk({ mode, ids, audience: mode === "selected" ? ids.length : (count?.with_email || 0), sampleVariables });
+  }
+
+  // The active filters (no paging) — shared by the list, the count, and the
+  // "email all matching" campaign so the audience always equals what's shown.
+  const filterParams = useMemo(() => {
+    const p: Record<string, string> = {};
+    if (search) p.search = search;
+    if (provider) p.provider = provider;
+    if (dealStatus) p.deal_status = dealStatus;
+    if (meterType) p.meter_type = meterType;
+    if (source) p.source = source;
+    if (missingInfo) p.missing_contact = "true";
+    if (dateFrom) p.date_from = dateFrom;
+    if (dateTo) p.date_to = dateTo;
+    return p;
+  }, [search, provider, dealStatus, meterType, source, missingInfo, dateFrom, dateTo]);
+
   const loadCustomers = useCallback(async (off = 0) => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { limit: String(LIMIT), offset: String(off) };
-      if (search) params.search = search;
-      if (provider) params.provider = provider;
-      if (dealStatus) params.deal_status = dealStatus;
-      if (meterType) params.meter_type = meterType;
-      if (source) params.source = source;
-      if (missingInfo) params.missing_contact = "true";
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
-      const data = await api.getCrmCustomers(params);
+      const data = await api.getCrmCustomers({ ...filterParams, limit: String(LIMIT), offset: String(off) });
       setCustomers(off === 0 ? data : prev => {
         const seen = new Set(prev.map((c: any) => c.id));
         return [...prev, ...data.filter((c: any) => !seen.has(c.id))];
@@ -90,9 +113,18 @@ function CrmCustomersContent() {
       setOffset(off);
     } catch {}
     setLoading(false);
-  }, [search, provider, dealStatus, meterType, source, missingInfo, dateFrom, dateTo]);
+  }, [filterParams]);
 
   useEffect(() => { loadCustomers(0); }, [loadCustomers]);
+
+  useEffect(() => {
+    if (!canEmail) return;
+    api.getCrmCustomersCount(filterParams).then(setCount).catch(() => {});
+  }, [filterParams, canEmail]);
+
+  const toggleOne = (id: string) => setSelected(prev => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
 
   const refreshStats = () => {
     api.getCrmStats().then(setStats).catch(() => {});
@@ -297,6 +329,30 @@ function CrmCustomersContent() {
           </div>
         </div>
 
+        {canEmail && (
+          <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-xs text-slate-500">
+              {count
+                ? <><span className="font-semibold text-slate-700">{count.total.toLocaleString()}</span> customer{count.total === 1 ? "" : "s"} match · <span className="font-semibold text-emerald-600">{count.with_email.toLocaleString()}</span> have an email</>
+                : "…"}
+              {selected.size > 0 && <> · <span className="font-semibold text-[#0F1D5E]">{selected.size} selected</span></>}
+            </div>
+            <div className="flex items-center gap-2">
+              {selected.size > 0 && (
+                <button onClick={() => openBulk("selected")}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90">
+                  <Mail className="w-4 h-4" /> Email {selected.size} selected
+                </button>
+              )}
+              <button onClick={() => openBulk("filter")}
+                disabled={!count || count.with_email === 0}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[#0F1D5E] text-[#0F1D5E] text-xs font-semibold hover:bg-[#EEF1FA] disabled:opacity-40 disabled:cursor-not-allowed">
+                <Megaphone className="w-4 h-4" /> Email all {count ? count.with_email.toLocaleString() : ""} matching
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading && customers.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-sm">Loading...</div>
         ) : customers.length === 0 ? (
@@ -306,6 +362,23 @@ function CrmCustomersContent() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
+                  {canEmail && (
+                    <th className="px-4 py-3 w-10">
+                      <input type="checkbox"
+                        checked={customers.filter(c => c.email).length > 0 && customers.filter(c => c.email).every(c => selected.has(c.id))}
+                        onChange={() => {
+                          const withEmail = customers.filter(c => c.email);
+                          const allSel = withEmail.length > 0 && withEmail.every(c => selected.has(c.id));
+                          setSelected(prev => {
+                            const next = new Set(prev);
+                            withEmail.forEach(c => allSel ? next.delete(c.id) : next.add(c.id));
+                            return next;
+                          });
+                        }}
+                        title="Select all loaded (with email)"
+                        className="w-4 h-4 rounded border-slate-300 accent-[#0F1D5E] cursor-pointer" />
+                    </th>
+                  )}
                   {["Name", "Business Name", "Source", "Phone", "Service Address", "REP", "Status", "Active / Total Deals", "", ...(isManager ? [""] : [])].map((h, i) => (
                     <th key={i} className={`px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider ${i === 7 ? "text-center" : ""}`}>
                       {h}
@@ -320,6 +393,14 @@ function CrmCustomersContent() {
                     className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 cursor-pointer"
                     onClick={() => router.push(`/crm/customers/${c.id}`)}
                   >
+                    {canEmail && (
+                      <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" disabled={!c.email} checked={selected.has(c.id)}
+                          onChange={() => toggleOne(c.id)}
+                          title={c.email ? "" : "No email on file"}
+                          className="w-4 h-4 rounded border-slate-300 accent-[#0F1D5E] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" />
+                      </td>
+                    )}
                     <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">
                       {c.full_name}
                       {!c.phone && !c.email && (
@@ -384,6 +465,19 @@ function CrmCustomersContent() {
           </>
         )}
       </div>
+
+      {bulk && (
+        <BulkEmailModal
+          dataset="crm"
+          mode={bulk.mode}
+          customerIds={bulk.ids}
+          filters={bulk.mode === "filter" ? filterParams : undefined}
+          audienceCount={bulk.audience}
+          sampleVariables={bulk.sampleVariables}
+          onClose={() => setBulk(null)}
+          onSent={() => { setBulk(null); setSelected(new Set()); }}
+        />
+      )}
 
       {/* ── Clear All Confirmation Modal ── */}
       {showClearModal && (
