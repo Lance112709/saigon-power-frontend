@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Zap, Phone, Loader2, LogOut, CalendarClock, Share2, Copy, CheckCircle,
-  AlertTriangle, ChevronRight, Gift, MessageSquare,
+  AlertTriangle, ChevronRight, Gift, MessageSquare, Mail,
 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -137,7 +137,7 @@ export default function CustomerPortal() {
           <div className="mt-10">
             <h1 className="text-2xl font-black text-center">Check your plan.<br /><span className="text-[#22c55e]">Never overpay again.</span></h1>
             <p className="text-white/45 text-sm text-center mt-3 mb-8">
-              Enter the phone number on your account — we'll text you a login code. No password needed.
+              Enter the phone number on your account — we'll email you a login code. No password needed.
             </p>
             <input
               type="tel" inputMode="numeric" autoComplete="tel"
@@ -148,7 +148,7 @@ export default function CustomerPortal() {
             {err && <p className="text-red-300 text-sm text-center mt-3 bg-red-500/10 rounded-xl px-4 py-3">{err}</p>}
             <button onClick={requestCode} disabled={busy || phone.replace(/\D/g, "").length < 10}
               className="w-full mt-4 py-4 rounded-2xl bg-[#22c55e] hover:bg-[#16a34a] font-black text-white disabled:opacity-40 flex items-center justify-center gap-2">
-              {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Text Me a Code <MessageSquare className="w-4 h-4" /></>}
+              {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Email Me a Code <Mail className="w-4 h-4" /></>}
             </button>
             <p className="text-center text-xs text-white/30 mt-6">
               New customer? <a href="/enroll" className="text-[#22c55e] font-semibold">Enroll in 2 minutes →</a>
