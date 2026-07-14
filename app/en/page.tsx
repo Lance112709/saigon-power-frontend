@@ -258,19 +258,20 @@ export default function LandingPage() {
               </div>
               <span className="text-white/70 text-sm font-semibold">4.9 · 500+ Texas Families Served</span>
               <span className="text-white/20">·</span>
-              <span className="text-[#22c55e] text-sm font-bold">100% Free</span>
+              <span className="text-[#22c55e] text-sm font-bold">Cancel anytime</span>
             </div>
 
             {/* Headline */}
             <h1 className="hero-text-2 font-black text-white leading-[1.02] tracking-tight mb-5"
               style={{ fontSize:"clamp(2.1rem,8vw,5rem)" }}>
-              Compare Texas<br />
-              Electricity Plans.<br />
-              <span className="text-[#22c55e]">Switch in 24 Hours.</span>
+              Better energy<br />
+              choices.<br />
+              <span className="text-[#22c55e]">Zero hassle.</span>
             </h1>
 
-            <p className="hero-text-3 text-white/55 text-base sm:text-lg leading-relaxed mb-8 max-w-[440px]">
-              We shop 50+ providers, find your lowest rate, and handle all the paperwork.{" "}
+            <p className="hero-text-3 text-white/55 text-base sm:text-lg leading-relaxed mb-8 max-w-[460px]">
+              We keep your electricity organized, watch your contract, and hunt down a better
+              rate the moment it's time to renew — for Texas homes and businesses.{" "}
               <strong className="text-white font-semibold">You do nothing.</strong>
             </p>
 
@@ -297,7 +298,7 @@ export default function LandingPage() {
 
             {/* Trust badges */}
             <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {["100% Free Service","Rates Updated Daily","Switch in 24 Hours"].map(b => (
+              {["Contract monitoring included","Rates updated daily","Switch in 24 hours"].map(b => (
                 <div key={b} className="flex items-center gap-1.5 text-sm text-white/50">
                   <CheckCircle className="w-4 h-4 text-[#22c55e]" />{b}
                 </div>
