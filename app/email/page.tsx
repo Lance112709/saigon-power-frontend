@@ -44,7 +44,7 @@ function TemplateModal({ template, onClose, onSaved }: { template?: any; onClose
           <div><label className="block text-xs font-medium text-slate-500 mb-1">Message</label>
             <textarea value={body} onChange={e => setBody(e.target.value)} rows={7} placeholder={"Hi {{first_name}},\n\n…"} className={inputCls + " font-mono"} />
             <p className="text-[11px] text-slate-400 mt-1">Personalization tags — replaced with each customer's real details when sent:{" "}
-              {["first_name", "last_name", "service_address", "esi_id", "phone", "email", "contract_end_date"].map((t, i) => (
+              {["first_name", "last_name", "service_address", "esi_id", "phone", "email", "contract_start_date", "contract_end_date"].map((t, i) => (
                 <span key={t}>{i > 0 ? " " : ""}<code className="bg-slate-100 px-1 rounded">{`{{${t}}}`}</code></span>
               ))}
             </p></div>
