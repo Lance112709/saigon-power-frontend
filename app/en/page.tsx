@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Phone, ChevronDown, Star, CheckCircle, ArrowRight,
-  Zap, Clock, Shield, Users, Home, Utensils, Briefcase, Plus, Gift, BadgeCheck,
+  Zap, Clock, Shield, Users, Home, Utensils, Briefcase, Plus, Gift, BadgeCheck, Lock,
 } from "lucide-react";
 
 // ── Wave Canvas Background ─────────────────────────────────────────────────────
@@ -229,9 +229,9 @@ export default function LandingPage() {
             <a href="#plans" className="hidden md:block text-sm font-semibold text-white/65 hover:text-white transition-colors">
               Compare Plans
             </a>
-            <a href="/apply"
+            <a href="/membership"
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black transition-colors shadow-lg shadow-[#22c55e]/20">
-              <Plus className="w-4 h-4" /> Get a Quote
+              <Plus className="w-4 h-4" /> Join — $9.99/mo
             </a>
           </div>
         </div>
@@ -285,9 +285,9 @@ export default function LandingPage() {
                   className="w-full pl-11 pr-4 py-4 bg-white/10 border border-white/20 rounded-l-2xl text-white placeholder-white/35 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#22c55e]/50 focus:border-[#22c55e]/60 backdrop-blur-sm transition-all"
                 />
               </div>
-              <a href="/apply"
+              <a href="/membership"
                 className="px-4 sm:px-6 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-r-2xl text-sm transition-colors flex items-center gap-2 whitespace-nowrap shadow-xl shadow-[#22c55e]/25">
-                See My Plans <ArrowRight className="w-4 h-4" />
+                Join to See My Plans <ArrowRight className="w-4 h-4" />
               </a>
             </div>
             <div className="flex items-center gap-1.5 text-sm text-white/40 mb-9 pl-1">
@@ -331,8 +331,8 @@ export default function LandingPage() {
                       </div>
                       <p className="text-xs text-white/35 mt-0.5">{plan.provider} · {plan.term_months} mo</p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-black text-white">{plan.rate}</span>
+                    <div className="text-right select-none" aria-hidden="true">
+                      <span className="text-2xl font-black text-white blur-[7px]">{plan.rate}</span>
                       <span className="text-xs text-white/40 font-medium">¢<br />per kWh</span>
                     </div>
                   </div>
@@ -340,9 +340,9 @@ export default function LandingPage() {
               </div>
 
               <div className="px-5 py-4 border-t border-white/8">
-                <a href="/apply"
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-semibold transition-colors border border-white/10">
-                  See all plans for your ZIP <ArrowRight className="w-4 h-4" />
+                <a href="/membership"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black transition-colors shadow-lg shadow-[#22c55e]/20">
+                  <Lock className="w-4 h-4" /> Join for $9.99/mo to unlock rates
                 </a>
               </div>
             </div>
@@ -390,7 +390,7 @@ export default function LandingPage() {
                 </a>
                 <a href="#plans"
                   className="px-8 py-4 border border-white/15 text-white font-bold rounded-2xl hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2">
-                  Compare rates first
+                  See member benefits
                 </a>
               </div>
               <p className="text-[11px] text-white/30">
@@ -452,10 +452,10 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="text-center mt-10">
-            <a href="/apply" className="inline-flex items-center gap-2 px-8 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm tracking-tight">
-              Compare My Rate Now <ArrowRight className="w-4 h-4" />
+            <a href="/membership" className="inline-flex items-center gap-2 px-8 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm tracking-tight">
+              Join Saigon Membership — $9.99/mo <ArrowRight className="w-4 h-4" />
             </a>
-            <p className="text-xs text-white/30 mt-2">Free · No credit check · Takes 30 seconds</p>
+            <p className="text-xs text-white/30 mt-2">$9.99/month · Cancel anytime · Members see every rate</p>
           </div>
         </div>
       </section>
@@ -493,8 +493,8 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-10">
-            <a href="/apply" className="px-8 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm text-center tracking-tight">
-              Compare Plans Free
+            <a href="/membership" className="px-8 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm text-center tracking-tight">
+              Join Saigon Membership
             </a>
             <a href="tel:8329379999" className="px-8 py-4 border border-white/15 text-white font-bold rounded-2xl hover:bg-white/5 transition-colors text-sm text-center flex items-center justify-center gap-2">
               <Phone className="w-4 h-4" /> Talk to an Agent
@@ -599,8 +599,8 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
-            <a href="/apply" className="px-8 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm flex items-center justify-center gap-2 tracking-tight">
-              See My Plans <ArrowRight className="w-4 h-4" />
+            <a href="/membership" className="px-8 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm flex items-center justify-center gap-2 tracking-tight">
+              Join Saigon Membership <ArrowRight className="w-4 h-4" />
             </a>
             <a href="tel:8329379999" className="px-8 py-4 bg-white/6 hover:bg-white/10 text-white font-bold rounded-2xl border border-white/10 transition-colors text-sm flex items-center justify-center gap-2">
               <Phone className="w-4 h-4" /> (832) 937-9999
@@ -646,7 +646,7 @@ export default function LandingPage() {
                   <li key={l}><a href={h} className="hover:text-white transition-colors">{l}</a></li>
                 ))}
               </ul>
-              <a href="/apply" className="inline-block mt-5 px-5 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black rounded-xl transition-colors shadow-lg shadow-[#22c55e]/20 tracking-tight">
+              <a href="/membership" className="inline-block mt-5 px-5 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black rounded-xl transition-colors shadow-lg shadow-[#22c55e]/20 tracking-tight">
                 Nhận Báo Giá
               </a>
             </div>
