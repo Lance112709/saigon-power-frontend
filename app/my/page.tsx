@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Zap, Phone, Loader2, LogOut, CalendarClock, Share2, Copy, CheckCircle,
   AlertTriangle, ChevronRight, Gift, MessageSquare, Mail,
+  UploadCloud, FileText, Sparkles, Pencil, Activity, Bell, Receipt, TrendingUp,
 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -17,6 +18,278 @@ function daysBadge(d: number | null, m2m: boolean) {
   if (d <= 30) return { label: `${d} days left`, cls: "bg-red-500/20 text-red-300" };
   if (d <= 60) return { label: `${d} days left`, cls: "bg-amber-500/20 text-amber-300" };
   return { label: `${d} days left`, cls: "bg-white/10 text-white/60" };
+}
+
+// ── Bill upload + Smart Meter Texas (English port of the giadienre.com dashboard) ──
+
+type BillFields = {
+  customer_name: string; service_address: string; provider: string; esi_id: string;
+  current_rate: string; contract_end_date: string; average_kwh: string; tdu: string;
+  meter_number: string;
+};
+const EMPTY_BILL: BillFields = {
+  customer_name: "", service_address: "", provider: "", esi_id: "",
+  current_rate: "", contract_end_date: "", average_kwh: "", tdu: "", meter_number: "",
+};
+const BILL_FIELDS: { key: keyof BillFields; label: string; placeholder?: string; type?: string }[] = [
+  { key: "customer_name", label: "Customer name", placeholder: "Your name" },
+  { key: "service_address", label: "Service address", placeholder: "123 Main St, Houston" },
+  { key: "provider", label: "Provider (REP)", placeholder: "TXU Energy" },
+  { key: "tdu", label: "TDU / Utility", placeholder: "CenterPoint" },
+  { key: "esi_id", label: "ESI ID", placeholder: "10..." },
+  { key: "current_rate", label: "Current rate (¢/kWh)", placeholder: "14.2" },
+  { key: "average_kwh", label: "Usage (kWh/month)", placeholder: "1200" },
+  { key: "contract_end_date", label: "Contract end date", type: "date" },
+  { key: "meter_number", label: "Meter number (optional)", placeholder: "Meter #" },
+];
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+    reader.onerror = () => reject(new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+const billInputCls = "w-full px-3.5 py-3 border border-white/15 rounded-xl text-sm bg-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#22c55e]/50 [color-scheme:dark]";
+
+function BillUploadCard({ onDone }: { onDone?: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [fields, setFields] = useState<BillFields>(EMPTY_BILL);
+  const [showForm, setShowForm] = useState(false);
+  const [confidence, setConfidence] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [aiUsed, setAiUsed] = useState(false);
+
+  const authed = (path: string, body: unknown) =>
+    fetch(`${API}/api/v1/giadienre/portal/${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+  async function analyze() {
+    if (!file) return;
+    setAnalyzing(true); setError(null); setMsg(null);
+    try {
+      const data = await fileToBase64(file);
+      const res = await authed("bill-ocr", { data, mediaType: file.type });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.detail ?? "failed");
+      const ex = body.extracted ?? {};
+      setFields({
+        customer_name: ex.customer_name ?? "",
+        service_address: ex.service_address ?? "",
+        provider: ex.provider ?? "",
+        esi_id: ex.esi_id ?? "",
+        current_rate: ex.current_rate != null ? String(ex.current_rate) : "",
+        contract_end_date: ex.contract_end_date ?? "",
+        average_kwh: ex.average_kwh != null ? String(ex.average_kwh) : "",
+        tdu: ex.tdu ?? "",
+        meter_number: ex.meter_number ?? "",
+      });
+      setConfidence(ex.confidence ?? null);
+      setAiUsed(true); setShowForm(true);
+      setMsg("AI read your bill — please review the details below.");
+    } catch (err) {
+      setError(err instanceof Error && err.message !== "failed"
+        ? err.message
+        : "We couldn't read that bill — you can enter the details manually.");
+      setShowForm(true); setAiUsed(false);
+    }
+    setAnalyzing(false);
+  }
+
+  async function submit() {
+    setSubmitting(true); setError(null);
+    try {
+      const res = await authed("bill", {
+        ...fields,
+        current_rate: fields.current_rate === "" ? null : Number(fields.current_rate),
+        average_kwh: fields.average_kwh === "" ? null : Number(fields.average_kwh),
+        bill_file_name: file?.name,
+        source: aiUsed ? "portal_ocr" : "portal_manual",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.detail ?? "failed");
+      setDone(true);
+      onDone?.();
+    } catch (err) {
+      setError(err instanceof Error && err.message !== "failed"
+        ? err.message : "We couldn't save that — please try again.");
+    }
+    setSubmitting(false);
+  }
+
+  if (done) {
+    return (
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+        <p className="flex items-center gap-2 text-sm font-bold text-[#4ade80]">
+          <CheckCircle className="w-4 h-4 shrink-0" />
+          Bill received! We're tracking your contract and will remind you before renewal time.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+      <p className="font-black text-sm flex items-center gap-2 mb-1">
+        <Sparkles className="w-4 h-4 text-[#22c55e]" /> Upload &amp; analyze your electric bill
+      </p>
+      <p className="text-xs text-white/45">
+        Upload your latest bill (PDF or photo). AI reads it and fills in your details — you review and save.
+      </p>
+
+      <label htmlFor="portalBillFile"
+        className="mt-4 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-white/15 bg-white/4 px-6 py-6 text-center transition-colors hover:border-[#22c55e]/50 hover:bg-[#22c55e]/5">
+        {file ? (
+          <>
+            <FileText className="w-6 h-6 text-[#22c55e]" />
+            <span className="text-sm font-semibold">{file.name}</span>
+            <span className="text-[11px] text-white/35">Tap to choose a different file</span>
+          </>
+        ) : (
+          <>
+            <UploadCloud className="w-6 h-6 text-white/40" />
+            <span className="text-sm font-semibold text-white/70">Choose your bill file</span>
+            <span className="text-[11px] text-white/35">PDF, JPG, PNG · up to 10MB</span>
+          </>
+        )}
+        <input id="portalBillFile" type="file" accept=".pdf,image/png,image/jpeg,image/webp"
+          className="sr-only"
+          onChange={e => { setFile(e.target.files?.[0] ?? null); setShowForm(false); setDone(false); setMsg(null); setError(null); }} />
+      </label>
+
+      {!showForm && (
+        <div className="mt-3.5 flex flex-col sm:flex-row gap-2">
+          <button onClick={analyze} disabled={!file || analyzing}
+            className="flex-1 py-3 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black disabled:opacity-40 flex items-center justify-center gap-2">
+            {analyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Reading your bill…</>
+              : <><Sparkles className="w-4 h-4" /> Read My Bill with AI</>}
+          </button>
+          <button onClick={() => { setShowForm(true); setAiUsed(false); }}
+            className="py-3 px-4 rounded-xl bg-white/8 hover:bg-white/12 border border-white/10 text-sm font-bold flex items-center justify-center gap-2">
+            <Pencil className="w-4 h-4" /> Enter manually
+          </button>
+        </div>
+      )}
+
+      {msg && (
+        <p className="mt-3 rounded-xl bg-[#22c55e]/10 border border-[#22c55e]/25 px-4 py-2.5 text-xs font-semibold text-[#4ade80]">
+          {msg}{confidence ? ` (confidence: ${confidence})` : ""}
+        </p>
+      )}
+
+      {showForm && (
+        <div className="mt-4 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {BILL_FIELDS.map(f => (
+              <div key={f.key} className={f.key === "service_address" ? "sm:col-span-2" : ""}>
+                <label htmlFor={`bf-${f.key}`} className="block text-[11px] font-bold text-white/50 mb-1">{f.label}</label>
+                <input id={`bf-${f.key}`} type={f.type ?? "text"} placeholder={f.placeholder}
+                  value={fields[f.key]}
+                  onChange={e => setFields(s => ({ ...s, [f.key]: e.target.value }))}
+                  className={billInputCls} />
+              </div>
+            ))}
+          </div>
+          <button onClick={submit} disabled={submitting}
+            className="w-full py-3.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black disabled:opacity-50 flex items-center justify-center gap-2">
+            {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : "Save & start contract tracking"}
+          </button>
+        </div>
+      )}
+
+      {error && <p className="mt-3 rounded-xl bg-red-500/10 border border-red-500/25 px-4 py-2.5 text-xs text-red-300">{error}</p>}
+
+      <p className="mt-3 text-[11px] leading-relaxed text-white/30">
+        🔒 Your bill is only used to manage your electricity account and find you a better plan.
+      </p>
+    </div>
+  );
+}
+
+function SmartMeterCard() {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function notifyMe() {
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch(`${API}/api/v1/giadienre/portal/smt-interest`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail ?? "failed");
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error && err.message !== "failed"
+        ? err.message : "We couldn't record that — please try again.");
+    }
+    setBusy(false);
+  }
+
+  const perks = [
+    { icon: Zap, text: "Track your electricity usage every day" },
+    { icon: Receipt, text: "See an estimate of this month's bill" },
+    { icon: TrendingUp, text: "Get alerts when your usage spikes" },
+  ];
+
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-[#22c55e]/10 to-white/5 border border-[#22c55e]/20 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="font-black text-sm flex items-center gap-2">
+          <span className="grid w-8 h-8 place-items-center rounded-lg bg-[#22c55e] text-white shrink-0">
+            <Activity className="w-4 h-4" />
+          </span>
+          <span>Smart Meter Texas<span className="block text-[11px] font-semibold text-white/40">Connect your meter directly</span></span>
+        </p>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-black tracking-wider text-amber-300">
+          <span className="w-1.5 h-1.5 animate-pulse rounded-full bg-amber-400" /> COMING SOON
+        </span>
+      </div>
+
+      <ul className="mt-4 space-y-2.5">
+        {perks.map(p => (
+          <li key={p.text} className="flex items-center gap-2.5 text-sm text-white/70">
+            <span className="grid w-6 h-6 shrink-0 place-items-center rounded-md bg-[#22c55e]/15 text-[#22c55e]">
+              <p.icon className="w-3.5 h-3.5" />
+            </span>
+            {p.text}
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-4 text-[11px] leading-relaxed text-white/35">
+        The system is built — we're finalizing the data-sharing agreement with Smart Meter Texas.
+        Free for SAIGON POWER PLUS members.
+      </p>
+
+      {done ? (
+        <p className="mt-4 flex items-center gap-2 rounded-xl bg-[#22c55e]/10 border border-[#22c55e]/25 px-4 py-3 text-sm font-bold text-[#4ade80]">
+          <CheckCircle className="w-4 h-4 shrink-0" /> Got it! We'll let you know the moment it's live.
+        </p>
+      ) : (
+        <button onClick={notifyMe} disabled={busy}
+          className="mt-4 w-full py-3 rounded-xl bg-white/8 hover:bg-white/12 border border-[#22c55e]/30 text-sm font-bold text-[#4ade80] disabled:opacity-60 flex items-center justify-center gap-2">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+          Notify me when it launches
+        </button>
+      )}
+      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+    </div>
+  );
 }
 
 const ENR_STATUS: Record<string, string> = {
@@ -350,6 +623,15 @@ export default function CustomerPortal() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* bill upload + Smart Meter Texas (members) */}
+            {me.membership && (
+              <div className="space-y-3">
+                <p className="text-xs font-black text-white/35 uppercase tracking-widest">My Tools</p>
+                <BillUploadCard onDone={() => { const t = localStorage.getItem(TOKEN_KEY); if (t) loadMe(t).catch(() => {}); }} />
+                <SmartMeterCard />
               </div>
             )}
 
