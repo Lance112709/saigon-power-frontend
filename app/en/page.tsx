@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Phone, ChevronDown, Star, CheckCircle, ArrowRight,
-  Zap, Clock, Shield, Users, Home, Utensils, Briefcase, Plus,
+  Zap, Clock, Shield, Users, Home, Utensils, Briefcase, Plus, Gift, BadgeCheck,
 } from "lucide-react";
 
 // ── Wave Canvas Background ─────────────────────────────────────────────────────
@@ -358,6 +358,68 @@ export default function LandingPage() {
       {/* ── Provider Ticker ── */}
       <section className="py-4 bg-[#060f09] border-y border-white/5">
         <ProviderTicker />
+      </section>
+
+      {/* ── $50 Rate-Beat Guarantee ── */}
+      <section className="relative py-16 px-5 bg-[#0a1a0e] overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position:"absolute", width:700, height:380, borderRadius:"50%", top:"50%", left:"18%", transform:"translateY(-50%)", background:"radial-gradient(ellipse,#22c55e 0%,transparent 65%)", opacity:0.07, filter:"blur(60px)" }} />
+        </div>
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <div className="rounded-3xl border border-[#22c55e]/30 bg-gradient-to-br from-[#22c55e]/12 via-white/[0.04] to-white/[0.02] p-8 md:p-12 lg:flex lg:items-center lg:gap-12">
+            {/* copy */}
+            <div className="flex-1 min-w-0">
+              <div className="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full bg-[#22c55e]/12 border border-[#22c55e]/30">
+                <BadgeCheck className="w-3.5 h-3.5 text-[#22c55e]" />
+                <span className="text-[#22c55e] text-[11px] font-black uppercase tracking-widest">The Saigon Power Guarantee</span>
+              </div>
+              <h2 className="font-black text-white tracking-tight leading-[1.05] mb-4"
+                style={{ fontSize:"clamp(1.9rem,4.5vw,3.1rem)" }}>
+                We'll beat or match your rate —<br className="hidden md:block" />
+                <span className="text-[#22c55e]"> or you get $50.</span>
+              </h2>
+              <p className="text-white/55 text-base leading-relaxed mb-7 max-w-[520px]">
+                Join Saigon Membership and put us to the test. We'll beat or match any
+                current market electricity rate for your home — and if we can't find you a
+                better deal, we'll hand you a <strong className="text-white">$50 gift card</strong> for your time.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 mb-5">
+                <a href="/membership"
+                  className="px-8 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm flex items-center justify-center gap-2 tracking-tight">
+                  Join Saigon Membership <ArrowRight className="w-4 h-4" />
+                </a>
+                <a href="#plans"
+                  className="px-8 py-4 border border-white/15 text-white font-bold rounded-2xl hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2">
+                  Compare rates first
+                </a>
+              </div>
+              <p className="text-[11px] text-white/30">
+                *Residential customers only. Rate comparison is based on current market offers
+                for your service area and usage. One guarantee per household.
+              </p>
+            </div>
+
+            {/* $50 gift-card visual */}
+            <div className="hidden lg:block shrink-0 relative w-[300px]">
+              <div className="absolute -inset-6 rounded-full" style={{ background:"radial-gradient(circle,#22c55e 0%,transparent 68%)", opacity:0.15, filter:"blur(30px)" }} />
+              <div className="relative rotate-[4deg] rounded-2xl border border-[#22c55e]/40 bg-gradient-to-br from-[#123c22] to-[#060f09] p-6 shadow-2xl shadow-black/50">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-2">
+                    <img src="/sgpower-logo.webp" alt="" className="h-7 w-7 object-contain" />
+                    <span className="text-white font-black text-xs tracking-tight">Saigon Power</span>
+                  </div>
+                  <Gift className="w-5 h-5 text-[#4ade80]" />
+                </div>
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Gift card</p>
+                <p className="font-black text-white leading-none tracking-tight" style={{ fontSize:"3.4rem" }}>$50</p>
+                <p className="text-[11px] text-white/40 mt-3">Yours if we can't beat your rate.</p>
+                <div className="mt-5 h-8 rounded-md bg-white/8 border border-white/10 flex items-center px-3">
+                  <span className="text-[10px] font-mono tracking-[0.3em] text-white/30">•••• •••• GUARANTEE</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ── Problem vs Solution ── */}
