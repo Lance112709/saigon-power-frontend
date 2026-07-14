@@ -20,6 +20,52 @@ function daysBadge(d: number | null, m2m: boolean) {
   return { label: `${d} days left`, cls: "bg-white/10 text-white/60" };
 }
 
+// ── HelcimPay.js (secure card entry — card data goes straight to Helcim) ─────
+
+declare global {
+  interface Window {
+    appendHelcimPayIframe?: (checkoutToken: string, allowExit?: boolean) => void;
+  }
+}
+
+function loadHelcimScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window.appendHelcimPayIframe === "function") return resolve();
+    const existing = document.querySelector<HTMLScriptElement>("script[data-helcim-pay]");
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("failed")));
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = "https://secure.helcim.app/helcim-pay/services/start.js";
+    s.async = true;
+    s.dataset.helcimPay = "true";
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("failed"));
+    document.head.appendChild(s);
+  });
+}
+
+function openHelcimPay(checkoutToken: string): Promise<unknown> {
+  return loadHelcimScript().then(() => new Promise((resolve, reject) => {
+    const eventName = `helcim-pay-js-${checkoutToken}`;
+    function cleanup() {
+      window.removeEventListener("message", onMessage);
+      document.getElementById("helcimPayIframe")?.remove();
+    }
+    function onMessage(ev: MessageEvent) {
+      if (!ev.data || ev.data.eventName !== eventName) return;
+      if (ev.data.eventStatus === "SUCCESS") { cleanup(); resolve(ev.data.eventMessage); }
+      else if (ev.data.eventStatus === "ABORTED" || ev.data.eventStatus === "HIDE") {
+        cleanup(); reject(new Error("cancelled"));
+      }
+    }
+    window.addEventListener("message", onMessage);
+    window.appendHelcimPayIframe?.(checkoutToken, true);
+  }));
+}
+
 // ── Bill upload + Smart Meter Texas (English port of the giadienre.com dashboard) ──
 
 type BillFields = {
@@ -387,6 +433,42 @@ export default function CustomerPortal() {
 
   const logout = () => { localStorage.removeItem(TOKEN_KEY); setMe(null); setStep("phone"); setPhone(""); setCode(""); };
 
+  // Update the card on file: Helcim popup collects the card ($0 verification),
+  // then the CRM stores the new token and future billing uses it.
+  const [cardBusy, setCardBusy] = useState(false);
+  const [cardMsg, setCardMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const updateCard = async () => {
+    setCardBusy(true); setCardMsg(null);
+    const t = localStorage.getItem(TOKEN_KEY) || "";
+    const authed = (path: string, body?: unknown) =>
+      fetch(`${API}/api/v1/giadienre/billing/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    try {
+      const sres = await authed("card-session");
+      const sdata = await sres.json().catch(() => ({}));
+      if (!sres.ok || !sdata?.checkoutToken) throw new Error(sdata?.detail ?? "failed");
+      const event = await openHelcimPay(sdata.checkoutToken);
+      const cres = await authed("card-confirm", { checkoutToken: sdata.checkoutToken, event });
+      const cdata = await cres.json().catch(() => ({}));
+      if (!cres.ok) throw new Error(cdata?.detail ?? "failed");
+      setCardMsg({ ok: true, text: `Card updated — ${cdata.card_brand || "card"} ending ${cdata.card_last4} is now on file.` });
+      loadMe(t).catch(() => {});
+    } catch (err) {
+      if (!(err instanceof Error && err.message === "cancelled")) {
+        setCardMsg({
+          ok: false,
+          text: err instanceof Error && err.message !== "failed"
+            ? err.message
+            : "We couldn't update your card — please try again or call (832) 937-9999.",
+        });
+      }
+    }
+    setCardBusy(false);
+  };
+
   const activePlans = useMemo(() => (me?.plans ?? []).filter((p: any) => p.active), [me]);
   const urgent = activePlans.find((p: any) => !p.month_to_month && p.days_left != null && p.days_left <= 60);
 
@@ -572,6 +654,23 @@ export default function CustomerPortal() {
                           We received your signup — our team will reach out to finish activating your membership.
                         </p>
                       )}
+                      {!cancelled && (
+                        <button onClick={updateCard} disabled={cardBusy}
+                          className="w-full mt-1 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/10 text-xs font-bold text-white/70 hover:text-white disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors">
+                          {cardBusy ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Opening secure card window…</>
+                            : <><Pencil className="w-3.5 h-3.5" /> {m.card_last4 ? "Update payment card" : "Add a payment card"}</>}
+                        </button>
+                      )}
+                      {cardMsg && (
+                        <p className={`text-xs rounded-lg px-3 py-2 ${cardMsg.ok
+                          ? "text-[#4ade80] bg-[#22c55e]/10 border border-[#22c55e]/25"
+                          : "text-red-300 bg-red-500/10 border border-red-500/25"}`}>
+                          {cardMsg.text}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-white/25 text-center">
+                        Card details are entered in Helcim&rsquo;s secure window and never touch our servers.
+                      </p>
                     </div>
                   </div>
 
