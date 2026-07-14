@@ -628,8 +628,17 @@ export default function CustomerPortal() {
             <div>
               <p className="text-xs font-black text-white/35 uppercase tracking-widest mb-3">My Plans</p>
               {activePlans.length === 0 && (
-                <div className="rounded-2xl bg-white/5 border border-white/10 p-6 text-sm text-white/50">
-                  No active plans on this number yet. <a href="/enroll" className="text-[#22c55e] font-bold">Enroll now →</a>
+                <div className="rounded-3xl bg-white/5 border border-white/10 p-10 text-center">
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#22c55e]/10 border border-[#22c55e]/20 grid place-items-center">
+                    <Zap className="w-6 h-6 text-[#22c55e]" />
+                  </div>
+                  <p className="font-black tracking-tight">No electricity plans here yet</p>
+                  <p className="text-sm text-white/45 mt-1.5 max-w-sm mx-auto">
+                    When you enroll through Saigon Power, your plan, rate, and contract dates show up here automatically.
+                  </p>
+                  <a href="/enroll" className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black shadow-lg shadow-[#22c55e]/20 transition-colors">
+                    Compare plans &amp; enroll <ChevronRight className="w-4 h-4" />
+                  </a>
                 </div>
               )}
               <div className="space-y-3">
