@@ -234,6 +234,12 @@ export const api = {
     api.downloadCsv("/api/v1/crm/customers/export", params, `imported_customers_${new Date().toISOString().slice(0, 10)}.csv`),
   exportConvertedCustomers: (params?: Record<string, string>) =>
     api.downloadCsv("/api/v1/leads/customers/export", params, `customers_${new Date().toISOString().slice(0, 10)}.csv`),
+  exportDeals: (params?: Record<string, string>) =>
+    api.downloadCsv("/api/v1/crm/deals/export", params, `deals_${new Date().toISOString().slice(0, 10)}.csv`),
+  exportLeadDeals: (params?: Record<string, string>) =>
+    api.downloadCsv("/api/v1/leads/all-deals/export", params, `lead_deals_${new Date().toISOString().slice(0, 10)}.csv`),
+  exportLeads: (params?: Record<string, string>) =>
+    api.downloadCsv("/api/v1/leads/export", params, `leads_${new Date().toISOString().slice(0, 10)}.csv`),
 
   // ── Commercial Pricing ──
   getCurrentPricing: (params?: Record<string, string>) => {

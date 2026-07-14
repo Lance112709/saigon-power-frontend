@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Search, UserPlus, ChevronRight, X, AlertCircle, Trash2 } from "lucide-react";
+import { Search, UserPlus, ChevronRight, X, AlertCircle, Trash2, Download } from "lucide-react";
 
 const inputCls =
   "w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -317,6 +317,7 @@ export default function LeadsPage() {
   const canDelete = user?.role === "admin" || user?.role === "manager";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -370,12 +371,29 @@ export default function LeadsPage() {
           <h1 className="text-2xl font-bold text-[#0F1D5E]">Leads</h1>
           <p className="text-slate-500 mt-1 text-sm">Manage your sales pipeline</p>
         </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#0F1D5E] text-white text-sm font-semibold rounded-xl hover:bg-[#0F1D5E]/90 transition-colors shadow-sm"
-        >
-          <UserPlus className="w-4 h-4" /> Add Lead
-        </button>
+        <div className="flex items-center gap-2">
+          {user?.role === "admin" && (
+            <button onClick={async () => {
+              setExporting(true);
+              try {
+                const p: Record<string, string> = {};
+                if (search) p.search = search;
+                if (statusFilter) p.status = statusFilter;
+                await (api as any).exportLeads(p);
+              } catch (e: any) { alert(e?.message || "Export failed."); }
+              setExporting(false);
+            }} disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
+              <Download className="w-4 h-4" /> {exporting ? "Exporting…" : "Export CSV"}
+            </button>
+          )}
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#0F1D5E] text-white text-sm font-semibold rounded-xl hover:bg-[#0F1D5E]/90 transition-colors shadow-sm"
+          >
+            <UserPlus className="w-4 h-4" /> Add Lead
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

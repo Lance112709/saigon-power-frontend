@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown, Download } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -43,6 +44,9 @@ const selectClass = "border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-w
 
 export default function CrmDealsPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const [exporting, setExporting] = useState(false);
   const [tab, setTab] = useState<"crm" | "leads">("leads");
 
   // CRM deals state
@@ -115,9 +119,39 @@ export default function CrmDealsPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0F1D5E]">All Deals</h1>
-        <p className="text-slate-500 mt-1 text-sm">Every deal across all customers and providers</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-[#0F1D5E]">All Deals</h1>
+          <p className="text-slate-500 mt-1 text-sm">Every deal across all customers and providers</p>
+        </div>
+        {isAdmin && (
+          <button onClick={async () => {
+            setExporting(true);
+            try {
+              if (tab === "crm") {
+                const p: Record<string, string> = {};
+                if (search) p.search = search;
+                if (supplierFilter) p.provider = supplierFilter;
+                if (statusFilter) p.deal_status = statusFilter;
+                if (typeFilter) p.meter_type = typeFilter;
+                if (agentFilter) p.sales_agent = agentFilter;
+                await (api as any).exportDeals(p);
+              } else {
+                const p: Record<string, string> = {};
+                if (search) p.search = search;
+                if (supplierFilter) p.supplier = supplierFilter;
+                if (statusFilter) p.status = statusFilter === "ACTIVE" ? "Active" : statusFilter === "INACTIVE" ? "Inactive" : statusFilter;
+                if (typeFilter) p.product_type = typeFilter;
+                if (agentFilter) p.sales_agent = agentFilter;
+                await (api as any).exportLeadDeals(p);
+              }
+            } catch (e: any) { alert(e?.message || "Export failed."); }
+            setExporting(false);
+          }} disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+            <Download className="w-4 h-4" /> {exporting ? "Exporting…" : `Export ${tab === "crm" ? "Imported" : "CRM Leads"} CSV`}
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
