@@ -183,6 +183,93 @@ export default function CustomerPortal() {
           <div className="space-y-4 mt-2">
             <h1 className="text-xl font-black">Hi {me.name?.split(" ")[0] || "there"} 👋</h1>
 
+            {/* membership + tracked-contract dashboard */}
+            {me.membership && (() => {
+              const m = me.membership;
+              const price = ({ POWER_PLUS_RES: "$9.99", POWER_PLUS_COM: "$19.99", plus: "$9.99", managed: "$12.99", "managed-plus": "$19.99" } as Record<string, string>)[m.plan_id];
+              const active = m.status === "ACTIVE";
+              const cancelled = m.status === "CANCELLED";
+              const dl = m.contract_days_left;
+              const pct = dl == null ? null : Math.min(96, Math.max(4, Math.round((1 - dl / 365) * 100)));
+              const endTxt = m.contract_end_date
+                ? new Date(String(m.contract_end_date).slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                : null;
+              const renewal = dl == null ? null : dl < 0 ? { t: "Expired", c: "text-red-300" }
+                : dl <= 60 ? { t: "Renewal window", c: "text-amber-300" } : { t: "On track", c: "text-[#22c55e]" };
+              return (
+                <div className="space-y-3">
+                  <p className="text-xs font-black text-white/35 uppercase tracking-widest">My Membership</p>
+
+                  <div className="rounded-2xl bg-gradient-to-br from-[#22c55e]/12 to-white/5 border border-[#22c55e]/25 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-black text-sm">{m.plan_name || "Saigon Power membership"}</p>
+                        {price && <p className="text-xs text-white/45 mt-0.5">{price}/month · cancel anytime</p>}
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider shrink-0 ${
+                        active ? "bg-[#22c55e]/15 text-[#22c55e]"
+                        : cancelled ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>
+                        {active ? "● ACTIVE" : cancelled ? "CANCELLED" : "ACTIVATION PENDING"}
+                      </span>
+                    </div>
+                    {(m.card_last4 || m.next_billing_date) && (
+                      <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs text-white/45">
+                        {m.card_last4 && <span>{m.card_brand || "Card"} •••• {m.card_last4}</span>}
+                        {m.next_billing_date && <span>Next billing {String(m.next_billing_date).slice(0, 10)}</span>}
+                      </div>
+                    )}
+                    {!active && !cancelled && (
+                      <p className="mt-3 text-xs text-white/45 bg-white/5 rounded-lg px-3 py-2">
+                        We received your signup — our team will reach out to finish activating your membership.
+                      </p>
+                    )}
+                  </div>
+
+                  {(m.contract_end_date || m.current_provider) && (
+                    <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="font-black text-sm">Your Energy Dashboard</p>
+                        <span className="px-2.5 py-1 rounded-full bg-[#22c55e]/15 text-[#22c55e] text-[10px] font-black tracking-wider">● MONITORING</span>
+                      </div>
+                      <div className="rounded-xl bg-[#060f09] border border-white/8 p-4">
+                        <p className="text-white/50 text-[11px] font-bold">Current contract status</p>
+                        <p className="font-black text-lg tracking-tight mt-0.5 mb-3">
+                          {endTxt
+                            ? (dl != null && dl < 0 ? `Your contract ended ${endTxt}` : `You're covered until ${endTxt}`)
+                            : "We're tracking your account"}
+                        </p>
+                        {pct != null && dl != null && dl >= 0 && (
+                          <>
+                            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                              <span className="block h-full rounded-full bg-gradient-to-r from-[#22c55e] to-[#4ade80]" style={{ width: `${pct}%` }} />
+                            </div>
+                            <div className="flex justify-between text-[11px] text-white/40 mt-1.5">
+                              <span>Contract progress</span><span>{dl} days remaining</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5 mt-2.5">
+                        <div className="rounded-xl border border-white/8 bg-white/4 p-3.5">
+                          <p className="text-[11px] text-white/40 font-bold mb-0.5">Renewal status</p>
+                          <p className={`font-black text-sm ${renewal ? renewal.c : "text-white/60"}`}>{renewal ? renewal.t : "—"}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/8 bg-white/4 p-3.5">
+                          <p className="text-[11px] text-white/40 font-bold mb-0.5">Current provider</p>
+                          <p className="font-black text-sm truncate">{m.current_provider || "—"}</p>
+                        </div>
+                      </div>
+                      {dl != null && dl >= 0 && dl <= 60 && (
+                        <p className="mt-2.5 text-xs text-amber-300 bg-amber-500/10 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                          <CalendarClock className="w-3.5 h-3.5 shrink-0" /> Your renewal window is open — we'll compare plans and reach out with options.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* urgent renewal banner */}
             {urgent && (
               <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4">
