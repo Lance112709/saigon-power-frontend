@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Saigon Power",
     short_name: "Saigon Power",
     description: "Your electricity plan, renewal reminders, and rates — Saigon Power.",
-    start_url: "/my",
+    start_url: "/myaccount",
     display: "standalone",
     background_color: "#0a1a0e",
     theme_color: "#0a1a0e",

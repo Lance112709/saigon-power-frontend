@@ -3,7 +3,7 @@ import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import { AuthProvider } from "@/lib/auth";
 
-const NO_LAYOUT = ["/login", "/change-password", "/en", "/apply", "/proposal/", "/refer", "/enroll", "/my", "/membership"];
+const NO_LAYOUT = ["/login", "/change-password", "/en", "/apply", "/proposal/", "/refer", "/enroll", "/my", "/myaccount", "/membership"];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

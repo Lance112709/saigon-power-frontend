@@ -40,6 +40,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  async redirects() {
+    // the customer portal moved from /my to /myaccount (old links keep working)
+    return [{ source: "/my", destination: "/myaccount", permanent: true }];
+  },
 };
 
 export default nextConfig;

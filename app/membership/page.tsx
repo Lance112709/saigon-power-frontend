@@ -270,7 +270,7 @@ export default function MembershipPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <a href="/my" className="hidden md:block text-sm font-semibold text-white/65 hover:text-white transition-colors">
+            <a href="/myaccount" className="hidden md:block text-sm font-semibold text-white/65 hover:text-white transition-colors">
               Log In
             </a>
             <button onClick={() => openJoin("POWER_PLUS_RES")}
@@ -652,7 +652,7 @@ export default function MembershipPage() {
             <div>
               <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-4">Platform</p>
               <ul className="space-y-2.5 text-sm text-white/35">
-                {[["#how", "How It Works"], ["#membership", "Membership"], ["#quote", "Get a Quote"], ["/my", "Customer Login"]].map(([h, l]) => (
+                {[["#how", "How It Works"], ["#membership", "Membership"], ["#quote", "Get a Quote"], ["/myaccount", "Customer Login"]].map(([h, l]) => (
                   <li key={l}><a href={h} className="hover:text-white transition-colors">{l}</a></li>
                 ))}
               </ul>
