@@ -20,6 +20,7 @@ export default function ConvertedCustomersPage() {
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
   const [showFilters, setShowFilters] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [options, setOptions] = useState<{ providers: string[]; last_names: string[]; cities: string[]; zips: string[] }>({ providers: [], last_names: [], cities: [], zips: [] });
   const [count, setCount] = useState<{ total: number; with_email: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -56,6 +57,11 @@ export default function ConvertedCustomersPage() {
     const t = setTimeout(load, 300);
     return () => clearTimeout(t);
   }, [load]);
+
+  // Dropdown choices (Provider / Last name / City / ZIP) from real data.
+  useEffect(() => {
+    api.getLeadCustomerFilterOptions().then(setOptions).catch(() => {});
+  }, []);
 
   // Dropping a filter/search can remove rows — prune any now-invisible selections.
   useEffect(() => {
@@ -141,7 +147,10 @@ export default function ConvertedCustomersPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
               <div>
                 <label className="block text-[11px] font-medium text-slate-500 mb-1">Provider</label>
-                <input value={filters.provider} onChange={e => setFilter("provider", e.target.value)} placeholder="e.g. NRG" className={inputCls} />
+                <select value={filters.provider} onChange={e => setFilter("provider", e.target.value)} className={inputCls}>
+                  <option value="">All providers</option>
+                  {options.providers.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-slate-500 mb-1">Segment</label>
@@ -161,7 +170,10 @@ export default function ConvertedCustomersPage() {
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-slate-500 mb-1">Last name</label>
-                <input value={filters.last_name} onChange={e => setFilter("last_name", e.target.value)} placeholder="e.g. Nguyen" className={inputCls} />
+                <select value={filters.last_name} onChange={e => setFilter("last_name", e.target.value)} className={inputCls}>
+                  <option value="">All last names</option>
+                  {options.last_names.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-slate-500 mb-1">Contract ends after</label>
@@ -173,7 +185,10 @@ export default function ConvertedCustomersPage() {
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-slate-500 mb-1">City</label>
-                <input value={filters.city} onChange={e => setFilter("city", e.target.value)} placeholder="e.g. Houston" className={inputCls} />
+                <select value={filters.city} onChange={e => setFilter("city", e.target.value)} className={inputCls}>
+                  <option value="">All cities</option>
+                  {options.cities.map(ci => <option key={ci} value={ci}>{ci}</option>)}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -182,7 +197,10 @@ export default function ConvertedCustomersPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-slate-500 mb-1">ZIP</label>
-                  <input value={filters.zip} onChange={e => setFilter("zip", e.target.value)} placeholder="77407" className={inputCls} />
+                  <select value={filters.zip} onChange={e => setFilter("zip", e.target.value)} className={inputCls}>
+                    <option value="">All ZIPs</option>
+                    {options.zips.map(z => <option key={z} value={z}>{z}</option>)}
+                  </select>
                 </div>
               </div>
             </div>
