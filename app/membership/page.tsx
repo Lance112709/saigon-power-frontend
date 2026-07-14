@@ -1,11 +1,18 @@
 "use client";
 /**
  * saigonpowertx.com/membership — SAIGON POWER PLUS
- * Public marketing + enrollment page. Signups and quote requests sync to the
- * CRM via the giadienre intake API (lead_source "SaigonPowerTX Website");
- * card payment runs through HelcimPay.js (card data never touches our servers).
+ * Public membership + enrollment page, styled to match the saigonpowertx.com
+ * homepage (dark #0a1a0e, emerald #22c55e, Inter). Signups and quote requests
+ * sync to the CRM via the giadienre intake API (lead_source "SaigonPowerTX
+ * Website"); card payment runs through HelcimPay.js (card data never touches
+ * our servers).
  */
 import { useState, FormEvent } from "react";
+import {
+  Phone, CheckCircle, ArrowRight, Shield, Clock, ChevronDown, FileText,
+  BarChart3, Bell, FolderOpen, Headphones, CalendarClock, LayoutDashboard,
+  Lock, X, Sparkles,
+} from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://web-production-188939.up.railway.app";
 const LEAD_SOURCE = "SaigonPowerTX Website";
@@ -71,19 +78,12 @@ async function post(path: string, body: unknown) {
   return data;
 }
 
-// ── Small shared bits ─────────────────────────────────────────────────────────
+// ── Shared styles (homepage design language) ─────────────────────────────────
 
-const Check = ({ w = 17 }: { w?: number }) => (
-  <svg viewBox="0 0 24 24" fill="none" style={{ width: w }}>
-    <path d="m5 12 4 4L19 6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const Bolt = () => (
-  <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
-    <path d="M13.2 2 5 13h6l-.3 9L19 10h-6l.2-8Z" fill="currentColor" />
-  </svg>
-);
+const inputCls = "w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/35 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#22c55e]/50 focus:border-[#22c55e]/60 transition-all";
+const labelCls = "block text-xs font-bold text-white/60 mb-1.5";
+const btnPrimary = "px-8 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm flex items-center justify-center gap-2 tracking-tight";
+const btnGhost = "px-8 py-4 border border-white/15 text-white font-bold rounded-2xl hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2";
 
 const PLANS = {
   POWER_PLUS_RES: { label: "Residential", price: "$9.99" },
@@ -93,10 +93,23 @@ type PlanId = keyof typeof PLANS;
 
 type JoinStep = "form" | "submitting" | "paying" | "active" | "received";
 
-export default function MembershipPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [faqOpen, setFaqOpen] = useState(0);
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/5 backdrop-blur-sm">
+      <button onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 text-left font-semibold text-white hover:bg-white/5 transition-colors">
+        {q}
+        <ChevronDown className={`w-5 h-5 text-white/40 shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-6 pb-5 text-sm text-white/60 leading-relaxed border-t border-white/10 pt-4">{a}</div>
+      )}
+    </div>
+  );
+}
 
+export default function MembershipPage() {
   // Join (enrollment) modal
   const [joinPlan, setJoinPlan] = useState<PlanId | null>(null);
   const [joinStep, setJoinStep] = useState<JoinStep>("form");
@@ -211,325 +224,542 @@ export default function MembershipPage() {
   });
 
   const faqs = [
-    ["What do the subscriptions cover?", "Residential service is $9.99/month and commercial service is $19.99/month. Both cover Saigon Power account-management services such as dashboard access, contract tracking, renewal reminders, document storage, and quote assistance. Electricity charges from your provider are separate."],
-    ["Can I cancel anytime?", "Yes. The membership is month-to-month and may be canceled according to the membership terms."],
-    ["Does submitting a quote request switch my provider?", "No. A quote request only gives the team permission to contact you about available options. Enrollment requires a separate confirmation."],
-    ["What if my contract does not end soon?", "Enter your contract end date. Saigon Power can keep it organized and help you prepare for the appropriate renewal window."],
-    ["Is Saigon Power an electricity provider?", "Saigon Power is an energy broker and account-management service. Electricity service is supplied and billed by the selected retail electricity provider."],
+    { q: "What do the subscriptions cover?", a: "Residential service is $9.99/month and commercial service is $19.99/month. Both cover Saigon Power account-management services such as dashboard access, contract tracking, renewal reminders, document storage, and quote assistance. Electricity charges from your provider are separate." },
+    { q: "Can I cancel anytime?", a: "Yes. The membership is month-to-month and may be canceled according to the membership terms." },
+    { q: "Does submitting a quote request switch my provider?", a: "No. A quote request only gives the team permission to contact you about available options. Enrollment requires a separate confirmation." },
+    { q: "What if my contract does not end soon?", a: "Enter your contract end date. Saigon Power can keep it organized and help you prepare for the appropriate renewal window." },
+    { q: "Is Saigon Power an electricity provider?", a: "Saigon Power is an energy broker and account-management service. Electricity service is supplied and billed by the selected retail electricity provider." },
   ];
 
   return (
-    <div id="top">
-      <style>{CSS}</style>
+    <div className="min-h-screen bg-[#0a1a0e]" style={{ fontFamily: "'Inter',system-ui,sans-serif" }}>
 
-      <div className="topbar"><strong>Texas electricity made easier.</strong> Residential $9.99/month · Commercial $19.99/month. Cancel anytime.</div>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        .hero-text   { animation: fadeUp .7s ease both; }
+        .hero-text-2 { animation: fadeUp .7s .1s ease both; }
+        .hero-card   { animation: fadeUp .8s .15s ease both; }
+      `}</style>
 
-      <div className="nav-wrap">
-        <nav className="container" aria-label="Primary navigation">
-          <a className="brand" href="#top" aria-label="Saigon Power home">
-            <span className="logo-mark" aria-hidden="true"><Bolt /></span>
-            <span>Saigon Power<small>RESIDENTIAL &amp; COMMERCIAL ENERGY SUPPORT</small></span>
+      {/* ── Topbar ── */}
+      <div className="bg-[#060f09] text-white/60 text-xs py-2 px-5 flex items-center justify-between border-b border-white/5">
+        <div className="flex items-center gap-4">
+          <a href="tel:8329379999" className="flex items-center gap-1.5 text-white/80 hover:text-white font-semibold">
+            <Phone className="w-3 h-3" />(832) 937-9999
           </a>
-          <div className={`nav-links${menuOpen ? " mobile-open" : ""}`} onClick={() => setMenuOpen(false)}>
-            <a href="#how">How It Works</a>
-            <a href="#membership">Membership</a>
-            <a href="#benefits">Benefits</a>
-            <a href="#faq">FAQ</a>
-          </div>
-          <div className="nav-actions">
-            <a className="btn btn-light" href="/my">Log In</a>
-            <a className="btn btn-primary" href="#quote">Get a Quote</a>
-            <button className="menu-btn" aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-            </button>
-          </div>
-        </nav>
+          <span className="text-white/20 hidden sm:inline">·</span>
+          <span className="hidden sm:inline">Mon–Fri, 8AM–6PM support</span>
+        </div>
+        <span className="hidden md:inline">Residential $9.99/mo · Commercial $19.99/mo · Cancel anytime</span>
       </div>
 
-      <main>
-        <section className="hero">
-          <div className="container hero-grid">
-            <div>
-              <span className="eyebrow">Electricity concierge for Texas</span>
-              <h1>Better energy choices. <span className="accent">Less hassle.</span></h1>
-              <p>Saigon Power keeps your electricity information organized, monitors your contract, and helps residential and commercial customers compare available plans when it is time to renew.</p>
-              <div className="hero-actions">
-                <button className="btn btn-primary" onClick={() => openJoin("POWER_PLUS_RES")}>
-                  Join Residential for $9.99/month
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </button>
-                <a className="btn btn-light" href="#quote">Get a real-time quote</a>
-              </div>
-              <div className="trust-row">
-                <span><Check w={18} />Cancel anytime</span>
-                <span><Check w={18} />Renewal reminders</span>
-                <span><Check w={18} />Human support</span>
-              </div>
+      {/* ── Navbar ── */}
+      <nav className="sticky top-0 z-50 bg-[#0a1a0e]/90 backdrop-blur-md border-b border-white/6">
+        <div className="max-w-7xl mx-auto px-5 flex items-center justify-between h-16">
+          <a href="/" className="flex items-center gap-2.5">
+            <img src="/sgpower-logo.webp" alt="Saigon Power" className="h-10 w-10 object-contain" />
+            <p className="font-black text-white text-sm leading-tight tracking-tight">Saigon Power</p>
+          </a>
+
+          <div className="hidden md:flex items-center gap-7">
+            {[["#how", "How It Works"], ["#membership", "Membership"], ["#benefits", "Benefits"], ["#faq", "FAQ"]].map(([h, l]) => (
+              <a key={h} href={h} className="text-sm font-medium text-white/65 hover:text-white transition-colors">{l}</a>
+            ))}
+            <a href="/" className="text-sm font-semibold text-[#22c55e] hover:text-[#4ade80] transition-colors">Compare Plans</a>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <a href="/my" className="hidden md:block text-sm font-semibold text-white/65 hover:text-white transition-colors">
+              Log In
+            </a>
+            <button onClick={() => openJoin("POWER_PLUS_RES")}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black transition-colors shadow-lg shadow-[#22c55e]/20">
+              <Sparkles className="w-4 h-4" /> Join Now
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden bg-[#0a1a0e]">
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position: "absolute", width: 900, height: 500, borderRadius: "50%", top: "-10%", right: "-15%", background: "radial-gradient(ellipse,#22c55e 0%,transparent 65%)", opacity: 0.07, filter: "blur(60px)" }} />
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0a1a0e] to-transparent" />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-5 lg:px-10 w-full pt-14 lg:pt-20 pb-16 lg:pb-24 flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
+          {/* Left — headline */}
+          <div className="flex-1 min-w-0">
+            <div className="hero-text inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/25">
+              <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+              <span className="text-[#22c55e] text-xs font-black uppercase tracking-widest">Electricity concierge for Texas</span>
             </div>
 
-            <div className="dashboard-card" aria-label="Customer dashboard preview">
-              <div className="dash-head">
-                <h3>Your Energy Dashboard</h3>
-                <span className="live-pill">● MONITORING</span>
-              </div>
-              <div className="status-panel">
-                <div className="status-label">Current contract status</div>
-                <div className="status-main">You&rsquo;re covered until Oct. 18</div>
-                <div className="progress"><span /></div>
-                <div className="status-meta"><span>Contract started</span><span>98 days remaining</span></div>
-              </div>
-              <div className="mini-grid">
-                <div className="mini-card"><small>Renewal status</small><strong className="good">On track</strong></div>
-                <div className="mini-card"><small>Current provider</small><strong>Provider name</strong></div>
-              </div>
-              <div className="alert-card">
-                <div className="alert-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 4.2 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <h1 className="hero-text-2 font-black text-white leading-[1.02] tracking-tight mb-5"
+              style={{ fontSize: "clamp(2.1rem,7vw,4.6rem)" }}>
+              Better energy choices.<br />
+              <span className="text-[#22c55e]">Less hassle.</span>
+            </h1>
+
+            <p className="text-white/55 text-base sm:text-lg leading-relaxed mb-8 max-w-[460px]">
+              Saigon Power keeps your electricity information organized, monitors your contract,
+              and helps residential and commercial customers compare available plans when it is time to renew.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 mb-8">
+              <button onClick={() => openJoin("POWER_PLUS_RES")} className={btnPrimary}>
+                Join Residential for $9.99/month <ArrowRight className="w-4 h-4" />
+              </button>
+              <a href="#quote" className={btnGhost}>Get a real-time quote</a>
+            </div>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {["Cancel anytime", "Renewal reminders", "Human support"].map(b => (
+                <div key={b} className="flex items-center gap-1.5 text-sm text-white/50">
+                  <CheckCircle className="w-4 h-4 text-[#22c55e]" />{b}
                 </div>
-                <div><strong>We&rsquo;ll notify you before renewal time.</strong><p>No more scrambling at the last minute or forgetting your contract end date.</p></div>
-              </div>
+              ))}
             </div>
           </div>
-        </section>
 
-        <section className="logo-strip" aria-label="Service highlights">
-          <div className="container logo-strip-inner">
-            <span><strong>Built for Texas homes and businesses</strong></span><span className="dot" />
-            <span>Simple membership</span><span className="dot" />
-            <span>Contract monitoring</span><span className="dot" />
-            <span>Bilingual support</span><span className="dot" />
-            <span>Residential + Commercial memberships</span>
-          </div>
-        </section>
-
-        <section className="section" id="how">
-          <div className="container">
-            <div className="section-title">
-              <span className="eyebrow">How it works</span>
-              <h2>From electric bill to organized account in three steps.</h2>
-              <p>We designed the process to feel simple—even when electricity plans are not.</p>
-            </div>
-            <div className="steps">
-              <article className="step">
-                <span className="step-num">Step 01</span>
-                <div className="step-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8m-6-6 6 6m-6-6v6h6M8 13h8M8 17h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3>Upload your bill</h3>
-                <p>Upload a recent electric bill or enter your provider and contract information manually.</p>
-              </article>
-              <article className="step">
-                <span className="step-num">Step 02</span>
-                <div className="step-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4 7v5c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V7l-8-4Z" stroke="currentColor" strokeWidth="2" /><path d="m9 12 2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3>We monitor the details</h3>
-                <p>Your account stores key contract information and watches for the right renewal window.</p>
-              </article>
-              <article className="step">
-                <span className="step-num">Step 03</span>
-                <div className="step-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg></div>
-                <h3>Compare and renew</h3>
-                <p>When the time is right, request available rates and get help choosing your next plan.</p>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section className="section membership" id="membership">
-          <div className="container membership-grid">
-            <div className="membership-copy">
-              <span className="eyebrow">Simple monthly subscriptions</span>
-              <h2>Your electricity account, actually managed.</h2>
-              <p>Saigon Power memberships cover account-management services only. Electricity usage, delivery charges, taxes, and provider charges remain separate.</p>
-              <div className="feature-list">
-                <div className="feature"><i><Check w={15} /></i><span>Secure customer profile and electric-bill storage</span></div>
-                <div className="feature"><i><Check w={15} /></i><span>Contract-end-date tracking and renewal reminders</span></div>
-                <div className="feature"><i><Check w={15} /></i><span>Access to quote assistance and customer support</span></div>
-                <div className="feature"><i><Check w={15} /></i><span>Cancel your subscription anytime</span></div>
+          {/* Right — dashboard preview */}
+          <div className="hero-card flex-1 min-w-0 w-full max-w-lg">
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-sm">
+              <div className="flex items-center justify-between px-1 pb-4">
+                <h3 className="font-black text-white text-sm tracking-tight">Your Energy Dashboard</h3>
+                <span className="px-2.5 py-1 rounded-full bg-[#22c55e]/15 text-[#22c55e] text-[10px] font-black tracking-wider">● MONITORING</span>
               </div>
-              <a className="btn btn-dark" href="#quote">See available rates</a>
-            </div>
-            <div className="pricing-stack">
-              <div className="price-card">
-                <span className="price-badge">RESIDENTIAL SUBSCRIPTION</span>
-                <div className="price"><strong>$9.99</strong><span>/ month</span></div>
-                <p>For homeowners and residential electricity accounts that want ongoing support and renewal monitoring.</p>
-                <ul>
-                  <li><Check />Personal customer dashboard</li>
-                  <li><Check />Contract and renewal tracking</li>
-                  <li><Check />Quote and enrollment assistance</li>
-                  <li><Check />Email and phone support</li>
-                </ul>
-                <button className="btn" onClick={() => openJoin("POWER_PLUS_RES")}>Start Residential</button>
-                <small>No long-term subscription commitment.</small>
-              </div>
-              <div className="price-card light-card">
-                <span className="price-badge">COMMERCIAL SUBSCRIPTION</span>
-                <div className="price"><strong>$19.99</strong><span>/ month</span></div>
-                <p>For businesses that need commercial account monitoring, quote support, and contract-renewal visibility.</p>
-                <ul>
-                  <li><Check />Commercial account dashboard</li>
-                  <li><Check />Contract and renewal tracking</li>
-                  <li><Check />Commercial quote assistance</li>
-                  <li><Check />Priority support for business accounts</li>
-                </ul>
-                <button className="btn" onClick={() => openJoin("POWER_PLUS_COM")}>Start Commercial</button>
-                <small>$19.99 per commercial account, billed monthly.</small>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="section" id="benefits">
-          <div className="container">
-            <div className="section-title">
-              <span className="eyebrow">Why Saigon Power</span>
-              <h2>Electricity is complicated. Your experience shouldn&rsquo;t be.</h2>
-            </div>
-            <div className="benefits-grid">
-              <article className="benefit"><div className="benefit-icon"><svg viewBox="0 0 24 24" fill="none" style={{ width: 23 }}><path d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg></div><div><h3>Never miss renewal timing</h3><p>We keep the contract end date visible and remind you before the renewal window arrives.</p></div></article>
-              <article className="benefit"><div className="benefit-icon"><svg viewBox="0 0 24 24" fill="none" style={{ width: 23 }}><path d="M4 7h16M7 4v6m10-6v6M5 11h14v9H5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div><div><h3>Everything in one place</h3><p>Keep provider, plan, service address, documents, and account activity organized.</p></div></article>
-              <article className="benefit"><div className="benefit-icon"><svg viewBox="0 0 24 24" fill="none" style={{ width: 23 }}><path d="M3 12h3l3-8 4 16 3-8h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div><div><h3>Rate-shopping assistance</h3><p>Request current plan options based on the information you provide and your service location.</p></div></article>
-              <article className="benefit"><div className="benefit-icon"><svg viewBox="0 0 24 24" fill="none" style={{ width: 23 }}><path d="M8 10h8m-8 4h5m8-2a9 9 0 1 1-3-6.7L21 3v6h-6l2.1-2.1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div><div><h3>Real human support</h3><p>Get help from the Saigon Power team when you have questions or are ready to enroll.</p></div></article>
-            </div>
-          </div>
-        </section>
-
-        <section className="quote-section" id="quote">
-          <div className="container quote-grid">
-            <div className="quote-copy">
-              <span className="eyebrow">Get a quote</span>
-              <h2>Let&rsquo;s find the right electricity plan.</h2>
-              <p>Send your information and the Saigon Power team can review residential or commercial options for your service address and contract timing.</p>
-              <div className="quote-note"><strong>Already under contract?</strong><br />That&rsquo;s okay. Share your contract end date so the team can follow up at the appropriate time.</div>
-            </div>
-
-            {quoteState === "done" ? (
-              <div className="quote-form quote-done">
-                <div className="done-icon"><Check w={30} /></div>
-                <h3>Request received!</h3>
-                <p>Thank you{quote.name ? `, ${quote.name.split(" ")[0]}` : ""} — the Saigon Power team will review current options for your address and reach out shortly.</p>
-                <p className="done-sub">Questions right now? Call <a href="tel:8329379999"><strong>832-937-9999</strong></a>.</p>
-              </div>
-            ) : (
-              <form className="quote-form" onSubmit={submitQuote}>
-                <div className="form-head">
-                  <h3>Request current rates</h3>
-                  <span className="secure"><svg viewBox="0 0 24 24" fill="none" style={{ width: 16 }}><path d="M6 10V8a6 6 0 1 1 12 0v2m-13 0h14v11H5z" stroke="currentColor" strokeWidth="2" /></svg>Secure form</span>
+              <div className="rounded-2xl bg-[#060f09] border border-white/8 p-5 relative overflow-hidden">
+                <div style={{ position: "absolute", width: 220, height: 220, borderRadius: "50%", right: -90, top: -100, background: "radial-gradient(circle,#22c55e 0%,transparent 70%)", opacity: 0.12 }} />
+                <p className="text-white/50 text-xs font-bold">Current contract status</p>
+                <p className="text-white font-black text-2xl tracking-tight mt-1 mb-4">You&rsquo;re covered until Oct. 18</p>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <span className="block h-full w-[72%] rounded-full bg-gradient-to-r from-[#22c55e] to-[#4ade80]" />
                 </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label htmlFor="accountType">Account Type</label>
-                    <select id="accountType" required {...qf("accountType")}>
-                      <option value="">Select one</option>
-                      <option value="residential">Residential</option>
-                      <option value="commercial">Commercial</option>
-                    </select>
-                  </div>
-                  <div className="field"><label htmlFor="name">Full Name</label><input id="name" autoComplete="name" required placeholder="Your full name" {...qf("name")} /></div>
-                  <div className="field"><label htmlFor="phone">Phone Number</label><input id="phone" autoComplete="tel" required placeholder="(832) 000-0000" {...qf("phone")} /></div>
-                  <div className="field full"><label htmlFor="address">Service Address</label><input id="address" autoComplete="street-address" required placeholder="Street, city, state and ZIP" {...qf("address")} /></div>
-                  <div className="field"><label htmlFor="email">Email Address</label><input id="email" type="email" autoComplete="email" required placeholder="you@example.com" {...qf("email")} /></div>
-                  <div className="field"><label htmlFor="provider">Current Provider</label><input id="provider" placeholder="Provider name" {...qf("provider")} /></div>
-                  <div className="field"><label htmlFor="date">Contract End Date</label><input id="date" type="date" {...qf("contractEndDate")} /></div>
+                <div className="flex justify-between text-[11px] text-white/40 mt-2">
+                  <span>Contract started</span><span>98 days remaining</span>
                 </div>
-                <label className="form-consent"><input type="checkbox" required /><span>I agree to be contacted about electricity service options and understand that submitting this form does not enroll me in a plan.</span></label>
-                {quoteError && <p className="form-error">{quoteError}</p>}
-                <button className="btn btn-primary" type="submit" disabled={quoteState === "sending"}>
-                  {quoteState === "sending" ? "Sending…" : <>Get My Quote <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg></>}
-                </button>
-              </form>
-            )}
-          </div>
-        </section>
-
-        <section className="section" id="faq">
-          <div className="container faq-wrap">
-            <div className="section-title">
-              <span className="eyebrow">Frequently asked questions</span>
-              <h2>Clear answers, no electric-company alphabet soup.</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                  <p className="text-xs text-white/40 font-bold mb-1">Renewal status</p>
+                  <p className="font-black text-[#22c55e]">On track</p>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                  <p className="text-xs text-white/40 font-bold mb-1">Current provider</p>
+                  <p className="font-black text-white">Provider name</p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/8 p-4 flex gap-3 items-start">
+                <div className="w-8 h-8 rounded-lg bg-amber-400/90 grid place-items-center shrink-0">
+                  <Bell className="w-4 h-4 text-[#0a1a0e]" />
+                </div>
+                <div>
+                  <p className="text-white text-xs font-black">We&rsquo;ll notify you before renewal time.</p>
+                  <p className="text-white/45 text-[11px] mt-0.5">No more scrambling at the last minute or forgetting your contract end date.</p>
+                </div>
+              </div>
             </div>
-            {faqs.map(([q, a], i) => (
-              <div key={q} className={`faq-item${faqOpen === i ? " open" : ""}`}>
-                <button className="faq-q" onClick={() => setFaqOpen(faqOpen === i ? -1 : i)}>{q}<span className="faq-plus">+</span></button>
-                <div className="faq-a">{a}</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Highlights strip ── */}
+      <div className="border-y border-white/6 bg-[#060f09] py-4 px-5">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm font-semibold text-white/40">
+          <span className="text-white/70 font-black">Built for Texas homes and businesses</span>
+          {["Simple membership", "Contract monitoring", "Bilingual support", "Residential + Commercial"].map(s => (
+            <span key={s} className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]/50" />{s}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── How It Works ── */}
+      <section className="py-20 px-5 bg-[#0a1a0e]" id="how">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">From Electric Bill to Organized Account in Three Steps.</h2>
+            <p className="text-white/45 max-w-xl mx-auto">We designed the process to feel simple — even when electricity plans are not.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {[
+              { step: "01", icon: FileText, title: "Upload your bill", time: "2 minutes", desc: "Upload a recent electric bill or enter your provider and contract information manually." },
+              { step: "02", icon: Shield, title: "We monitor the details", time: "Always on", desc: "Your account stores key contract information and watches for the right renewal window." },
+              { step: "03", icon: BarChart3, title: "Compare and renew", time: "When it counts", desc: "When the time is right, request available rates and get help choosing your next plan." },
+            ].map(s => (
+              <div key={s.step} className="bg-white/5 rounded-2xl border border-white/8 p-7 relative overflow-hidden">
+                <span className="absolute top-4 right-5 text-6xl font-black text-white/5 select-none leading-none">{s.step}</span>
+                <s.icon className="w-8 h-8 text-[#22c55e] mb-4" />
+                <h3 className="font-black text-white text-base mb-1 tracking-tight">{s.title}</h3>
+                <div className="flex items-center gap-1 text-xs text-[#22c55e] font-bold mb-3">
+                  <Clock className="w-3.5 h-3.5" /> {s.time}
+                </div>
+                <p className="text-sm text-white/45 leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="cta-band">
-          <div className="container cta-box">
-            <div><h2>Ready to stop worrying about renewal dates?</h2><p>Join Saigon Power or request a quote from the Saigon Power team.</p></div>
-            <div className="cta-actions">
-              <button className="btn btn-primary" onClick={() => openJoin("POWER_PLUS_RES")}>Join Membership</button>
-              <a className="btn btn-light" href="#quote">Get a Quote</a>
+      {/* ── Membership / Pricing ── */}
+      <section className="py-20 px-5 bg-[#060f09]" id="membership">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/25">
+              <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+              <span className="text-[#22c55e] text-xs font-black uppercase tracking-widest">Simple monthly subscriptions</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-[1.05] mb-4">
+              Your electricity account, <span className="text-[#22c55e]">actually managed.</span>
+            </h2>
+            <p className="text-white/45 mb-7">
+              Saigon Power memberships cover account-management services only. Electricity usage,
+              delivery charges, taxes, and provider charges remain separate.
+            </p>
+            <ul className="space-y-3.5 mb-8">
+              {["Secure customer profile and electric-bill storage", "Contract-end-date tracking and renewal reminders", "Access to quote assistance and customer support", "Cancel your subscription anytime"].map(item => (
+                <li key={item} className="flex items-start gap-2.5 text-sm text-white/70 font-semibold">
+                  <CheckCircle className="w-4 h-4 text-[#22c55e] shrink-0 mt-0.5" />{item}
+                </li>
+              ))}
+            </ul>
+            <a href="#quote" className={`${btnGhost} inline-flex`}>See available rates</a>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-5">
+            {/* Residential — highlighted */}
+            <div className="rounded-2xl border border-[#22c55e]/40 bg-[#22c55e]/8 p-7 flex flex-col">
+              <p className="text-xs font-black text-[#22c55e] uppercase tracking-widest mb-4">Residential</p>
+              <div className="flex items-end gap-1.5 mb-2">
+                <span className="text-5xl font-black text-white tracking-tight leading-none">$9.99</span>
+                <span className="text-white/40 font-bold text-sm mb-0.5">/ month</span>
+              </div>
+              <p className="text-sm text-white/50 mb-5">For homeowners and residential electricity accounts that want ongoing support and renewal monitoring.</p>
+              <ul className="space-y-3 border-t border-white/10 pt-5 mb-6">
+                {["Personal customer dashboard", "Contract and renewal tracking", "Quote and enrollment assistance", "Email and phone support"].map(f => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-white/75">
+                    <CheckCircle className="w-4 h-4 text-[#22c55e] shrink-0 mt-0.5" />{f}
+                  </li>
+                ))}
+              </ul>
+              <button onClick={() => openJoin("POWER_PLUS_RES")}
+                className="mt-auto w-full px-6 py-4 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm tracking-tight">
+                Start Residential
+              </button>
+              <p className="text-[11px] text-white/30 text-center mt-3">No long-term subscription commitment.</p>
+            </div>
+
+            {/* Commercial */}
+            <div className="rounded-2xl border border-white/8 bg-white/4 p-7 flex flex-col">
+              <p className="text-xs font-black text-white/50 uppercase tracking-widest mb-4">Commercial</p>
+              <div className="flex items-end gap-1.5 mb-2">
+                <span className="text-5xl font-black text-white tracking-tight leading-none">$19.99</span>
+                <span className="text-white/40 font-bold text-sm mb-0.5">/ month</span>
+              </div>
+              <p className="text-sm text-white/50 mb-5">For businesses that need commercial account monitoring, quote support, and contract-renewal visibility.</p>
+              <ul className="space-y-3 border-t border-white/10 pt-5 mb-6">
+                {["Commercial account dashboard", "Contract and renewal tracking", "Commercial quote assistance", "Priority support for business accounts"].map(f => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-white/75">
+                    <CheckCircle className="w-4 h-4 text-[#22c55e] shrink-0 mt-0.5" />{f}
+                  </li>
+                ))}
+              </ul>
+              <button onClick={() => openJoin("POWER_PLUS_COM")}
+                className="mt-auto w-full px-6 py-4 bg-white/8 hover:bg-white/14 border border-white/15 text-white font-black rounded-2xl transition-colors text-sm tracking-tight">
+                Start Commercial
+              </button>
+              <p className="text-[11px] text-white/30 text-center mt-3">$19.99 per commercial account, billed monthly.</p>
             </div>
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
 
-      <footer>
-        <div className="container">
-          <div className="footer-grid">
+      {/* ── Benefits ── */}
+      <section className="py-20 px-5 bg-[#0a1a0e]" id="benefits">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">Electricity is Complicated. Your Experience Shouldn&rsquo;t Be.</h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-5">
+            {[
+              { icon: CalendarClock, title: "Never miss renewal timing", desc: "We keep the contract end date visible and remind you before the renewal window arrives." },
+              { icon: FolderOpen, title: "Everything in one place", desc: "Keep provider, plan, service address, documents, and account activity organized." },
+              { icon: LayoutDashboard, title: "Rate-shopping assistance", desc: "Request current plan options based on the information you provide and your service location." },
+              { icon: Headphones, title: "Real human support", desc: "Get help from the Saigon Power team when you have questions or are ready to enroll." },
+            ].map(b => (
+              <div key={b.title} className="bg-white/5 rounded-2xl border border-white/8 p-6 flex gap-4">
+                <div className="w-11 h-11 rounded-xl bg-[#22c55e]/12 border border-[#22c55e]/20 grid place-items-center shrink-0">
+                  <b.icon className="w-5 h-5 text-[#22c55e]" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base mb-1 tracking-tight">{b.title}</h3>
+                  <p className="text-sm text-white/45 leading-relaxed">{b.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Quote ── */}
+      <section className="relative py-20 px-5 overflow-hidden bg-[#060f09]" id="quote">
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position: "absolute", width: 800, height: 400, borderRadius: "50%", top: "50%", left: "-10%", transform: "translateY(-50%)", background: "radial-gradient(ellipse,#22c55e 0%,transparent 65%)", opacity: 0.06, filter: "blur(60px)" }} />
+        </div>
+        <div className="relative z-10 max-w-6xl mx-auto grid lg:grid-cols-[0.85fr_1.15fr] gap-12 items-start">
+          <div>
+            <div className="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/25">
+              <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+              <span className="text-[#22c55e] text-xs font-black uppercase tracking-widest">Get a quote</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-[1.02] mb-4">
+              Let&rsquo;s find the right electricity plan.
+            </h2>
+            <p className="text-white/45 mb-7">
+              Send your information and the Saigon Power team can review residential or commercial
+              options for your service address and contract timing.
+            </p>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-sm">
+              <p className="font-bold text-white mb-1">Already under contract?</p>
+              <p className="text-white/45">That&rsquo;s okay. Share your contract end date so the team can follow up at the appropriate time.</p>
+            </div>
+          </div>
+
+          {quoteState === "done" ? (
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center backdrop-blur-sm">
+              <div className="w-16 h-16 rounded-full bg-[#22c55e]/15 border border-[#22c55e]/30 grid place-items-center mx-auto mb-5">
+                <CheckCircle className="w-8 h-8 text-[#22c55e]" />
+              </div>
+              <h3 className="text-2xl font-black text-white tracking-tight mb-2">Request received!</h3>
+              <p className="text-white/50 mb-2">Thank you{quote.name ? `, ${quote.name.split(" ")[0]}` : ""} — the Saigon Power team will review current options for your address and reach out shortly.</p>
+              <p className="text-white/40 text-sm">Questions right now? Call <a href="tel:8329379999" className="text-[#22c55e] font-bold hover:underline">832-937-9999</a>.</p>
+            </div>
+          ) : (
+            <form onSubmit={submitQuote} className="bg-white/5 border border-white/10 rounded-3xl p-7 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-black text-white tracking-tight">Request current rates</h3>
+                <span className="flex items-center gap-1.5 text-[11px] font-black text-[#22c55e]">
+                  <Lock className="w-3.5 h-3.5" /> SECURE FORM
+                </span>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="accountType" className={labelCls}>Account Type</label>
+                  <select id="accountType" required {...qf("accountType")} className={`${inputCls} [&>option]:bg-[#0a1a0e]`}>
+                    <option value="">Select one</option>
+                    <option value="residential">Residential</option>
+                    <option value="commercial">Commercial</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="name" className={labelCls}>Full Name</label>
+                  <input id="name" autoComplete="name" required placeholder="Your full name" {...qf("name")} className={inputCls} />
+                </div>
+                <div>
+                  <label htmlFor="phone" className={labelCls}>Phone Number</label>
+                  <input id="phone" autoComplete="tel" required placeholder="(832) 000-0000" {...qf("phone")} className={inputCls} />
+                </div>
+                <div>
+                  <label htmlFor="email" className={labelCls}>Email Address</label>
+                  <input id="email" type="email" autoComplete="email" required placeholder="you@example.com" {...qf("email")} className={inputCls} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="address" className={labelCls}>Service Address</label>
+                  <input id="address" autoComplete="street-address" required placeholder="Street, city, state and ZIP" {...qf("address")} className={inputCls} />
+                </div>
+                <div>
+                  <label htmlFor="provider" className={labelCls}>Current Provider</label>
+                  <input id="provider" placeholder="Provider name" {...qf("provider")} className={inputCls} />
+                </div>
+                <div>
+                  <label htmlFor="date" className={labelCls}>Contract End Date</label>
+                  <input id="date" type="date" {...qf("contractEndDate")} className={`${inputCls} [color-scheme:dark]`} />
+                </div>
+              </div>
+              <label className="flex gap-2.5 items-start text-xs text-white/40 my-5">
+                <input type="checkbox" required className="mt-0.5 accent-[#22c55e]" />
+                <span>I agree to be contacted about electricity service options and understand that submitting this form does not enroll me in a plan.</span>
+              </label>
+              {quoteError && (
+                <p className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-semibold">{quoteError}</p>
+              )}
+              <button type="submit" disabled={quoteState === "sending"}
+                className={`${btnPrimary} w-full disabled:opacity-60 disabled:cursor-wait`}>
+                {quoteState === "sending" ? "Sending…" : <>Get My Quote <ArrowRight className="w-4 h-4" /></>}
+              </button>
+            </form>
+          )}
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="py-20 px-5 bg-[#0a1a0e]" id="faq">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">Frequently Asked Questions</h2>
+            <p className="text-white/40">Clear answers, no electric-company alphabet soup.</p>
+          </div>
+          <div className="space-y-3">
+            {faqs.map(f => <FaqItem key={f.q} {...f} />)}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="relative py-20 px-5 overflow-hidden bg-[#060f09]">
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position: "absolute", width: 800, height: 400, borderRadius: "50%", top: "50%", left: "50%", transform: "translate(-50%,-50%)", background: "radial-gradient(ellipse,#22c55e 0%,transparent 65%)", opacity: 0.06, filter: "blur(60px)" }} />
+        </div>
+        <div className="relative z-10 max-w-3xl mx-auto text-center">
+          <div className="text-[10px] font-black text-white/25 uppercase tracking-[0.2em] mb-4">Memberships from $9.99/month · Cancel anytime</div>
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">Ready to Stop Worrying About Renewal Dates?</h2>
+          <p className="text-white/40 mb-8">Join SAIGON POWER PLUS or request a quote from the Saigon Power team.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+            <button onClick={() => openJoin("POWER_PLUS_RES")} className={btnPrimary}>
+              Join Membership <ArrowRight className="w-4 h-4" />
+            </button>
+            <a href="#quote" className="px-8 py-4 bg-white/6 hover:bg-white/10 text-white font-bold rounded-2xl border border-white/10 transition-colors text-sm flex items-center justify-center gap-2">
+              Get a Quote
+            </a>
+          </div>
+          <div className="flex flex-wrap justify-center gap-x-7 gap-y-2 text-xs text-white/30">
+            {["Your data is secure", "Card handled by Helcim", "No spam, ever"].map(b => (
+              <div key={b} className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#22c55e]" />{b}</div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="bg-[#030a05] text-white pt-14 pb-8 px-5 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-10 mb-10">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2.5 mb-3">
+                <img src="/sgpower-logo.webp" alt="Saigon Power" className="h-9 w-9 object-contain" />
+                <span className="font-black text-lg tracking-tight">Saigon Power</span>
+              </div>
+              <p className="text-sm text-white/35 leading-relaxed max-w-xs">A simpler way to organize residential and commercial Texas electricity accounts, monitor contract timing, and request help comparing available plans.</p>
+              <div className="mt-4 space-y-1.5 text-sm text-white/30">
+                <a href="tel:8329379999" className="flex items-center gap-2 hover:text-white transition-colors"><Phone className="w-3.5 h-3.5" />(832) 937-9999</a>
+                <p>lance@saigonllc.com · Houston, Texas</p>
+                <p>Mon-Fri: 8AM - 6PM</p>
+              </div>
+            </div>
             <div>
-              <div className="brand"><span className="logo-mark"><Bolt /></span><span>Saigon Power<small>RESIDENTIAL &amp; COMMERCIAL ENERGY SUPPORT</small></span></div>
-              <div className="footer-about">A simpler way to organize residential and commercial Texas electricity accounts, monitor contract timing, and request help comparing available plans.</div>
+              <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-4">Platform</p>
+              <ul className="space-y-2.5 text-sm text-white/35">
+                {[["#how", "How It Works"], ["#membership", "Membership"], ["#quote", "Get a Quote"], ["/my", "Customer Login"]].map(([h, l]) => (
+                  <li key={l}><a href={h} className="hover:text-white transition-colors">{l}</a></li>
+                ))}
+              </ul>
             </div>
-            <div className="footer-col"><h4>Platform</h4><a href="#how">How It Works</a><a href="#membership">Membership</a><a href="#quote">Get a Quote</a><a href="/my">Customer Login</a></div>
-            <div className="footer-col"><h4>Company</h4><a href="/en">About</a><a href="tel:8329379999">Contact</a><a href="#">Privacy Policy</a><a href="#">Terms of Service</a></div>
-            <div className="footer-col"><h4>Saigon Power</h4><a href="tel:8329379999">832-937-9999</a><a href="mailto:lance@saigonllc.com">lance@saigonllc.com</a><span>Houston, Texas</span></div>
+            <div>
+              <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-4">Company</p>
+              <ul className="space-y-2.5 text-sm text-white/35">
+                {[["/", "Compare Plans"], ["/#about", "About Us"], ["/#faq", "FAQ"]].map(([h, l]) => (
+                  <li key={l}><a href={h} className="hover:text-white transition-colors">{l}</a></li>
+                ))}
+              </ul>
+              <button onClick={() => openJoin("POWER_PLUS_RES")}
+                className="inline-block mt-5 px-5 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white text-sm font-black rounded-xl transition-colors shadow-lg shadow-[#22c55e]/20 tracking-tight">
+                Join Membership
+              </button>
+            </div>
           </div>
-          <div className="footer-bottom"><span>© 2026 Saigon Power. All rights reserved.</span><span className="powered">Rates, availability, and potential savings vary by service area, usage, provider, and market conditions.</span></div>
+          <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/20">
+            <p>© 2026 Saigon Power LLC. All rights reserved. · Texas Electric License: <strong className="text-white/35">#BR190102</strong></p>
+            <p className="text-white/15">Rates, availability, and potential savings vary by service area, usage, provider, and market conditions.</p>
+          </div>
         </div>
       </footer>
 
-      <div className="mobile-cta">
-        <button className="btn btn-light" onClick={() => openJoin("POWER_PLUS_RES")}>Plans from $9.99</button>
-        <a className="btn btn-primary" href="#quote">Get a Quote</a>
-      </div>
-
       {/* ── Join / enrollment modal ── */}
       {joinPlan && (
-        <div className="join-overlay" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget && joinStep !== "paying" && joinStep !== "submitting") setJoinPlan(null); }}>
-          <div className="join-modal">
+        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto"
+          role="dialog" aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget && joinStep !== "paying" && joinStep !== "submitting") setJoinPlan(null); }}>
+          <div className="w-full max-w-[540px] bg-[#0c1d11] border border-white/10 rounded-3xl p-7 shadow-2xl max-h-[calc(100vh-32px)] overflow-y-auto">
             {(joinStep === "active" || joinStep === "received") ? (
-              <div className="join-done">
-                <div className="done-icon"><Check w={30} /></div>
-                <h3>{joinStep === "active" ? "Welcome to SAIGON POWER PLUS! 🎉" : "You're on the list!"}</h3>
-                <p>
+              <div className="text-center py-6">
+                <div className="w-16 h-16 rounded-full bg-[#22c55e]/15 border border-[#22c55e]/30 grid place-items-center mx-auto mb-5">
+                  <CheckCircle className="w-8 h-8 text-[#22c55e]" />
+                </div>
+                <h3 className="text-2xl font-black text-white tracking-tight mb-3">
+                  {joinStep === "active" ? "Welcome to SAIGON POWER PLUS! 🎉" : "You're on the list!"}
+                </h3>
+                <p className="text-white/50 text-sm leading-relaxed mb-3">
                   {joinStep === "active"
-                    ? <>Your {PLANS[joinPlan].label} membership is <strong>active</strong>{cardLast4 ? <> — billed monthly to the card ending {cardLast4}</> : null}. The Saigon Power team will reach out to finish setting up your dashboard.</>
+                    ? <>Your {PLANS[joinPlan].label} membership is <strong className="text-[#22c55e]">active</strong>{cardLast4 ? <> — billed monthly to the card ending {cardLast4}</> : null}. The Saigon Power team will reach out to finish setting up your dashboard.</>
                     : <>We received your {PLANS[joinPlan].label} membership signup. The Saigon Power team will contact you shortly to complete payment and activate your account.</>}
                 </p>
-                {reference && <p className="join-ref">Reference: <strong>{reference}</strong></p>}
-                <button className="btn btn-primary" onClick={() => setJoinPlan(null)}>Done</button>
+                {reference && <p className="text-white/40 text-sm mb-4">Reference: <strong className="text-white/70">{reference}</strong></p>}
+                <button onClick={() => setJoinPlan(null)}
+                  className="px-8 py-3.5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-black rounded-2xl shadow-lg shadow-[#22c55e]/20 transition-colors text-sm">
+                  Done
+                </button>
               </div>
             ) : (
               <>
-                <div className="join-head">
+                <div className="flex items-start justify-between gap-4 mb-6">
                   <div>
-                    <span className="price-badge">{PLANS[joinPlan].label.toUpperCase()} MEMBERSHIP</span>
-                    <h3>Join for {PLANS[joinPlan].price}/month</h3>
+                    <p className="text-xs font-black text-[#22c55e] uppercase tracking-widest mb-2">{PLANS[joinPlan].label} membership</p>
+                    <h3 className="text-2xl font-black text-white tracking-tight">Join for {PLANS[joinPlan].price}/month</h3>
                   </div>
-                  <button className="join-close" aria-label="Close" onClick={() => setJoinPlan(null)}>✕</button>
+                  <button onClick={() => setJoinPlan(null)} aria-label="Close"
+                    className="w-9 h-9 rounded-xl border border-white/15 grid place-items-center text-white/50 hover:text-white hover:bg-white/5 transition-colors shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
                 <form onSubmit={submitJoin}>
-                  <div className="form-grid">
-                    <div className="field full"><label htmlFor="j-name">Full Name</label><input id="j-name" autoComplete="name" required placeholder="Your full name" {...jf("full_name")} /></div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label htmlFor="j-name" className={labelCls}>Full Name</label>
+                      <input id="j-name" autoComplete="name" required placeholder="Your full name" {...jf("full_name")} className={inputCls} />
+                    </div>
                     {joinPlan === "POWER_PLUS_COM" && (
-                      <div className="field full"><label htmlFor="j-biz">Business Name</label><input id="j-biz" autoComplete="organization" required placeholder="Your business name" {...jf("business_name")} /></div>
+                      <div className="sm:col-span-2">
+                        <label htmlFor="j-biz" className={labelCls}>Business Name</label>
+                        <input id="j-biz" autoComplete="organization" required placeholder="Your business name" {...jf("business_name")} className={inputCls} />
+                      </div>
                     )}
-                    <div className="field"><label htmlFor="j-email">Email Address</label><input id="j-email" type="email" autoComplete="email" required placeholder="you@example.com" {...jf("email")} /></div>
-                    <div className="field"><label htmlFor="j-phone">Phone Number</label><input id="j-phone" autoComplete="tel" required placeholder="(832) 000-0000" {...jf("phone")} /></div>
-                    <div className="field full"><label htmlFor="j-addr">Service Address</label><input id="j-addr" autoComplete="street-address" required placeholder="Street address" {...jf("service_address")} /></div>
-                    <div className="field"><label htmlFor="j-city">City</label><input id="j-city" autoComplete="address-level2" required placeholder="Houston" {...jf("city")} /></div>
-                    <div className="field"><label htmlFor="j-zip">ZIP Code</label><input id="j-zip" autoComplete="postal-code" required placeholder="77000" {...jf("zip")} /></div>
+                    <div>
+                      <label htmlFor="j-email" className={labelCls}>Email Address</label>
+                      <input id="j-email" type="email" autoComplete="email" required placeholder="you@example.com" {...jf("email")} className={inputCls} />
+                    </div>
+                    <div>
+                      <label htmlFor="j-phone" className={labelCls}>Phone Number</label>
+                      <input id="j-phone" autoComplete="tel" required placeholder="(832) 000-0000" {...jf("phone")} className={inputCls} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="j-addr" className={labelCls}>Service Address</label>
+                      <input id="j-addr" autoComplete="street-address" required placeholder="Street address" {...jf("service_address")} className={inputCls} />
+                    </div>
+                    <div>
+                      <label htmlFor="j-city" className={labelCls}>City</label>
+                      <input id="j-city" autoComplete="address-level2" required placeholder="Houston" {...jf("city")} className={inputCls} />
+                    </div>
+                    <div>
+                      <label htmlFor="j-zip" className={labelCls}>ZIP Code</label>
+                      <input id="j-zip" autoComplete="postal-code" required placeholder="77000" {...jf("zip")} className={inputCls} />
+                    </div>
                   </div>
-                  {joinError && <p className="form-error">{joinError}</p>}
-                  <button className="btn btn-primary join-submit" type="submit" disabled={joinStep === "submitting" || joinStep === "paying"}>
+                  {joinError && (
+                    <p className="mt-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-semibold">{joinError}</p>
+                  )}
+                  <button type="submit" disabled={joinStep === "submitting" || joinStep === "paying"}
+                    className={`${btnPrimary} w-full mt-5 disabled:opacity-60 disabled:cursor-wait`}>
                     {joinStep === "submitting" ? "Saving your details…"
                       : joinStep === "paying" ? "Waiting for secure payment…"
-                      : <>Continue to secure payment <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg></>}
+                      : <>Continue to secure payment <ArrowRight className="w-4 h-4" /></>}
                   </button>
-                  <p className="join-fine">Card details are entered in Helcim&rsquo;s secure payment window and never touch our servers. {PLANS[joinPlan].price}/month, cancel anytime.</p>
+                  <p className="flex items-center justify-center gap-1.5 text-[11px] text-white/35 mt-3 text-center">
+                    <Lock className="w-3 h-3 shrink-0" />
+                    Card details are entered in Helcim&rsquo;s secure payment window and never touch our servers. {PLANS[joinPlan].price}/month, cancel anytime.
+                  </p>
                 </form>
               </>
             )}
@@ -539,343 +769,3 @@ export default function MembershipPage() {
     </div>
   );
 }
-
-// ── Design CSS (ported 1:1 from saigonpowertx_membership.html) ────────────────
-
-const CSS = `
-    :root {
-      --navy: #07182f;
-      --navy-2: #0d2547;
-      --blue: #146ef5;
-      --blue-dark: #0b55c7;
-      --cyan: #69d5ff;
-      --yellow: #ffd24a;
-      --ink: #10223e;
-      --muted: #627089;
-      --line: #dce5ef;
-      --soft: #f4f8fc;
-      --white: #ffffff;
-      --success: #0e9f6e;
-      --shadow: 0 24px 70px rgba(7, 24, 47, 0.13);
-      --radius-lg: 28px;
-      --radius-md: 18px;
-      --radius-sm: 12px;
-      --max: 1180px;
-    }
-
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--ink);
-      background: var(--white);
-      line-height: 1.55;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    a { color: inherit; text-decoration: none; }
-    button, input, select { font: inherit; }
-    img, svg { display: block; max-width: 100%; }
-    .container { width: min(calc(100% - 40px), var(--max)); margin: 0 auto; }
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(20, 110, 245, 0.1);
-      color: var(--blue-dark);
-      font-size: 0.82rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 5px rgba(20,110,245,.12); }
-    .section { padding: 96px 0; }
-    .section-title { max-width: 720px; margin-bottom: 44px; }
-    .section-title h2 { margin: 16px 0 12px; font-size: clamp(2rem, 4vw, 3.35rem); line-height: 1.05; letter-spacing: -0.045em; }
-    .section-title p { margin: 0; color: var(--muted); font-size: 1.08rem; }
-
-    .topbar {
-      background: var(--navy);
-      color: rgba(255,255,255,.82);
-      font-size: .86rem;
-      text-align: center;
-      padding: 9px 16px;
-    }
-    .topbar strong { color: var(--white); }
-
-    .nav-wrap {
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      background: rgba(255,255,255,.9);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid rgba(220,229,239,.8);
-    }
-    nav { height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-    .brand { display: flex; align-items: center; gap: 11px; font-weight: 900; letter-spacing: -0.04em; font-size: 1.25rem; }
-    .logo-mark {
-      width: 39px;
-      height: 39px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(145deg, var(--blue), #27b3ff);
-      color: white;
-      box-shadow: 0 10px 24px rgba(20,110,245,.25);
-    }
-    .brand span small { display: block; color: var(--muted); font-weight: 700; letter-spacing: 0; font-size: .62rem; margin-top: -3px; }
-    .nav-links { display: flex; align-items: center; gap: 28px; color: #43516a; font-size: .94rem; font-weight: 700; }
-    .nav-links a:hover { color: var(--blue); }
-    .nav-actions { display: flex; align-items: center; gap: 10px; }
-    .btn {
-      border: 0;
-      border-radius: 12px;
-      padding: 13px 18px;
-      font-weight: 800;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 9px;
-      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
-    }
-    .btn:hover { transform: translateY(-2px); }
-    .btn-primary { background: var(--blue); color: white; box-shadow: 0 10px 24px rgba(20,110,245,.23); }
-    .btn-primary:hover { background: var(--blue-dark); }
-    .btn-primary:disabled { opacity: .65; cursor: wait; transform: none; }
-    .btn-dark { background: var(--navy); color: white; box-shadow: 0 12px 24px rgba(7,24,47,.18); }
-    .btn-light { background: white; color: var(--ink); border: 1px solid var(--line); }
-    .menu-btn { display: none; width: 42px; height: 42px; border: 1px solid var(--line); background: white; border-radius: 10px; cursor: pointer; }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at 84% 15%, rgba(105,213,255,.34), transparent 31%),
-        radial-gradient(circle at 8% 85%, rgba(255,210,74,.18), transparent 28%),
-        linear-gradient(180deg, #f7fbff 0%, #ffffff 84%);
-      padding: 82px 0 76px;
-    }
-    .hero::after {
-      content: "";
-      position: absolute;
-      inset: auto -5% -250px -5%;
-      height: 380px;
-      background: repeating-linear-gradient(90deg, rgba(20,110,245,.035) 0 1px, transparent 1px 68px), repeating-linear-gradient(0deg, rgba(20,110,245,.035) 0 1px, transparent 1px 68px);
-      transform: perspective(420px) rotateX(64deg);
-      transform-origin: bottom;
-    }
-    .hero-grid { position: relative; z-index: 2; display: grid; grid-template-columns: 1.03fr .97fr; gap: 64px; align-items: center; }
-    .hero h1 { font-size: clamp(3.1rem, 6vw, 5.6rem); line-height: .95; letter-spacing: -.065em; margin: 20px 0 24px; max-width: 700px; }
-    .hero h1 .accent { color: var(--blue); position: relative; white-space: nowrap; }
-    .hero p { max-width: 650px; color: var(--muted); font-size: 1.18rem; margin: 0 0 29px; }
-    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; }
-    .hero-actions .btn { min-height: 52px; padding-inline: 22px; }
-    .trust-row { display: flex; flex-wrap: wrap; gap: 18px; color: #3e4d67; font-size: .9rem; font-weight: 700; }
-    .trust-row span { display: inline-flex; align-items: center; gap: 7px; }
-    .trust-row svg { width: 18px; color: var(--success); }
-
-    .dashboard-card {
-      position: relative;
-      border: 1px solid rgba(255,255,255,.8);
-      border-radius: 30px;
-      background: rgba(255,255,255,.82);
-      box-shadow: var(--shadow);
-      padding: 22px;
-      backdrop-filter: blur(20px);
-    }
-    .dashboard-card::before {
-      content: "";
-      position: absolute;
-      inset: -18px 42px auto -24px;
-      height: 140px;
-      background: linear-gradient(90deg, rgba(20,110,245,.25), rgba(105,213,255,.08));
-      filter: blur(42px);
-      z-index: -1;
-    }
-    .dash-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 6px 4px 18px; }
-    .dash-head h3 { margin: 0; font-size: 1rem; }
-    .live-pill { padding: 7px 10px; border-radius: 999px; background: #eafbf4; color: #087f59; font-size: .72rem; font-weight: 900; }
-    .status-panel { border-radius: 22px; background: var(--navy); color: white; padding: 24px; overflow: hidden; position: relative; }
-    .status-panel::after { content: ""; position: absolute; width: 210px; height: 210px; border-radius: 50%; background: rgba(105,213,255,.16); right: -90px; top: -100px; }
-    .status-label { color: rgba(255,255,255,.64); font-size: .8rem; font-weight: 700; }
-    .status-main { font-size: 1.65rem; font-weight: 900; letter-spacing: -.03em; margin: 6px 0 18px; }
-    .progress { height: 9px; background: rgba(255,255,255,.12); border-radius: 999px; overflow: hidden; }
-    .progress span { display: block; width: 72%; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--yellow)); border-radius: inherit; }
-    .status-meta { display: flex; justify-content: space-between; color: rgba(255,255,255,.7); font-size: .74rem; margin-top: 10px; }
-    .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 13px; }
-    .mini-card { border: 1px solid var(--line); border-radius: 18px; padding: 17px; background: white; }
-    .mini-card small { display: block; color: var(--muted); font-weight: 700; margin-bottom: 5px; }
-    .mini-card strong { font-size: 1.07rem; }
-    .mini-card .good { color: var(--success); }
-    .alert-card { margin-top: 13px; padding: 15px 16px; border-radius: 16px; background: #fff8df; display: flex; gap: 12px; align-items: flex-start; border: 1px solid #ffe39a; }
-    .alert-icon { width: 34px; height: 34px; border-radius: 10px; flex: 0 0 auto; display: grid; place-items: center; background: var(--yellow); }
-    .alert-card strong { display: block; font-size: .89rem; }
-    .alert-card p { margin: 2px 0 0; font-size: .77rem; color: #786b40; }
-
-    .logo-strip { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 24px 0; background: white; }
-    .logo-strip-inner { display: flex; align-items: center; justify-content: center; gap: 14px 42px; flex-wrap: wrap; color: var(--muted); font-size: .86rem; font-weight: 800; text-align: center; }
-    .logo-strip strong { color: var(--ink); }
-    .dot { width: 4px; height: 4px; border-radius: 50%; background: #b5c1cf; }
-
-    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-    .step { border: 1px solid var(--line); border-radius: 24px; padding: 28px; background: white; position: relative; overflow: hidden; }
-    .step:hover { box-shadow: 0 18px 46px rgba(7,24,47,.08); transform: translateY(-4px); transition: .25s ease; }
-    .step-num { font-size: .76rem; font-weight: 900; color: var(--blue); text-transform: uppercase; letter-spacing: .12em; }
-    .step-icon { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; margin: 20px 0 22px; background: var(--soft); color: var(--blue); }
-    .step-icon svg { width: 25px; }
-    .step h3 { margin: 0 0 9px; font-size: 1.24rem; letter-spacing: -.02em; }
-    .step p { margin: 0; color: var(--muted); }
-
-    .membership { background: var(--soft); }
-    .membership-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 64px; align-items: center; }
-    .pricing-stack { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: stretch; }
-    .price-card.light-card { background: white; color: var(--ink); border: 1px solid var(--line); }
-    .price-card.light-card::before { background: radial-gradient(circle, rgba(20,110,245,.10), transparent 66%); }
-    .price-card.light-card .price-badge { background: #eef5ff; border-color: #d8e6ff; color: var(--blue); }
-    .price-card.light-card > p { color: var(--muted); }
-    .price-card.light-card ul { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-    .price-card.light-card li { color: var(--ink); }
-    .price-card.light-card li svg { color: var(--blue); }
-    .price-card.light-card .btn { background: var(--navy); color: white; }
-
-    .membership-copy h2 { font-size: clamp(2.35rem, 4.6vw, 4rem); line-height: 1; letter-spacing: -.05em; margin: 18px 0; }
-    .membership-copy p { color: var(--muted); font-size: 1.08rem; }
-    .feature-list { display: grid; gap: 13px; margin: 28px 0 32px; }
-    .feature { display: flex; gap: 12px; align-items: flex-start; font-weight: 700; }
-    .feature i { width: 24px; height: 24px; border-radius: 50%; background: #dff8ed; color: var(--success); display: grid; place-items: center; flex: 0 0 auto; font-style: normal; }
-    .feature i svg { width: 15px; }
-    .price-card { background: var(--navy); color: white; padding: 38px; border-radius: 30px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
-    .price-card::before { content: ""; position: absolute; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(105,213,255,.22), transparent 66%); right: -120px; top: -130px; }
-    .price-badge { display: inline-block; padding: 8px 11px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; color: var(--cyan); font-size: .78rem; font-weight: 900; }
-    .price { display: flex; align-items: end; gap: 8px; margin: 24px 0 9px; }
-    .price strong { font-size: 4.25rem; line-height: .85; letter-spacing: -.07em; }
-    .price span { color: rgba(255,255,255,.66); font-weight: 700; }
-    .price-card > p { color: rgba(255,255,255,.7); margin: 0 0 24px; }
-    .price-card ul { list-style: none; padding: 22px 0; margin: 0; border-top: 1px solid rgba(255,255,255,.12); border-bottom: 1px solid rgba(255,255,255,.12); display: grid; gap: 14px; }
-    .price-card li { display: flex; gap: 10px; align-items: center; color: rgba(255,255,255,.88); }
-    .price-card li svg { width: 17px; color: var(--cyan); }
-    .price-card .btn { width: 100%; margin-top: 24px; background: var(--yellow); color: var(--navy); min-height: 53px; }
-    .price-card small { display: block; text-align: center; color: rgba(255,255,255,.5); margin-top: 12px; }
-    .price-card.light-card small { color: var(--muted); }
-
-    .benefits-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
-    .benefit { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: flex; gap: 18px; }
-    .benefit-icon { width: 46px; height: 46px; border-radius: 14px; background: #eaf3ff; color: var(--blue); display: grid; place-items: center; flex: 0 0 auto; }
-    .benefit-icon svg { width: 23px; }
-    .benefit h3 { margin: 0 0 6px; font-size: 1.1rem; }
-    .benefit p { margin: 0; color: var(--muted); font-size: .95rem; }
-
-    .quote-section { padding: 96px 0; background: linear-gradient(145deg, var(--navy), var(--navy-2)); color: white; position: relative; overflow: hidden; }
-    .quote-section::before { content: ""; position: absolute; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, rgba(20,110,245,.45), transparent 68%); left: -190px; top: -260px; }
-    .quote-grid { position: relative; display: grid; grid-template-columns: .85fr 1.15fr; gap: 56px; align-items: start; }
-    .quote-copy h2 { font-size: clamp(2.4rem, 5vw, 4.35rem); line-height: .98; letter-spacing: -.055em; margin: 18px 0; }
-    .quote-copy p { color: rgba(255,255,255,.7); font-size: 1.06rem; }
-    .quote-copy .eyebrow { background: rgba(105,213,255,.12); color: var(--cyan); }
-    .quote-copy .eyebrow::before { background: var(--cyan); box-shadow: 0 0 0 5px rgba(105,213,255,.12); }
-    .quote-note { margin-top: 28px; padding: 17px; border-radius: 16px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); font-size: .9rem; color: rgba(255,255,255,.78); }
-    .quote-form { background: white; color: var(--ink); border-radius: 28px; padding: 30px; box-shadow: 0 28px 70px rgba(0,0,0,.22); }
-    .form-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; }
-    .form-head h3 { margin: 0; font-size: 1.35rem; }
-    .secure { font-size: .76rem; color: var(--success); font-weight: 900; display: flex; align-items: center; gap: 6px; }
-    .secure svg { width: 16px; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .field { display: grid; gap: 7px; }
-    .field.full { grid-column: 1 / -1; }
-    label { font-size: .82rem; color: #465570; font-weight: 800; }
-    input, select { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; outline: none; color: var(--ink); background: #fff; }
-    input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(20,110,245,.1); }
-    .form-consent { display: flex; gap: 10px; color: var(--muted); font-size: .76rem; margin: 16px 0; }
-    .form-consent input { width: auto; margin-top: 4px; }
-    .quote-form .btn { width: 100%; min-height: 52px; }
-    .form-error { margin: 0 0 14px; padding: 11px 14px; border-radius: 12px; background: #fdeeee; border: 1px solid #f5c6c6; color: #a13030; font-size: .86rem; font-weight: 700; }
-
-    .quote-done { text-align: center; padding: 56px 30px; }
-    .done-icon { width: 62px; height: 62px; border-radius: 50%; background: #dff8ed; color: var(--success); display: grid; place-items: center; margin: 0 auto 18px; }
-    .quote-done h3 { margin: 0 0 10px; font-size: 1.5rem; }
-    .quote-done p { color: var(--muted); margin: 0 0 8px; }
-    .done-sub a { color: var(--blue); }
-
-    .faq-wrap { max-width: 850px; margin: 0 auto; }
-    .faq-item { border-bottom: 1px solid var(--line); }
-    .faq-q { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 20px; text-align: left; padding: 22px 0; border: 0; background: transparent; cursor: pointer; color: var(--ink); font-weight: 850; font-size: 1.04rem; }
-    .faq-plus { width: 30px; height: 30px; border-radius: 9px; background: var(--soft); display: grid; place-items: center; flex: 0 0 auto; transition: transform .2s; }
-    .faq-a { display: none; padding: 0 50px 22px 0; color: var(--muted); }
-    .faq-item.open .faq-a { display: block; }
-    .faq-item.open .faq-plus { transform: rotate(45deg); }
-
-    .cta-band { padding: 0 0 90px; }
-    .cta-box { border-radius: 28px; background: linear-gradient(120deg, #eaf4ff, #f7fbff 60%, #fff8dd); padding: 44px; display: flex; justify-content: space-between; align-items: center; gap: 30px; border: 1px solid #d9e9fa; }
-    .cta-box h2 { margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 2.8rem); letter-spacing: -.04em; }
-    .cta-box p { margin: 0; color: var(--muted); }
-    .cta-actions { display: flex; gap: 10px; flex: 0 0 auto; }
-
-    footer { background: #051326; color: rgba(255,255,255,.68); padding: 58px 0 26px; }
-    .footer-grid { display: grid; grid-template-columns: 1.5fr .7fr .7fr 1fr; gap: 42px; padding-bottom: 42px; }
-    footer .brand { color: white; margin-bottom: 16px; }
-    .footer-about { max-width: 390px; font-size: .9rem; }
-    .footer-col h4 { color: white; margin: 0 0 15px; font-size: .9rem; }
-    .footer-col a { display: block; margin: 10px 0; font-size: .88rem; }
-    .footer-col a:hover { color: white; }
-    .footer-bottom { border-top: 1px solid rgba(255,255,255,.1); padding-top: 22px; display: flex; justify-content: space-between; gap: 20px; font-size: .75rem; }
-    .powered { color: rgba(255,255,255,.45); }
-
-    .mobile-cta { display: none; }
-
-    .join-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(7,24,47,.62); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 18px; overflow-y: auto; }
-    .join-modal { width: min(560px, 100%); background: white; color: var(--ink); border-radius: 24px; padding: 28px; box-shadow: 0 34px 90px rgba(0,0,0,.35); max-height: calc(100vh - 36px); overflow-y: auto; }
-    .join-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
-    .join-head h3 { margin: 12px 0 0; font-size: 1.45rem; letter-spacing: -.02em; }
-    .join-head .price-badge { background: #eef5ff; border: 1px solid #d8e6ff; color: var(--blue); }
-    .join-close { width: 36px; height: 36px; border: 1px solid var(--line); background: white; border-radius: 10px; cursor: pointer; color: var(--muted); flex: 0 0 auto; }
-    .join-submit { width: 100%; min-height: 52px; margin-top: 16px; }
-    .join-fine { margin: 12px 0 0; color: var(--muted); font-size: .76rem; text-align: center; }
-    .join-done { text-align: center; padding: 26px 6px 10px; }
-    .join-done h3 { margin: 0 0 10px; font-size: 1.4rem; }
-    .join-done p { color: var(--muted); margin: 0 0 10px; }
-    .join-ref { font-size: .85rem; }
-    .join-done .btn { min-width: 160px; margin-top: 10px; }
-
-    @media (max-width: 960px) {
-      .nav-links, .nav-actions .btn-light { display: none; }
-      .menu-btn { display: grid; place-items: center; }
-      .nav-links.mobile-open { display: grid; position: absolute; left: 20px; right: 20px; top: 70px; background: white; border: 1px solid var(--line); padding: 20px; border-radius: 16px; box-shadow: var(--shadow); gap: 16px; }
-      .hero-grid, .membership-grid, .quote-grid { grid-template-columns: 1fr; }
-      .pricing-stack { grid-template-columns: 1fr; }
-      .hero-grid { gap: 48px; }
-      .dashboard-card { max-width: 650px; }
-      .membership-grid { gap: 40px; }
-      .quote-grid { gap: 38px; }
-      .footer-grid { grid-template-columns: 1.2fr 1fr 1fr; }
-      .footer-grid > :first-child { grid-column: 1 / -1; }
-    }
-
-    @media (max-width: 700px) {
-      .container { width: min(calc(100% - 28px), var(--max)); }
-      .section { padding: 72px 0; }
-      .hero { padding: 62px 0 56px; }
-      .hero h1 { font-size: clamp(2.75rem, 14vw, 4.1rem); }
-      .hero-actions { display: grid; }
-      .hero-actions .btn { width: 100%; }
-      .steps, .benefits-grid, .form-grid, .pricing-stack { grid-template-columns: 1fr; }
-      .field.full { grid-column: auto; }
-      .mini-grid { grid-template-columns: 1fr; }
-      .price-card, .quote-form { padding: 24px; }
-      .price strong { font-size: 3.6rem; }
-      .cta-box { padding: 30px 24px; display: grid; }
-      .cta-actions { width: 100%; display: grid; }
-      .footer-grid { grid-template-columns: 1fr 1fr; gap: 30px; }
-      .footer-grid > :first-child { grid-column: 1 / -1; }
-      .footer-bottom { flex-direction: column; }
-      .mobile-cta { display: flex; position: fixed; z-index: 40; bottom: 12px; left: 12px; right: 12px; gap: 8px; background: rgba(255,255,255,.94); backdrop-filter: blur(16px); border: 1px solid var(--line); box-shadow: 0 18px 45px rgba(7,24,47,.2); padding: 8px; border-radius: 16px; }
-      .mobile-cta .btn { flex: 1; padding: 12px 9px; font-size: .84rem; }
-      body { padding-bottom: 78px; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
-    }
-`;

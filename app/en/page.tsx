@@ -218,7 +218,7 @@ export default function LandingPage() {
 
           {/* Nav links */}
           <div className="hidden md:flex items-center gap-7">
-            {[["#plans","Compare Plans"],["#residential","Residential"],["#commercial","Commercial"],["#about","About Us"],["#faq","FAQ"]].map(([h,l]) => (
+            {[["/membership","Membership"],["#plans","Compare Plans"],["#residential","Residential"],["#commercial","Commercial"],["#about","About Us"],["#faq","FAQ"]].map(([h,l]) => (
               <a key={h} href={h} className="text-sm font-medium text-white/65 hover:text-white transition-colors">{l}</a>
             ))}
             <a href="/refer" className="text-sm font-semibold text-[#22c55e] hover:text-[#4ade80] transition-colors">Refer a Customer</a>
@@ -572,7 +572,7 @@ export default function LandingPage() {
             <div>
               <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-4">Services</p>
               <ul className="space-y-2.5 text-sm text-white/35">
-                {[["#residential","Residential Electricity"],["#commercial","Commercial Electricity"],["#plans","Compare Plans"]].map(([h,l]) => (
+                {[["#residential","Residential Electricity"],["#commercial","Commercial Electricity"],["#plans","Compare Plans"],["/membership","POWER PLUS Membership"]].map(([h,l]) => (
                   <li key={l}><a href={h} className="hover:text-white transition-colors">{l}</a></li>
                 ))}
               </ul>
