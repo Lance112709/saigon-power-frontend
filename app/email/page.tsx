@@ -43,7 +43,11 @@ function TemplateModal({ template, onClose, onSaved }: { template?: any; onClose
             <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Your Saigon Power update" className={inputCls} /></div>
           <div><label className="block text-xs font-medium text-slate-500 mb-1">Message</label>
             <textarea value={body} onChange={e => setBody(e.target.value)} rows={7} placeholder={"Hi {{first_name}},\n\n…"} className={inputCls + " font-mono"} />
-            <p className="text-[11px] text-slate-400 mt-1">Use <code className="bg-slate-100 px-1 rounded">{"{{first_name}}"}</code> for the customer's name.</p></div>
+            <p className="text-[11px] text-slate-400 mt-1">Personalization tags — replaced with each customer's real details when sent:{" "}
+              {["first_name", "last_name", "service_address", "esi_id", "phone", "email", "contract_end_date"].map((t, i) => (
+                <span key={t}>{i > 0 ? " " : ""}<code className="bg-slate-100 px-1 rounded">{`{{${t}}}`}</code></span>
+              ))}
+            </p></div>
           <div><label className="block text-xs font-medium text-slate-500 mb-1">Description (optional)</label>
             <input value={desc} onChange={e => setDesc(e.target.value)} className={inputCls} /></div>
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-2">{error}</p>}

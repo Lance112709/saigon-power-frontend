@@ -552,6 +552,8 @@ export const api = {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/email/logs${q}`);
   },
+  getEmailMergeVars: (params: Record<string, string>) =>
+    request(`/api/v1/email/merge-vars?${new URLSearchParams(params).toString()}`),
   getEmailTemplates: () => request("/api/v1/email/templates"),
   createEmailTemplate: (data: object) => request("/api/v1/email/templates", { method: "POST", body: JSON.stringify(data) }),
   updateEmailTemplate: (id: string, data: object) => request(`/api/v1/email/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
