@@ -750,7 +750,9 @@ export default function LeadDetailPage() {
   const [salesAgents, setSalesAgents] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
-  const [newTask, setNewTask] = useState({ title: "", task_type: "call", due_date: "", priority: "medium", description: "" });
+  const [newTask, setNewTask] = useState({ title: "", task_type: "call", due_date: "", priority: "medium", description: "", assigned_to: "" });
+  const [users, setUsers] = useState<any[]>([]);
+  useEffect(() => { api.getUsers().then((u: any[]) => setUsers(u || [])).catch(() => setUsers([])); }, []);
   const [savingTask, setSavingTask] = useState(false);
   const [notes, setNotes] = useState<any[]>([]);
   const [noteText, setNoteText] = useState("");
@@ -874,11 +876,12 @@ export default function LeadDetailPage() {
 
   const handleAddTask = async () => {
     if (!newTask.title.trim() || !newTask.due_date) return;
+    if (!newTask.assigned_to.trim()) { setTaskError("Please assign this task to a user."); return; }
     setSavingTask(true);
     setTaskError("");
     try {
       await api.createTask({ ...newTask, lead_id: id });
-      setNewTask({ title: "", task_type: "call", due_date: "", priority: "medium", description: "" });
+      setNewTask({ title: "", task_type: "call", due_date: "", priority: "medium", description: "", assigned_to: "" });
       setShowAddTask(false);
       await loadTasks();
     } catch (err: any) {
@@ -1489,9 +1492,15 @@ export default function LeadDetailPage() {
         </div>
 
         {showAddTask && (
-          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60 grid grid-cols-5 gap-3 items-end">
+          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60 grid grid-cols-6 gap-3 items-end">
             {([
               { label: "Title", col: "col-span-2", el: <input className={inputCls} placeholder="Task title" value={newTask.title} onChange={e => setNewTask(f => ({ ...f, title: e.target.value }))} /> },
+              { label: "Assign To *", col: "", el: users.length > 0
+                  ? <select className={inputCls} value={newTask.assigned_to} onChange={e => setNewTask(f => ({ ...f, assigned_to: e.target.value }))}>
+                      <option value="">— Select user —</option>
+                      {users.map(u => <option key={u.id} value={`${u.first_name} ${u.last_name}`}>{u.first_name} {u.last_name} ({u.role})</option>)}
+                    </select>
+                  : <input className={inputCls} placeholder="Assignee name" value={newTask.assigned_to} onChange={e => setNewTask(f => ({ ...f, assigned_to: e.target.value }))} /> },
               { label: "Type", col: "", el: <select className={inputCls} value={newTask.task_type} onChange={e => setNewTask(f => ({ ...f, task_type: e.target.value }))}><option value="call">Call</option><option value="text">Text</option><option value="email">Email</option><option value="renewal_followup">Renewal</option><option value="general">General</option></select> },
               { label: "Priority", col: "", el: <select className={inputCls} value={newTask.priority} onChange={e => setNewTask(f => ({ ...f, priority: e.target.value }))}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select> },
               { label: "Due Date", col: "", el: <input type="date" className={inputCls} value={newTask.due_date} onChange={e => setNewTask(f => ({ ...f, due_date: e.target.value }))} /> },
@@ -1501,8 +1510,9 @@ export default function LeadDetailPage() {
                 {el}
               </div>
             ))}
-            <button onClick={handleAddTask} disabled={savingTask}
-              className="py-2 px-4 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+            <button onClick={handleAddTask}
+              disabled={savingTask || !newTask.title.trim() || !newTask.due_date || !newTask.assigned_to.trim()}
+              className="py-2 px-4 rounded-xl bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50 disabled:cursor-not-allowed">
               {savingTask ? "..." : "Save"}
             </button>
           </div>
