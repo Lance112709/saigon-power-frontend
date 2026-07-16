@@ -419,7 +419,11 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
       const raw = err?.message || "Failed to save deal";
       // Strip leading "STATUS:" prefix added by api.ts request helper
       const body = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1) : raw;
-      try { setApiError(JSON.parse(body)?.detail ?? body); } catch { setApiError(body); }
+      let detail = body;
+      try { detail = JSON.parse(body)?.detail ?? body; } catch {}
+      setApiError(detail);
+      // Duplicate active ESI ID / address → pop up so the user can't miss it.
+      if (/already has an active deal/i.test(detail)) window.alert(detail);
     }
     setSaving(false);
   };
