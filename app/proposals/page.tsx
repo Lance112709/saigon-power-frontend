@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { FileSignature, Copy, Check, ExternalLink, Download, Mail, Loader2 } from "lucide-react";
+import { FileSignature, Copy, Check, ExternalLink, Download, Mail, Loader2, Trash2 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -77,6 +78,8 @@ async function openContract(token: string) {
 }
 
 export default function ProposalsPage() {
+  const { user } = useAuth();
+  const canDelete = user?.role === "admin" || user?.role === "manager";
   const [proposals, setProposals] = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [tab, setTab]             = useState<typeof TABS[number]>("all");
@@ -95,6 +98,12 @@ export default function ProposalsPage() {
     if (!confirm("Mark this proposal as rejected?")) return;
     await api.updateProposal(id, { status: "rejected" }).catch(() => {});
     load();
+  };
+
+  const handleDelete = async (id: string, name?: string) => {
+    if (!confirm(`Delete the proposal for ${name || "this customer"}? This can't be undone.`)) return;
+    setProposals(prev => prev.filter(p => p.id !== id));   // optimistic
+    try { await api.deleteProposal(id); } catch { load(); alert("Failed to delete proposal."); }
   };
 
   // Stats (from full list regardless of tab filter — load separately)
@@ -223,6 +232,12 @@ export default function ProposalsPage() {
                           <button onClick={() => markRejected(p.id)}
                             className="text-xs text-slate-300 hover:text-red-500 transition-colors">
                             Reject
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => handleDelete(p.id, p.customer_name)} title="Delete proposal"
+                            className="text-slate-300 hover:text-red-500 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>

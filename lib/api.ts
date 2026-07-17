@@ -398,6 +398,7 @@ export const api = {
   getProposal: (id: string) => request(`/api/v1/proposals/${id}`),
   updateProposal: (id: string, data: object) =>
     request(`/api/v1/proposals/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteProposal: (id: string) => request(`/api/v1/proposals/${id}`, { method: "DELETE" }),
   getProposalByToken: (token: string) => request(`/api/v1/proposals/view/${token}`),
   acceptProposal: (token: string, data: object) =>
     request(`/api/v1/proposals/accept/${token}`, { method: "POST", body: JSON.stringify(data) }),
