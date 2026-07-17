@@ -417,6 +417,10 @@ function CrmCustomersContent() {
                     )}
                     <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">
                       {c.full_name}
+                      {c.is_member && (
+                        <span title="SmartCare Member — give extra care"
+                          className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700 align-middle">⭐ SmartCare</span>
+                      )}
                       {!c.phone && !c.email && (
                         <span className="ml-2 inline-block w-2 h-2 rounded-full bg-amber-400 align-middle" title="No contact info on file — click to complete profile" />
                       )}

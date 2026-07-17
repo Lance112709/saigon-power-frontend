@@ -1167,6 +1167,12 @@ export default function CustomerProfilePage() {
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl font-bold">{customer.full_name}</h2>
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider bg-emerald-400/20 text-emerald-200 border border-emerald-300/30 uppercase">Customer</span>
+                {customer.membership?.active && (
+                  <span title={`${customer.membership.plan_name || "Member"}${customer.membership.since ? " · since " + new Date(customer.membership.since).toLocaleDateString() : ""}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider bg-amber-400/25 text-amber-100 border border-amber-300/40 uppercase">
+                    ⭐ SmartCare Member
+                  </span>
+                )}
               </div>
               <div className="flex flex-wrap gap-2 mt-2.5">
                 {customer.phone && (
