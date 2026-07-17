@@ -107,7 +107,7 @@ export default function EnrollPage() {
             <p className="font-mono text-[11px] text-slate-500 break-all">{done.id}</p>
           </div>
           <p className="text-xs text-slate-400 mt-4">
-            Questions? Call or text us — Saigon Power LLC · Broker VID 319010
+            Questions? Call or text us — Saigon Power LLC · Broker ID BR200202
           </p>
         </div>
       </div>
@@ -274,7 +274,7 @@ export default function EnrollPage() {
               <label className="flex items-start gap-3 cursor-pointer bg-white border border-slate-200 rounded-2xl p-4">
                 <input type="checkbox" checked={form.terms_accepted} onChange={e => set("terms_accepted", e.target.checked)} className="mt-0.5 rounded" />
                 <span className="text-xs text-slate-500 leading-relaxed">
-                  I authorize Saigon Power LLC (Broker VID 319010) to enroll this service address with the selected
+                  I authorize Saigon Power LLC (Broker ID BR200202) to enroll this service address with the selected
                   electricity provider on my behalf, and to contact me by phone, text, or email about this enrollment.
                   The provider's Terms of Service, EFL, and YRAC documents will be provided upon enrollment.
                 </span>
@@ -321,7 +321,7 @@ export default function EnrollPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-6">Saigon Power LLC · Broker VID 319010 · Texas</p>
+        <p className="text-center text-xs text-slate-400 mt-6">Saigon Power LLC · Broker ID BR200202 · Texas</p>
       </div>
     </div>
   );

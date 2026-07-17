@@ -172,7 +172,7 @@ export default function ProposalAcceptPage() {
             Thank you, <strong>{signature}</strong>. Your contract has been submitted successfully.
             A Saigon Power energy advisor will follow up within <strong>24 hours</strong>.
           </p>
-          <p className="text-xs text-slate-400 mt-6">Questions? Call <span className="font-semibold text-[#0F1D5E]">(832) 793-2271</span></p>
+          <p className="text-xs text-slate-400 mt-6">Questions? Call <span className="font-semibold text-[#0F1D5E]">(832) 937-9999</span></p>
         </div>
       </div>
     );
@@ -319,7 +319,7 @@ export default function ProposalAcceptPage() {
         </div>
 
         <p className="text-center text-xs text-slate-400 pb-4">
-          Saigon Power LLC · Licensed Energy Broker · Broker VID: 319010
+          Saigon Power LLC · Licensed Energy Broker · Broker ID: BR200202
         </p>
       </div>
     </div>

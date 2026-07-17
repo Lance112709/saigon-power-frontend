@@ -95,7 +95,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-xs text-slate-400">
-          Saigon Power LLC · Broker VID: 319010
+          Saigon Power LLC · Broker ID: BR200202
         </p>
       </div>
     </div>

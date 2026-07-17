@@ -65,7 +65,7 @@ export default function ApplyPage() {
           <p className="text-slate-500 text-sm leading-relaxed">
             Thanks for reaching out. A Saigon Power energy advisor will contact you within <strong>24 hours</strong> to discuss your options.
           </p>
-          <p className="text-xs text-slate-400 mt-6">Questions? Call us at <span className="font-semibold text-[#0F1D5E]">(832) 793-2271</span></p>
+          <p className="text-xs text-slate-400 mt-6">Questions? Call us at <span className="font-semibold text-[#0F1D5E]">(832) 937-9999</span></p>
         </div>
       </div>
     );

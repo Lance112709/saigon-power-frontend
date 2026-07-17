@@ -124,7 +124,7 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; font-size:
       </tr>
       <tr>
         <td colspan="5" style="padding: 14px 6px 4px;">
-          <span style="font-size: 10px; color: #555;">Agent: <strong>SGP</strong> &nbsp;&nbsp;&nbsp; Broker VID: <strong>319010</strong></span>
+          <span style="font-size: 10px; color: #555;">Agent: <strong>SGP</strong> &nbsp;&nbsp;&nbsp; Broker ID: <strong>BR200202</strong></span>
         </td>
       </tr>
     </table>
@@ -133,7 +133,7 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; font-size:
   <!-- Footer -->
   <div style="margin-top: 16px; padding-top: 10px; border-top: 1px solid #eee; text-align: center; font-size: 9px; color: #aaa;">
     9999 Bellaire Blvd Suite 7E, Houston TX 77036 &nbsp;|&nbsp; power@saigonllc.com &nbsp;|&nbsp; Mon–Fri 9AM–6PM<br/>
-    Saigon Power LLC &middot; Licensed Energy Broker &middot; Broker VID: 319010
+    Saigon Power LLC &middot; Licensed Energy Broker &middot; Broker ID: BR200202
   </div>
 </div>`;
 

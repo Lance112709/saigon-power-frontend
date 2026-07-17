@@ -231,7 +231,7 @@ export default function Sidebar() {
             </div>
           </div>
         ) : (
-          <p className="px-3 py-2 text-xs text-slate-600">Broker VID: 319010</p>
+          <p className="px-3 py-2 text-xs text-slate-600">Broker ID: BR200202</p>
         )}
       </div>
     </aside>
