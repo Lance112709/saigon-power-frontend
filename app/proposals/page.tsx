@@ -49,8 +49,11 @@ function EmailContractButton({ proposal }: { proposal: any }) {
 
 function CopyLink({ token }: { token: string }) {
   const [copied, setCopied] = useState(false);
-  const url = `${APP_URL}/proposal/${token}`;
   const copy = async () => {
+    // Use the live origin at click time so copied links always match the host
+    // the CRM is served from (NEXT_PUBLIC_APP_URL isn't configured in prod).
+    const origin = typeof window !== "undefined" ? window.location.origin : APP_URL;
+    const url = `${origin}/proposal/${token}`;
     await navigator.clipboard.writeText(url).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
