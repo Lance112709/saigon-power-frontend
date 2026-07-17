@@ -20,11 +20,14 @@ function EmailContractButton({ proposal }: { proposal: any }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const send = async () => {
-    let email = proposal.customer_email;
-    if (!email) {
-      email = window.prompt(`No email on file for ${proposal.customer_name || "this customer"}. Enter their email:`) || "";
-      if (!email.includes("@")) return;
-    }
+    // Always show the recipient so a wrong/placeholder email can be corrected
+    // before sending (prefilled with whatever's on the proposal).
+    const entered = window.prompt(
+      `Send this contract to which email?\nCustomer: ${proposal.customer_name || "—"}`,
+      proposal.customer_email || "");
+    if (entered === null) return;            // cancelled
+    const email = entered.trim();
+    if (!email.includes("@")) { alert("Please enter a valid email address."); return; }
     setBusy(true);
     setMsg("");
     try {
@@ -40,7 +43,7 @@ function EmailContractButton({ proposal }: { proposal: any }) {
     setTimeout(() => setMsg(""), 5000);
   };
   return (
-    <button onClick={send} disabled={busy} title={proposal.customer_email ? `Email contract to ${proposal.customer_email}` : "No email on file — click to add"}
+    <button onClick={send} disabled={busy} title="Email the contract — you'll confirm the recipient first"
       className="flex items-center gap-1 text-xs text-[#0F1D5E] hover:text-emerald-600 font-semibold transition-colors">
       {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
       {msg || "Email"}
