@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { Zap, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -36,10 +36,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         {/* Brand */}
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 bg-[#0F1D5E] text-white px-6 py-3 rounded-2xl mb-4">
-            <Zap className="w-5 h-5 text-green-400" />
-            <span className="font-bold text-lg">Saigon Power</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/saigon-logo.png" alt="Saigon" className="h-32 w-auto mx-auto mb-3 object-contain" />
           <p className="text-slate-500 text-sm">Sign in to your account</p>
         </div>
 

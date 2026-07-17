@@ -146,16 +146,12 @@ export default function Sidebar() {
     <aside className="w-60 min-h-screen flex flex-col shrink-0 bg-[#0d1117] border-r border-white/[0.06]">
 
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-900/40">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-black text-white tracking-tight leading-none">Saigon Power</p>
-            <p className="text-[10px] text-slate-500 mt-0.5 leading-none">CRM Platform</p>
-          </div>
+      <div className="px-3 py-4 border-b border-white/[0.06]">
+        <div className="bg-white rounded-xl p-2.5 flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/saigon-logo.png" alt="Saigon Power" className="h-20 w-auto object-contain" />
         </div>
+        <p className="text-[10px] text-slate-500 mt-2 leading-none text-center tracking-[0.2em] uppercase">CRM Platform</p>
       </div>
 
       {/* Nav */}
