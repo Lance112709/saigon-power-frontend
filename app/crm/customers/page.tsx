@@ -44,6 +44,7 @@ function CrmCustomersContent() {
   const [meterType, setMeterType] = useState("");
   const [source, setSource] = useState("");
   const [missingInfo, setMissingInfo] = useState(false);
+  const [membership, setMembership] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sources, setSources] = useState<any[]>([]);
@@ -98,10 +99,11 @@ function CrmCustomersContent() {
     if (meterType) p.meter_type = meterType;
     if (source) p.source = source;
     if (missingInfo) p.missing_contact = "true";
+    if (membership) p.membership = membership;
     if (dateFrom) p.date_from = dateFrom;
     if (dateTo) p.date_to = dateTo;
     return p;
-  }, [search, provider, dealStatus, meterType, source, missingInfo, dateFrom, dateTo]);
+  }, [search, provider, dealStatus, meterType, source, missingInfo, membership, dateFrom, dateTo]);
 
   const loadCustomers = useCallback(async (off = 0) => {
     setLoading(true);
@@ -320,6 +322,11 @@ function CrmCustomersContent() {
                 <option key={s.value} value={s.value}>{s.label} ({s.count})</option>
               ))}
             </select>
+            <select value={membership} onChange={e => setMembership(e.target.value)} className={selectClass}>
+              <option value="">All (SmartCare or not)</option>
+              <option value="members">⭐ SmartCare members only</option>
+              <option value="non_members">Non-members only</option>
+            </select>
             <button
               onClick={() => setMissingInfo(v => !v)}
               className={`px-3 py-2 rounded-xl text-xs font-semibold border whitespace-nowrap transition-colors ${
@@ -333,9 +340,9 @@ function CrmCustomersContent() {
               <span className="text-slate-300">→</span>
               <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={selectClass} />
             </div>
-            {(source || missingInfo || dateFrom || dateTo || provider || dealStatus || meterType || search) && (
+            {(source || missingInfo || membership || dateFrom || dateTo || provider || dealStatus || meterType || search) && (
               <button
-                onClick={() => { setSearch(""); setProvider(""); setDealStatus(""); setMeterType(""); setSource(""); setMissingInfo(false); setDateFrom(""); setDateTo(""); }}
+                onClick={() => { setSearch(""); setProvider(""); setDealStatus(""); setMeterType(""); setSource(""); setMissingInfo(false); setMembership(""); setDateFrom(""); setDateTo(""); }}
                 className="text-xs font-semibold text-slate-500 hover:text-red-500 px-2 py-1 whitespace-nowrap">
                 ✕ Clear filters
               </button>
