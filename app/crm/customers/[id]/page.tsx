@@ -1153,6 +1153,27 @@ export default function CustomerProfilePage() {
               <MessageSquare className="w-4 h-4" /> Send SMS
             </button>
           )}
+          {isAdmin && (
+            customer?.membership?.active ? (
+              customer.membership.manual && (
+                <button
+                  onClick={async () => { await api.toggleSmartcareBadge(id, false); await loadCustomer(); }}
+                  title="Remove the manual SmartCare badge"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-300 text-amber-700 bg-amber-50 text-xs font-semibold hover:bg-amber-100 transition-colors"
+                >
+                  ⭐ Remove SmartCare Badge
+                </button>
+              )
+            ) : (
+              <button
+                onClick={async () => { await api.toggleSmartcareBadge(id, true); await loadCustomer(); }}
+                title="Manually flag this account as a SmartCare member (badge only, no billing)"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition-colors"
+              >
+                ⭐ Add SmartCare Badge
+              </button>
+            )
+          )}
         </div>
       </div>
 

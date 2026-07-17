@@ -25,6 +25,7 @@ export default function CampaignsPage() {
   const [provider, setProvider] = useState("");
   const [dealStatus, setDealStatus] = useState("");   // "" = all (incl. inactive)
   const [source, setSource] = useState("");
+  const [membership, setMembership] = useState("");   // "" = all | members | non_members
   const [providers, setProviders] = useState<string[]>([]);
   const [sources, setSources] = useState<any[]>([]);
   const [count, setCount] = useState<{ total: number; with_email: number } | null>(null);
@@ -42,8 +43,9 @@ export default function CampaignsPage() {
     if (provider) p.provider = provider;
     if (dealStatus) p.deal_status = dealStatus;
     if (source) p.source = source;
+    if (membership) p.membership = membership;
     return p;
-  }, [search, provider, dealStatus, source]);
+  }, [search, provider, dealStatus, source, membership]);
 
   const loadCampaigns = useCallback(async () => {
     try { setCampaigns(await api.getCampaigns()); } catch {}
@@ -129,6 +131,14 @@ export default function CampaignsPage() {
             <select value={source} onChange={e => setSource(e.target.value)} className={selectCls}>
               <option value="">All sources</option>
               {sources.map((s: any) => <option key={s.value ?? s.label} value={s.value ?? s.label}>{(s.label ?? s.value)}{s.count ? ` (${s.count})` : ""}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-slate-500 mb-1">SmartCare membership</label>
+            <select value={membership} onChange={e => setMembership(e.target.value)} className={selectCls}>
+              <option value="">Everyone</option>
+              <option value="non_members">Non-members only (for the ad)</option>
+              <option value="members">Members only</option>
             </select>
           </div>
         </div>
