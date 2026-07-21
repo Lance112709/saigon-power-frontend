@@ -1222,6 +1222,11 @@ export default function CustomerProfilePage() {
                     <Hash className="w-3 h-3 text-blue-200" /> {maskAnxh(String(a))}
                   </span>
                 ))}
+                {customer.created_by && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-xs text-blue-50">
+                    <User className="w-3 h-3 text-blue-200" /> Added by {customer.created_by}
+                  </span>
+                )}
               </div>
               {customer.notes && <p className="text-xs text-blue-200/80 mt-2 max-w-2xl">{customer.notes}</p>}
             </div>
@@ -1394,6 +1399,11 @@ export default function CustomerProfilePage() {
                         {d.sales_agent && (
                           <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
                             Agent <span className="font-bold text-slate-700">{d.sales_agent}</span>
+                          </span>
+                        )}
+                        {d.created_by && (
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
+                            Created by <span className="font-bold text-slate-700">{d.created_by}</span>
                           </span>
                         )}
                         {d.contract_start_date && d.contract_end_date && (

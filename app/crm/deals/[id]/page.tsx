@@ -521,6 +521,7 @@ export default function DealDetailPage() {
             ["Adder", deal.adder != null ? `$${parseFloat(deal.adder).toFixed(4)}/kWh` : "—"],
             ["Term", deal.contract_term || "—"],
             ["Agent", deal.sales_agent || "—"],
+            ["Created By", deal.created_by || "—"],
             ["Service Address", deal.service_address || "—"],
           ].map(([label, value]) => (
             <div key={label}>
