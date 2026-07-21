@@ -68,9 +68,9 @@ function CrmCustomersContent() {
 
   useEffect(() => {
     api.getCrmProviders().then(setProviders).catch(() => {});
-    api.getCrmStats().then(setStats).catch(() => {});
+    if (isAdmin) api.getCrmStats().then(setStats).catch(() => {});
     (api as any).getCrmCustomerSources().then(setSources).catch(() => {});
-  }, []);
+  }, [isAdmin]);
 
   const [exporting, setExporting] = useState(false);
   // Bulk email
@@ -130,7 +130,7 @@ function CrmCustomersContent() {
   });
 
   const refreshStats = () => {
-    api.getCrmStats().then(setStats).catch(() => {});
+    if (isAdmin) api.getCrmStats().then(setStats).catch(() => {});
     api.getCrmProviders().then(setProviders).catch(() => {});
   };
 
@@ -277,7 +277,7 @@ function CrmCustomersContent() {
         </div>
       )}
 
-      {stats && (
+      {isAdmin && stats && (
         <div className="grid grid-cols-3 gap-4">
           <StatCard title="Total Customers" value={stats.total_customers.toLocaleString()} icon={Users} onClick={() => setDealStatus("")} />
           <StatCard title="Active Deals" value={stats.active_deals.toLocaleString()} icon={FileCheck} valueColor="text-emerald-600" onClick={() => setDealStatus("ACTIVE")} />
