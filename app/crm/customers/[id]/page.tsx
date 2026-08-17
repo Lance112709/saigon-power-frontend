@@ -883,6 +883,9 @@ export default function CustomerProfilePage() {
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [noteError, setNoteError] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
+  const [savingEditNote, setSavingEditNote] = useState(false);
 
   // Tasks state
   const [tasks, setTasks] = useState<any[]>([]);
@@ -1000,6 +1003,17 @@ export default function CustomerProfilePage() {
     if (!confirm("Delete this note?")) return;
     await api.deleteCrmCustomerNote(id, noteId).catch(() => {});
     setNotes(prev => prev.filter(n => n.id !== noteId));
+  };
+
+  const handleSaveEditNote = async (noteId: string) => {
+    if (!editingNoteText.trim()) return;
+    setSavingEditNote(true);
+    try {
+      const updated = await api.updateCrmCustomerNote(id, noteId, editingNoteText.trim());
+      setNotes(prev => prev.map(n => n.id === noteId ? { ...n, content: updated.content ?? editingNoteText.trim() } : n));
+      setEditingNoteId(null);
+    } catch {}
+    setSavingEditNote(false);
   };
 
   // Populate the "Assign To" dropdown. getUsers is admin-only, so managers/agents
@@ -1462,7 +1476,11 @@ export default function CustomerProfilePage() {
               <p className="px-5 py-8 text-center text-slate-400 text-sm">No notes yet.</p>
             ) : (
               <div className="divide-y divide-slate-100">
-                {notes.map(n => (
+                {notes.map(n => {
+                  const isOwn = (n.author_name || "").trim().toLowerCase() === (user?.name || "").trim().toLowerCase();
+                  const canEdit = isOwn || user?.role === "admin" || user?.role === "manager";
+                  const isEditing = editingNoteId === n.id;
+                  return (
                   <div key={n.id} className="px-5 py-4 hover:bg-slate-50/50 group">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
@@ -1474,15 +1492,46 @@ export default function CustomerProfilePage() {
                           {new Date(n.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
                         </span>
                       </div>
-                      {canDeleteNotes && (
-                        <button onClick={() => handleDeleteNote(n.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        {canEdit && !isEditing && (
+                          <button onClick={() => { setEditingNoteId(n.id); setEditingNoteText(n.content); }}
+                            className="text-slate-300 hover:text-blue-500 p-1">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canDeleteNotes && (
+                          <button onClick={() => handleDeleteNote(n.id)} className="text-slate-300 hover:text-red-500 p-1">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap ml-9">{n.content}</p>
+                    {isEditing ? (
+                      <div className="ml-9 space-y-2">
+                        <textarea
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 resize-none"
+                          rows={3}
+                          value={editingNoteText}
+                          onChange={e => setEditingNoteText(e.target.value)}
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditingNoteId(null)}
+                            className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+                            Cancel
+                          </button>
+                          <button onClick={() => handleSaveEditNote(n.id)} disabled={savingEditNote || !editingNoteText.trim()}
+                            className="px-3 py-1.5 text-xs bg-[#0F1D5E] text-white rounded-lg font-semibold hover:bg-[#0F1D5E]/90 disabled:opacity-50">
+                            {savingEditNote ? "Saving..." : "Save"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap ml-9">{n.content}</p>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

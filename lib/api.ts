@@ -167,6 +167,8 @@ export const api = {
   renewCrmDeal: (id: string, data: object) =>
     request(`/api/v1/crm/deals/${id}/renew`, { method: "POST", body: JSON.stringify(data) }),
   getCrmCustomerNotes: (id: string) => request(`/api/v1/crm/customers/${id}/notes`),
+  updateCrmCustomerNote: (id: string, noteId: string, content: string) =>
+    request(`/api/v1/crm/customers/${id}/notes/${noteId}`, { method: "PATCH", body: JSON.stringify({ content }) }),
   createCrmCustomerNote: (id: string, data: object) =>
     request(`/api/v1/crm/customers/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
   deleteCrmCustomerNote: (id: string, noteId: string) =>
@@ -190,6 +192,8 @@ export const api = {
   deleteCrmCustomerAttachment: (id: string, attachmentId: string) =>
     request(`/api/v1/crm/customers/${id}/attachments/${attachmentId}`, { method: "DELETE" }),
   getCrmDealNotes: (id: string) => request(`/api/v1/crm/deals/${id}/notes`),
+  updateCrmDealNote: (id: string, noteId: string, content: string) =>
+    request(`/api/v1/crm/deals/${id}/notes/${noteId}`, { method: "PATCH", body: JSON.stringify({ content }) }),
   createCrmDealNote: (id: string, data: object) =>
     request(`/api/v1/crm/deals/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
   deleteCrmDealNote: (id: string, noteId: string) =>
