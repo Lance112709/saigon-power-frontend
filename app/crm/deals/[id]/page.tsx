@@ -39,7 +39,7 @@ function TerminateDealModal({ deal, onClose, onSaved }: { deal: any; onClose: ()
   const handleTerminate = async () => {
     setSaving(true);
     try {
-      await api.updateCrmDeal(deal.id, { deal_status: "INACTIVE", contract_end_date: date });
+      await api.updateCrmDeal(deal.id, { deal_status: "INACTIVE", terminated_date: date });
       onSaved();
     } catch {}
     setSaving(false);
@@ -487,9 +487,9 @@ export default function DealDetailPage() {
             </div>
             {customer?.full_name && <p className="text-sm text-slate-500 mt-0.5">{customer.full_name}</p>}
             {customer?.email && <p className="text-xs text-slate-400">{customer.email}</p>}
-            {deal.deal_status === "INACTIVE" && deal.contract_end_date && (
+            {deal.deal_status === "INACTIVE" && deal.terminated_date && (
               <p className="text-xs text-red-500 font-semibold mt-1">
-                Terminated: {fmtDate(deal.contract_end_date)}
+                Terminated: {fmtDate(deal.terminated_date)}
               </p>
             )}
           </div>

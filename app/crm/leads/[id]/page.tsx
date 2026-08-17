@@ -661,7 +661,7 @@ function TerminateModal({ deal, leadId, onClose, onDone }: {
     setSaving(true);
     setError("");
     try {
-      await api.updateLeadDeal(leadId, deal.id, { status: "Inactive", end_date: date });
+      await api.updateLeadDeal(leadId, deal.id, { status: "Inactive", terminated_date: date });
       onDone();
     } catch (err: any) {
       const raw = err?.message || "Failed to terminate deal";
@@ -1306,6 +1306,7 @@ export default function LeadDetailPage() {
                     ["Term",            d.contract_term,  ""],
                     ["Start",           fmtDate(d.start_date), ""],
                     ["End",             fmtDate(d.end_date),   ""],
+                    ["Terminated",      d.terminated_date ? fmtDate(d.terminated_date) : null, "text-red-500 font-semibold"],
                     ["Agent",           d.sales_agent,    ""],
                     ["Deal Type",       d.deal_type,      ""],
                     ["Rate Type",       d.rate_type,      ""],

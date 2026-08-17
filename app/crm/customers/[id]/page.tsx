@@ -241,7 +241,7 @@ function TerminateDealModal({ deal, onClose, onSaved }: {
     try {
       await api.updateCrmDeal(deal.id, {
         deal_status: "INACTIVE",
-        contract_end_date: date,
+        terminated_date: date,
       });
       onSaved();
     } catch {}
@@ -1423,8 +1423,8 @@ export default function CustomerProfilePage() {
                             <MapPin className="w-3 h-3 shrink-0" />{d.service_address}
                           </span>
                         )}
-                        {d.deal_status === "INACTIVE" && d.contract_end_date && (
-                          <span className="text-red-500 font-semibold">Terminated: {fmtDate(d.contract_end_date)}</span>
+                        {d.deal_status === "INACTIVE" && d.terminated_date && (
+                          <span className="text-red-500 font-semibold">Terminated: {fmtDate(d.terminated_date)}</span>
                         )}
                       </div>
                     </div>
