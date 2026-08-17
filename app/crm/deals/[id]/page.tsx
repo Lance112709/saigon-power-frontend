@@ -24,6 +24,7 @@ function StatusBadge({ status }: { status: string }) {
   const styles =
     status === "ACTIVE"  ? "bg-emerald-100 text-emerald-700" :
     status === "RENEWED" ? "bg-indigo-100 text-indigo-700" :
+    status === "FUTURE"  ? "bg-amber-100 text-amber-700" :
                            "bg-slate-100 text-slate-500";
   return (
     <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${styles}`}>
