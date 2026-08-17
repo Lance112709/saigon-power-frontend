@@ -23,7 +23,7 @@ const fmtBytes = (n?: number) => {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 };
 
-const DEAL_FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "DE LINKED"] as const;
+const DEAL_FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "Directly Renewed"] as const;
 type DealFlag = typeof DEAL_FLAGS[number];
 const DEAL_FLAG_KEYS: Record<DealFlag, string> = {
   "TOS": "flag_tos",
@@ -31,7 +31,7 @@ const DEAL_FLAG_KEYS: Record<DealFlag, string> = {
   "Deposit": "flag_deposit",
   "Special Deal": "flag_special_deal",
   "10% Promo": "flag_promo_10",
-  "DE LINKED": "flag_delinked",
+  "Directly Renewed": "flag_delinked",
 };
 const EMPTY_FLAGS = { flag_tos: false, flag_toao: false, flag_deposit: false, flag_special_deal: false, flag_promo_10: false, flag_delinked: false };
 
@@ -503,7 +503,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
                     type="button"
                     onClick={() => toggleFlag(key)}
                     className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-                      flag === "DE LINKED"
+                      flag === "Directly Renewed"
                         ? active ? "bg-red-600 text-white border-red-600" : "bg-white text-red-600 border-red-300 hover:border-red-400"
                         : active ? "bg-[#0F1D5E] text-white border-[#0F1D5E]" : "bg-white text-slate-700 border-slate-300 hover:border-[#0F1D5E]/40"
                     }`}
@@ -715,7 +715,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
                 return (
                   <button key={flag} type="button" onClick={() => toggleFlag(key)}
                     className={`px-4 py-1.5 rounded-full border text-sm font-medium transition-colors ${
-                      flag === "DE LINKED"
+                      flag === "Directly Renewed"
                         ? active ? "bg-red-600 text-white border-red-600" : "bg-white text-red-600 border-red-300 hover:border-red-400"
                         : active ? "bg-[#0F1D5E] text-white border-[#0F1D5E]" : "bg-white text-slate-700 border-slate-300 hover:border-[#0F1D5E]/40"
                     }`}>
@@ -1363,7 +1363,7 @@ export default function CustomerProfilePage() {
                             const key = DEAL_FLAG_KEYS[flag];
                             if (!(d as any)[key]) return null;
                             return (
-                              <span key={flag} className={`px-2 py-0.5 rounded-full text-xs font-bold border ${flag === "DE LINKED" ? "bg-red-100 text-red-600 border-red-200" : "bg-[#EEF1FA] text-[#0F1D5E] border-[#0F1D5E]/20"}`}>
+                              <span key={flag} className={`px-2 py-0.5 rounded-full text-xs font-bold border ${flag === "Directly Renewed" ? "bg-red-100 text-red-600 border-red-200" : "bg-[#EEF1FA] text-[#0F1D5E] border-[#0F1D5E]/20"}`}>
                                 {flag}
                               </span>
                             );

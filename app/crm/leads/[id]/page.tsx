@@ -262,7 +262,7 @@ function fmtDate(d?: string | null) {
   return `${m}/${day}/${y}`;
 }
 
-const FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "DE LINKED"] as const;
+const FLAGS = ["TOS", "TOAO", "Deposit", "Special Deal", "10% Promo", "Directly Renewed"] as const;
 type Flag = typeof FLAGS[number];
 
 const FLAG_KEYS: Record<Flag, string> = {
@@ -271,7 +271,7 @@ const FLAG_KEYS: Record<Flag, string> = {
   "Deposit": "flag_deposit",
   "Special Deal": "flag_special_deal",
   "10% Promo": "flag_promo_10",
-  "DE LINKED": "flag_delinked",
+  "Directly Renewed": "flag_delinked",
 };
 
 const CONTRACT_TERMS = [
@@ -474,7 +474,7 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
                     type="button"
                     onClick={() => toggleFlag(key)}
                     className={`px-4 py-1.5 rounded-full border text-sm font-medium transition-colors ${
-                      flag === "DE LINKED"
+                      flag === "Directly Renewed"
                         ? active
                           ? "bg-red-600 text-white border-red-600"
                           : "bg-white text-red-600 border-red-300 hover:border-red-400"
@@ -1279,7 +1279,7 @@ export default function LeadDetailPage() {
                     <span className="font-bold text-[#0F1D5E] text-sm">{d.supplier || "—"}</span>
                     {d.flag_delinked && (
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 border border-red-200">
-                        DE LINKED
+                        Directly Renewed
                       </span>
                     )}
                     {d.plan_name && <span className="text-xs text-slate-400">{d.plan_name}</span>}
