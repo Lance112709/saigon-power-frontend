@@ -198,6 +198,10 @@ export const api = {
     request(`/api/v1/crm/deals/${id}/notes`, { method: "POST", body: JSON.stringify(data) }),
   deleteCrmDealNote: (id: string, noteId: string) =>
     request(`/api/v1/crm/deals/${id}/notes/${noteId}`, { method: "DELETE" }),
+  getCommissionUsage: (params: Record<string, string>) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/api/v1/commission-payments/usage?${q}`);
+  },
   getCommissionPayments: (params: Record<string, string>) => {
     const qs = new URLSearchParams(params).toString();
     return request(`/api/v1/commission-payments?${qs}`);

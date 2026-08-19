@@ -47,7 +47,6 @@ function MonthlyUsageCard({ data }: { data: any }) {
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-[#0F1D5E]" />
           <h3 className="text-sm font-bold text-[#0F1D5E]">Monthly Usage</h3>
-          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">Admin only</span>
         </div>
         <span className="text-sm text-slate-500">
           Lifetime metered <span className="font-bold text-slate-700">{Math.round(totalKwh).toLocaleString()} kWh</span>
@@ -114,21 +113,23 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
 }) {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
+  const [usage, setUsage] = useState<any>(null);
   const [failed, setFailed] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
-    if (!isAdmin) return;
     const params: Record<string, string> = {};
     if (customerId) params.customer_id = customerId;
     else if (dealId) params.deal_id = dealId;
     else if (leadId) params.lead_id = leadId;
     else return;
+    (api as any).getCommissionUsage(params).then(setUsage).catch(() => {});
+    if (!isAdmin) return;
     (api as any).getCommissionPayments(params).then(setData).catch(() => setFailed(true));
   }, [isAdmin, customerId, dealId, leadId]);
 
-  if (!isAdmin || failed) return null;
+  if (!isAdmin || failed) return <MonthlyUsageCard data={usage} />;
 
   const payments = data?.payments || [];
   const visible = showAll ? payments : payments.slice(0, 12);
@@ -204,7 +205,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
       )}
     </div>
 
-    <MonthlyUsageCard data={data} />
+    <MonthlyUsageCard data={usage} />
     </>
   );
 }
