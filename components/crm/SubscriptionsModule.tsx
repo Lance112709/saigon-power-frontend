@@ -19,6 +19,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 function StatusBadge({ status }: { status?: string }) {
   const s = (status || "NEW").toUpperCase();
+
   return (
     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[s] || "bg-slate-100 text-slate-500"}`}>
       {s}
@@ -87,6 +88,11 @@ export default function SubscriptionsModule({
 }: SubscriptionsModuleProps) {
   const router = useRouter();
   const { user } = useAuth();
+
+  // Guard — subscription modules are hidden from sales agents
+  useEffect(() => {
+    if (user && user.role === "sales_agent") router.replace("/dashboard");
+  }, [user, router]);
 
   const [subs, setSubs] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -194,6 +200,8 @@ export default function SubscriptionsModule({
     return opt?.label || s.plan_name || s.plan_id;
   };
 
+
+  if (!user || user.role === "sales_agent") return null;
   return (
     <div className="p-8 max-w-[1400px] mx-auto">
       {/* Header */}

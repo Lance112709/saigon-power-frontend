@@ -42,6 +42,11 @@ export default function GiaDienReDetailPage() {
   const id = params.id as string;
   const canDeleteNotes = user?.role === "admin";
 
+  // Guard — subscription pages are hidden from sales agents
+  useEffect(() => {
+    if (user && user.role === "sales_agent") router.replace("/dashboard");
+  }, [user, router]);
+
   const [sub, setSub] = useState<any>(null);
   const [customer, setCustomer] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
@@ -155,6 +160,8 @@ export default function GiaDienReDetailPage() {
       await loadNotes();
     } catch {}
   };
+
+  if (!user || user.role === "sales_agent") return null;
 
   if (loading) {
     return (
