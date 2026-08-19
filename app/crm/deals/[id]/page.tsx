@@ -4,7 +4,8 @@ import CommissionPayments from "@/components/CommissionPayments";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit, AlertCircle, Pencil } from "lucide-react";
+import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit, AlertCircle, Pencil, RefreshCw } from "lucide-react";
+import RenewDealModal from "@/components/RenewDealModal";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 
@@ -342,6 +343,7 @@ export default function DealDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showTerminate, setShowTerminate] = useState(false);
+  const [showRenew, setShowRenew] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
   // Notes state
@@ -454,6 +456,15 @@ export default function DealDetailPage() {
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-5">
 
+      {showRenew && (
+        <RenewDealModal
+          deal={deal}
+          customerId={deal.customer_id}
+          onClose={() => setShowRenew(false)}
+          onSaved={async () => { setShowRenew(false); await loadDeal(); }}
+        />
+      )}
+
       {showTerminate && (
         <TerminateDealModal
           deal={deal}
@@ -510,12 +521,20 @@ export default function DealDetailPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {deal.deal_status === "ACTIVE" && (
-              <button
-                onClick={() => setShowTerminate(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-              >
-                <Ban className="w-4 h-4" /> Terminate
-              </button>
+              <>
+                <button
+                  onClick={() => setShowRenew(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" /> Renew
+                </button>
+                <button
+                  onClick={() => setShowTerminate(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                >
+                  <Ban className="w-4 h-4" /> Terminate
+                </button>
+              </>
             )}
             <button
               onClick={() => setShowEdit(true)}
