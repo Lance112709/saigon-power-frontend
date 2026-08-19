@@ -14,6 +14,7 @@ interface NavItem {
   label: string;
   icon: any;
   roles?: Role[];
+  hideRoles?: Role[];
   perm?: PermAction;
 }
 
@@ -39,9 +40,9 @@ const crmLinks: NavItem[] = [
   { href: "/proposals",           label: "Proposals",          icon: FileSignature, perm: "view_proposals" },
   { href: "/crm/agents",          label: "Sales Agents",       icon: UserCog,       roles: ["admin"] },
   { href: "/crm/customers",       label: "Imported Customers", icon: Users,         perm: "view_all_customers" },
-  { href: "/crm/giadienre",       label: "GiaDienRe Subscription", icon: PlugZap,   perm: "view_all_customers" },
-  { href: "/crm/saigon",          label: "SAIGON Subscription",    icon: Sparkles,  perm: "view_all_customers" },
-  { href: "/crm/powerplus",       label: "POWER PLUS Membership",  icon: Zap,       perm: "view_all_customers" },
+  { href: "/crm/giadienre",       label: "GiaDienRe Subscription", icon: PlugZap,   perm: "view_all_customers", hideRoles: ["sales_agent"] },
+  { href: "/crm/saigon",          label: "SAIGON Subscription",    icon: Sparkles,  perm: "view_all_customers", hideRoles: ["sales_agent"] },
+  { href: "/crm/powerplus",       label: "POWER PLUS Membership",  icon: Zap,       perm: "view_all_customers", hideRoles: ["sales_agent"] },
   { href: "/renewals",            label: "Renewals",           icon: CalendarClock, perm: "view_all_customers" },
   { href: "/crm/deals",           label: "All Deals",          icon: FileText,      perm: "view_all_deals" },
   { href: "/crm/dropped",         label: "Dropped Deals",      icon: XCircle,       perm: "view_all_deals" },
@@ -97,6 +98,7 @@ export default function Sidebar() {
 
   const canSee = (item: NavItem) => {
     if (!user) return false;
+    if (item.hideRoles?.includes(user.role)) return false;
     if (item.perm) return can(item.perm);
     if (item.roles) return item.roles.includes(user.role);
     return true;
