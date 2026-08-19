@@ -36,6 +36,11 @@ function CrmCustomersContent() {
   const isAdmin = user?.role === "admin";
   const isManager = user?.role === "admin" || user?.role === "manager";
 
+  // Guard — Imported Customers is hidden from sales agents
+  useEffect(() => {
+    if (user && user.role === "sales_agent") router.replace("/dashboard");
+  }, [user, router]);
+
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -184,6 +189,8 @@ function CrmCustomersContent() {
   };
 
   const selectClass = "border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 text-slate-700";
+
+  if (!user || user.role === "sales_agent") return null;
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-6">

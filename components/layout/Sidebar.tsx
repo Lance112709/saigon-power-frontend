@@ -39,7 +39,7 @@ const crmLinks: NavItem[] = [
   { href: "/crm/converted",       label: "Customers",          icon: UserCheck,     perm: "view_all_leads" },
   { href: "/proposals",           label: "Proposals",          icon: FileSignature, perm: "view_proposals" },
   { href: "/crm/agents",          label: "Sales Agents",       icon: UserCog,       roles: ["admin"] },
-  { href: "/crm/customers",       label: "Imported Customers", icon: Users,         perm: "view_all_customers" },
+  { href: "/crm/customers",       label: "Imported Customers", icon: Users,         perm: "view_all_customers", hideRoles: ["sales_agent"] },
   { href: "/crm/giadienre",       label: "GiaDienRe Subscription", icon: PlugZap,   perm: "view_all_customers", hideRoles: ["sales_agent"] },
   { href: "/crm/saigon",          label: "SAIGON Subscription",    icon: Sparkles,  perm: "view_all_customers", hideRoles: ["sales_agent"] },
   { href: "/crm/powerplus",       label: "POWER PLUS Membership",  icon: Zap,       perm: "view_all_customers", hideRoles: ["sales_agent"] },
