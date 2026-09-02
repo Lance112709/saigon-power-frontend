@@ -21,6 +21,7 @@ const SUPPLIERS = [
 // A commission plan is a stack of components. Every dollar is computed from
 // what providers ACTUALLY paid that month — never from estimates.
 const COMM_TYPES = [
+  { value: "flat_per_enrollment",   label: "One-time $ per enrolled customer", hint: "paid in the month the contract starts · new deals and renewals · once per service address (a second contract at the same address is held for admin review)" },
   { value: "flat_per_deal",         label: "One-time $ per new deal",   hint: "paid once, in the month the provider's first payment for the deal arrives" },
   { value: "per_kwh",               label: "$ per kWh (residual)",      hint: "monthly · rate × actual kWh the provider paid on" },
   { value: "percent_of_commission", label: "% of commission received",  hint: "monthly · % of the gross commission dollars received" },
@@ -43,6 +44,7 @@ function componentLabel(c: { type: string; value?: string | number; supplier?: s
     case "per_kwh":               return `$${v}/kWh${scope}`;
     case "flat_monthly":          return `$${v}/mo${scope}`;
     case "flat_per_deal":         return `$${v}/new deal${scope}`;
+    case "flat_per_enrollment":   return `$${v}/enrolled customer${scope}`;
     case "percent_of_commission": return `${v}% of received${scope}`;
     default:                      return `${v}${scope}`;
   }

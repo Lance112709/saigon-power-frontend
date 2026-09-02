@@ -29,6 +29,13 @@ interface Commission {
 
 interface Deal {
   deal_id: string;
+  deal_source?: string;
+  kind?: "enrollment" | "paid";
+  held?: boolean;
+  hold_reason?: string;
+  contract_start?: string;
+  address?: string;
+  duplicate_of?: { source: string; id: string; customer: string; contract_start: string; contract_end: string; agent: string } | null;
   esiid: string;
   customer: string;
   supplier: string;
@@ -215,6 +222,24 @@ export default function CommissionsPage() {
   const [modal, setModal] = useState<Modal | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [breakdown, setBreakdown] = useState<Record<string, Deal[]>>({});
+  const [deciding, setDeciding] = useState<Record<string, boolean>>({});
+
+  /** Admin decision on a HELD enrollment bonus, then refresh that record's breakdown + recalculate the month. */
+  const decideHeld = async (row: Commission, d: Deal, decision: "release" | "reject") => {
+    if (!d.deal_source || !d.deal_id) return;
+    setDeciding(s => ({ ...s, [d.deal_id]: true }));
+    try {
+      await api.decideHeldEnrollment(d.deal_source, d.deal_id, decision, { month: `${row.year}-${String(row.month).padStart(2, "0")}` });
+      await api.calculateAgentCommissions({ month: row.month, year: row.year });
+      const data = await api.getAgentCommissionBreakdown(row.id);
+      setBreakdown(b => ({ ...b, [row.id]: data.deals }));
+      await load();
+    } catch (e: any) {
+      alert(e?.message?.replace(/^\d+:/, "") || "Could not save decision");
+    } finally {
+      setDeciding(s => ({ ...s, [d.deal_id]: false }));
+    }
+  };
   const [calcResult, setCalcResult] = useState<CalcResult | null>(null);
 
   const downloadStatement = async (row: Commission) => {
@@ -449,6 +474,9 @@ export default function CommissionsPage() {
           {calcResult.warnings.filter(w => w.includes("NO commission plan")).map((w, i) => (
             <p key={i} className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{w}</p>
           ))}
+          {calcResult.warnings.filter(w => w.includes("HELD for review")).map((w, i) => (
+            <p key={`h${i}`} className="text-xs text-amber-800 bg-amber-50 border border-amber-300 rounded-xl px-3 py-2 font-medium">⚠ {w}</p>
+          ))}
         </div>
       )}
 
@@ -575,23 +603,51 @@ export default function CommissionsPage() {
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                 {deals.map(d => (
-                                  <tr key={d.esiid} className="hover:bg-white/60">
+                                  <tr key={d.deal_id || d.esiid} className={d.held ? "bg-amber-50/70" : "hover:bg-white/60"}>
                                     <td className="py-2 pr-4">
                                       <span className="font-medium text-slate-700">{d.customer || "—"}</span>
                                       {d.first_payment && (
                                         <span className="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">NEW</span>
                                       )}
-                                      <span className="block font-mono text-[10px] text-slate-400">{d.esiid}</span>
+                                      {d.kind === "enrollment" && !d.held && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-[10px] font-bold">ENROLLED</span>
+                                      )}
+                                      {d.held && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold">
+                                          {d.hold_reason === "rejected" ? "REJECTED" : "HELD — REVIEW"}
+                                        </span>
+                                      )}
+                                      <span className="block font-mono text-[10px] text-slate-400">{d.esiid || d.address || ""}</span>
                                     </td>
                                     <td className="py-2 pr-4 text-slate-500">{d.supplier}</td>
-                                    <td className="py-2 pr-4 text-right text-slate-600">{(d.kwh_paid ?? 0).toLocaleString()}</td>
-                                    <td className="py-2 pr-4 text-right text-slate-600">{fmt(d.gross_received)}</td>
+                                    <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : (d.kwh_paid ?? 0).toLocaleString()}</td>
+                                    <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : fmt(d.gross_received)}</td>
                                     <td className="py-2 pl-4 text-slate-500">
                                       {d.excluded
                                         ? <span className="text-red-400 font-semibold">Excluded — {d.plan_type}</span>
                                         : d.applied}
+                                      {d.held && d.hold_reason !== "rejected" && d.duplicate_of && (
+                                        <div className="mt-1 text-[11px] text-amber-900">
+                                          Other contract: <b>{d.duplicate_of.customer || "—"}</b> · {d.duplicate_of.contract_start} → {d.duplicate_of.contract_end || "open"}
+                                          {d.duplicate_of.agent ? ` · agent ${d.duplicate_of.agent}` : ""}
+                                          <div className="mt-1 flex gap-2">
+                                            <button
+                                              disabled={!!deciding[d.deal_id]}
+                                              onClick={() => decideHeld(row, d, "release")}
+                                              className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 disabled:opacity-50">
+                                              Release &amp; pay
+                                            </button>
+                                            <button
+                                              disabled={!!deciding[d.deal_id]}
+                                              onClick={() => decideHeld(row, d, "reject")}
+                                              className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-600 text-[11px] font-semibold hover:bg-slate-50 disabled:opacity-50">
+                                              Reject (no pay)
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
                                     </td>
-                                    <td className="py-2 text-right font-semibold text-emerald-600">{fmt(d.commission)}</td>
+                                    <td className={`py-2 text-right font-semibold ${d.held ? "text-amber-700" : "text-emerald-600"}`}>{fmt(d.commission)}</td>
                                   </tr>
                                 ))}
                               </tbody>
