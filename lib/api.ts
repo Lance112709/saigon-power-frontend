@@ -31,6 +31,15 @@ async function request(path: string, options: RequestInit = {}) {
 }
 
 export const api = {
+  // Payments received (REP → SGP), any month range
+  getPaymentsReceived: (from?: string | null, to?: string | null, providers?: string[] | null) => {
+    const q = new URLSearchParams();
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    if (providers && providers.length) q.set("providers", providers.join(","));
+    const qs = q.toString();
+    return request(`/api/v1/reconciliation/payments-received${qs ? `?${qs}` : ""}`);
+  },
   // Dashboard
   getDashboard: (month?: string) =>
     request(`/api/v1/dashboard/overview${month ? `?billing_month=${month}` : ""}`),

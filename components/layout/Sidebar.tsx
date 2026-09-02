@@ -29,6 +29,7 @@ const links: NavItem[] = [
   { href: "/uploads",        label: "Upload Statements", icon: Upload, perm: "view_uploads" },
   { href: "/admin/enrollments", label: "Enrollments",     icon: FileSignature, roles: ["admin", "manager"] },
   { href: "/reconciliation", label: "Reconciliation",    icon: RefreshCw, perm: "view_reconciliation" },
+  { href: "/payments",       label: "Payments Received", icon: DollarSign, roles: ["admin"] },
   { href: "/disputes",       label: "Disputes",          icon: Scale, roles: ["admin"] },
   { href: "/scorecards",     label: "Provider Scorecards", icon: Award, roles: ["admin"] },
   { href: "/suppliers",      label: "Suppliers",         icon: Building2, roles: ["admin", "manager"] },
