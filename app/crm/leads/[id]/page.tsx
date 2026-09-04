@@ -95,7 +95,12 @@ function DealStatusBtn({ status, dealId, leadId, onUpdate }: {
     try {
       await api.updateLeadDeal(leadId, dealId, { status: next });
       onUpdate(dealId, next);
-    } catch { }
+    } catch (err: any) {
+      const body = String(err?.message || err || "");
+      let detail = body;
+      try { detail = JSON.parse(body)?.detail ?? body; } catch {}
+      alert(`Could not update deal status: ${detail}`);
+    }
     setSaving(false);
   };
 
