@@ -31,6 +31,8 @@ interface Deal {
   deal_id: string;
   deal_source?: string;
   kind?: "enrollment" | "paid";
+  enrollment_type?: "new" | "renewal";
+  prior_contract?: { source: string; id: string; customer: string; supplier: string; agent: string; contract_start: string; contract_end: string } | null;
   held?: boolean;
   hold_reason?: string;
   contract_start?: string;
@@ -190,6 +192,12 @@ function ConfirmModal({
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+
+/** Engine summary stored on each record (JSON in `notes`): enrolled split etc. */
+function parseSummary(notes?: string): { enrolled?: number; new_enrollments?: number; renewals?: number; held?: number } | null {
+  if (!notes) return null;
+  try { const j = JSON.parse(notes); return j && typeof j === "object" ? j : null; } catch { return null; }
+}
 
 export default function CommissionsPage() {
   const router  = useRouter();
@@ -533,7 +541,19 @@ export default function CommissionsPage() {
                         </button>
                       </td>
                       <td className="px-5 py-4 text-slate-600">{MONTHS[row.month - 1]} {row.year}</td>
-                      <td className="px-5 py-4 text-right text-slate-700">{row.total_deals}</td>
+                      <td className="px-5 py-4 text-right text-slate-700">
+                        {row.total_deals}
+                        {(() => {
+                          const sm = parseSummary(row.notes);
+                          if (!sm || !sm.enrolled) return null;
+                          return (
+                            <span className="block text-[11px] text-slate-400 whitespace-nowrap">
+                              {sm.enrolled} enrolled · <span className="text-emerald-600">{sm.new_enrollments ?? 0} new</span> · <span className="text-violet-600">{sm.renewals ?? 0} renewals</span>
+                              {sm.held ? <span className="text-amber-600"> · {sm.held} held</span> : null}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-5 py-4 text-right font-semibold text-emerald-600">{fmt(row.total_commission)}</td>
                       <td className="px-5 py-4"><StatusBadge status={row.status} /></td>
                       <td className="px-5 py-4 text-slate-400 text-xs">
@@ -583,9 +603,24 @@ export default function CommissionsPage() {
                     {isExpanded && (
                       <tr key={`${row.id}-breakdown`} className="bg-[#F8FAFF] border-b border-slate-200">
                         <td colSpan={7} className="px-6 py-4">
-                          <div className="mb-2 flex items-center gap-2">
+                          <div className="mb-2 flex items-center gap-2 flex-wrap">
                             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Paid Deals — {row.agent_name}</span>
                             <span className="text-xs text-slate-400">· computed from provider payments received this month</span>
+                            {(() => {
+                              const enr = deals.filter(d => d.kind === "enrollment");
+                              if (!enr.length) return null;
+                              const nw = enr.filter(d => d.enrollment_type !== "renewal").length;
+                              const rn = enr.length - nw;
+                              const hd = enr.filter(d => d.held).length;
+                              return (
+                                <span className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold">
+                                  <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">{enr.length} enrolled</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{nw} brand-new</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{rn} renewals</span>
+                                  {hd > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">{hd} held</span>}
+                                </span>
+                              );
+                            })()}
                           </div>
                           {deals.length === 0 ? (
                             <p className="text-xs text-slate-400 py-2">Loading deals…</p>
@@ -609,8 +644,11 @@ export default function CommissionsPage() {
                                       {d.first_payment && (
                                         <span className="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">NEW</span>
                                       )}
-                                      {d.kind === "enrollment" && !d.held && (
-                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-[10px] font-bold">ENROLLED</span>
+                                      {d.kind === "enrollment" && (
+                                        d.enrollment_type === "renewal"
+                                          ? <span className="ml-1.5 px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 text-[10px] font-bold"
+                                                  title={d.prior_contract ? `Prior contract: ${d.prior_contract.supplier || "—"} from ${d.prior_contract.contract_start}${d.prior_contract.contract_end ? ` to ${d.prior_contract.contract_end}` : ""}${d.prior_contract.agent ? ` (agent ${d.prior_contract.agent})` : ""}` : undefined}>RENEWAL</span>
+                                          : <span className="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">NEW CUSTOMER</span>
                                       )}
                                       {d.held && (
                                         <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold">
