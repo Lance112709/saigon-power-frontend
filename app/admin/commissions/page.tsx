@@ -30,7 +30,7 @@ interface Commission {
 interface Deal {
   deal_id: string;
   deal_source?: string;
-  kind?: "enrollment" | "paid";
+  kind?: "enrollment" | "paid" | "statement";
   enrollment_type?: "new" | "renewal";
   prior_contract?: { source: string; id: string; customer: string; supplier: string; agent: string; contract_start: string; contract_end: string } | null;
   held?: boolean;
@@ -77,7 +77,7 @@ interface Log {
 interface Modal {
   commissionId: string;
   agentName: string;
-  action: "approve" | "close_out" | "mark_paid" | "recalculate";
+  action: "approve" | "close_out" | "mark_paid" | "recalculate" | "record_payment";
   title: string;
   message: string;
 }
@@ -136,12 +136,14 @@ function ConfirmModal({
   loading: boolean;
 }) {
   const [notes, setNotes] = useState("");
+  const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
 
   const colorMap: Record<string, string> = {
     approve:     "bg-amber-500 hover:bg-amber-600",
     close_out:   "bg-violet-600 hover:bg-violet-700",
     mark_paid:   "bg-emerald-600 hover:bg-emerald-700",
     recalculate: "bg-blue-600 hover:bg-blue-700",
+    record_payment: "bg-emerald-600 hover:bg-emerald-700",
   };
 
   return (
@@ -157,6 +159,13 @@ function ConfirmModal({
           </div>
         </div>
 
+        {modal.action === "record_payment" && (
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Date paid</label>
+            <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
+              className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20" />
+          </div>
+        )}
         <div className="mb-5">
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
             Notes <span className="font-normal normal-case text-slate-400">(optional)</span>
@@ -165,7 +174,7 @@ function ConfirmModal({
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={2}
-            placeholder={modal.action === "mark_paid" ? "e.g. Paid via Zelle, partial payment…" : "Add a note…"}
+            placeholder={modal.action === "mark_paid" || modal.action === "record_payment" ? "e.g. Paid via Zelle, check #1042…" : "Add a note…"}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 resize-none"
           />
         </div>
@@ -179,7 +188,7 @@ function ConfirmModal({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(notes)}
+            onClick={() => onConfirm(modal.action === "record_payment" ? `${paidAt}|${notes}` : notes)}
             disabled={loading}
             className={`px-5 py-2 rounded-xl text-sm font-semibold text-white transition-colors ${colorMap[modal.action]} disabled:opacity-50`}
           >
@@ -194,7 +203,7 @@ function ConfirmModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 /** Engine summary stored on each record (JSON in `notes`): enrolled split etc. */
-function parseSummary(notes?: string): { enrolled?: number; new_enrollments?: number; renewals?: number; held?: number } | null {
+function parseSummary(notes?: string): { enrolled?: number; new_enrollments?: number; renewals?: number; held?: number; statement_rows?: number; statement_share?: number } | null {
   if (!notes) return null;
   try { const j = JSON.parse(notes); return j && typeof j === "object" ? j : null; } catch { return null; }
 }
@@ -317,8 +326,12 @@ export default function CommissionsPage() {
 
   // ── Action buttons ─────────────────────────────────────────────────────────
 
-  const openAction = (row: Commission, action: "approve" | "close_out" | "mark_paid") => {
+  const openAction = (row: Commission, action: "approve" | "close_out" | "mark_paid" | "record_payment") => {
     const configs = {
+      record_payment: {
+        title: "Record Payment",
+        message: `Record that ${row.agent_name} was paid ${fmt(row.total_commission)} for ${MONTHS[row.month - 1]} ${row.year}. Use this for payments already made outside the approve → close out → pay steps; the record goes straight to Paid with the date you enter.`,
+      },
       approve: {
         title: "Approve Commission",
         message: `Approve ${row.agent_name}'s commission of ${fmt(row.total_commission)} for ${MONTHS[row.month - 1]} ${row.year}? This confirms the numbers are correct.`,
@@ -351,6 +364,9 @@ export default function CommissionsPage() {
         await api.closeOutAgentCommission(modal.commissionId, { notes });
       } else if (modal.action === "mark_paid") {
         await api.markAgentCommissionPaid(modal.commissionId, { notes });
+      } else if (modal.action === "record_payment") {
+        const [paid_at, ...rest] = notes.split("|");
+        await api.recordAgentCommissionPayment(modal.commissionId, { paid_at, notes: rest.join("|") });
       }
       setModal(null);
       await load();
@@ -545,6 +561,13 @@ export default function CommissionsPage() {
                         {row.total_deals}
                         {(() => {
                           const sm = parseSummary(row.notes);
+                          if (sm && sm.statement_rows) {
+                            return (
+                              <span className="block text-[11px] text-slate-400 whitespace-nowrap">
+                                {sm.statement_rows} statement rows · <span className="text-sky-700">{fmt(sm.statement_share ?? 0)} provider-listed share</span>
+                              </span>
+                            );
+                          }
                           if (!sm || !sm.enrolled) return null;
                           return (
                             <span className="block text-[11px] text-slate-400 whitespace-nowrap">
@@ -582,6 +605,12 @@ export default function CommissionsPage() {
                               Mark as Paid ✓
                             </button>
                           )}
+                          {row.status !== "paid" && (
+                            <button onClick={() => openAction(row, "record_payment")} title="Already paid this? Record the payment with its date"
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-colors">
+                              Record payment
+                            </button>
+                          )}
                           {row.status === "paid" && (
                             <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 text-slate-400 border border-slate-200">Paid ✓</span>
                           )}
@@ -605,7 +634,7 @@ export default function CommissionsPage() {
                         <td colSpan={7} className="px-6 py-4">
                           <div className="mb-2 flex items-center gap-2 flex-wrap">
                             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Paid Deals — {row.agent_name}</span>
-                            <span className="text-xs text-slate-400">· computed from provider payments received this month</span>
+                            <span className="text-xs text-slate-400">· {deals.some(d => d.kind === "statement") ? "share listed per account on the provider's own statement" : "computed from provider payments received this month"}</span>
                             {(() => {
                               const enr = deals.filter(d => d.kind === "enrollment");
                               if (!enr.length) return null;
@@ -643,6 +672,9 @@ export default function CommissionsPage() {
                                       <span className="font-medium text-slate-700">{d.customer || "—"}</span>
                                       {d.first_payment && (
                                         <span className="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">NEW</span>
+                                      )}
+                                      {d.kind === "statement" && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-[10px] font-bold">STATEMENT</span>
                                       )}
                                       {d.kind === "enrollment" && (
                                         d.enrollment_type === "renewal"

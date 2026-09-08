@@ -26,6 +26,7 @@ const COMM_TYPES = [
   { value: "per_kwh",               label: "$ per kWh (residual)",      hint: "monthly · rate × actual kWh the provider paid on" },
   { value: "percent_of_commission", label: "% of commission received",  hint: "monthly · % of the gross commission dollars received" },
   { value: "flat_monthly",          label: "Flat $ per month",          hint: "fixed monthly amount (only in months with paid deals)" },
+  { value: "statement_column",      label: "Column on provider statement", hint: "monthly · sums a column the provider's own statement lists per account (e.g. a sub-agent's split) · type part of the column header, provider required · not tied to which agent the deal is credited to" },
 ];
 
 const PLAN_TYPES = [
@@ -46,6 +47,7 @@ function componentLabel(c: { type: string; value?: string | number; supplier?: s
     case "flat_per_deal":         return `$${v}/new deal${scope}`;
     case "flat_per_enrollment":   return `$${v}/enrolled customer${scope}`;
     case "percent_of_commission": return `${v}% of received${scope}`;
+    case "statement_column":      return `statement column "${v}"${scope}`;
     default:                      return `${v}${scope}`;
   }
 }
@@ -57,7 +59,7 @@ function rulesToComponents(rules: any): PlanComponent[] {
   if (Array.isArray(rules.components)) {
     return rules.components.map((c: any) => ({
       type: c.type || "per_kwh",
-      value: String(c.rate ?? c.amount ?? c.percent ?? ""),
+      value: c.type === "statement_column" ? String(c.column_pattern ?? "") : String(c.rate ?? c.amount ?? c.percent ?? ""),
       supplier: c.supplier || "",
     }));
   }
@@ -75,10 +77,11 @@ function componentsToRules(components: PlanComponent[], exclude_plan_types: stri
   return {
     version: 2,
     components: components
-      .filter(c => c.value !== "" && !isNaN(parseFloat(c.value)))
+      .filter(c => c.value.trim() !== "" && (c.type === "statement_column" || !isNaN(parseFloat(c.value))))
       .map(c => {
         const n = parseFloat(c.value);
         const base: any = { type: c.type, supplier: c.supplier || null };
+        if (c.type === "statement_column") { base.column_pattern = c.value.trim(); return base; }
         if (c.type === "per_kwh") base.rate = n;
         else if (c.type === "percent_of_commission") base.percent = n;
         else base.amount = n;
@@ -570,12 +573,20 @@ export default function AgentsPage() {
                                     {COMM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                                   </select>
                                 </div>
-                                <div className="w-28">
-                                  <label className={labelCls}>Amount ({unit})</label>
-                                  <input type="number" step="0.0001" min="0" className={inputCls}
-                                    placeholder={c.type === "per_kwh" ? "0.001" : c.type === "percent_of_commission" ? "30" : "20"}
-                                    value={c.value} onChange={e => setComponent(i, "value", e.target.value)} />
-                                </div>
+                                {c.type === "statement_column" ? (
+                                  <div className="w-40">
+                                    <label className={labelCls}>Column header contains</label>
+                                    <input type="text" className={inputCls} placeholder="e.g. abe.*comm"
+                                      value={c.value} onChange={e => setComponent(i, "value", e.target.value)} />
+                                  </div>
+                                ) : (
+                                  <div className="w-28">
+                                    <label className={labelCls}>Amount ({unit})</label>
+                                    <input type="number" step="0.0001" min="0" className={inputCls}
+                                      placeholder={c.type === "per_kwh" ? "0.001" : c.type === "percent_of_commission" ? "30" : "20"}
+                                      value={c.value} onChange={e => setComponent(i, "value", e.target.value)} />
+                                  </div>
+                                )}
                                 <div className="flex-1">
                                   <label className={labelCls}>Provider</label>
                                   <select className={inputCls} value={c.supplier} onChange={e => setComponent(i, "supplier", e.target.value)}>

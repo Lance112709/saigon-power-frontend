@@ -436,7 +436,9 @@ export const api = {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/agent-commissions${q}`);
   },
-  calculateAgentCommissions: (data: { month: number; year: number }) =>
+  recordAgentCommissionPayment: (id: string, data: { paid_at: string; notes?: string }) =>
+    request(`/api/v1/agent-commissions/${id}/record-payment`, { method: "PATCH", body: JSON.stringify(data) }),
+  calculateAgentCommissions: (data: { month: number; year: number; agent?: string }) =>
     request("/api/v1/agent-commissions/calculate", { method: "POST", body: JSON.stringify(data) }),
   approveAgentCommission: (id: string, data?: object) =>
     request(`/api/v1/agent-commissions/${id}/approve`, { method: "PATCH", body: JSON.stringify(data || {}) }),
