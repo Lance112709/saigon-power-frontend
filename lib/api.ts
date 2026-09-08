@@ -457,6 +457,7 @@ export const api = {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/call-list${q}`);
   },
+  getResolvedCallList: () => request("/api/v1/call-list/resolved?limit=300"),
   resolveCallListEntry: (entityKey: string, endDate: string | null) =>
     request("/api/v1/call-list/resolve", { method: "POST", body: JSON.stringify({ entity_key: entityKey, end_date: endDate }) }),
   unresolveCallListEntry: (resolutionId: string) =>

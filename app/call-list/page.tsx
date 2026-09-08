@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { PhoneCall, RefreshCw, ArrowRight, CheckCircle2, Undo2 } from "lucide-react";
+import { PhoneCall, RefreshCw, ArrowRight, CheckCircle2, Undo2, RotateCcw } from "lucide-react";
 
 type Entry = {
   name: string;
@@ -20,6 +20,17 @@ type Entry = {
   entity_key: string;
   entity_url: string;
 };
+
+type ResolvedEntry = Entry & {
+  resolution_id: string;
+  resolved_by_name: string | null;
+  resolved_at: string | null;
+  note: string | null;
+  still_due: boolean;
+};
+
+const fmtResolvedAt = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
 
 function ScoreBar({ score }: { score: number }) {
   const color = score >= 75 ? "bg-red-500" : score >= 50 ? "bg-amber-400" : "bg-emerald-500";
@@ -53,16 +64,25 @@ export default function CallListPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string | undefined>(undefined);
   const [resolving, setResolving] = useState<string | null>(null);
+  const [resolved, setResolved] = useState<ResolvedEntry[]>([]);
+  const [restoring, setRestoring] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Last resolved row, kept for a few seconds so a misclick can be undone
   const [undo, setUndo] = useState<{ entry: Entry; index: number; id: string | null } | null>(null);
 
+  const showResolved = priorityFilter === "resolved";
+
   const load = async (pf?: string, isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
-    const params: Record<string, string> = { limit: "100" };
-    if (pf) params.priority_filter = pf;
-    const data = await api.getCallList(params).catch(() => []);
-    setEntries(data);
+    if (pf === "resolved") {
+      const data = await api.getResolvedCallList().catch(() => []);
+      setResolved(data);
+    } else {
+      const params: Record<string, string> = { limit: "100" };
+      if (pf) params.priority_filter = pf;
+      const data = await api.getCallList(params).catch(() => []);
+      setEntries(data);
+    }
     setLoading(false);
     setRefreshing(false);
   };
@@ -111,6 +131,21 @@ export default function CallListPage() {
     }
   };
 
+  // "Put back" from the Resolved tab — the customer returns to Who To Call
+  const restore = async (r: ResolvedEntry) => {
+    setRestoring(r.resolution_id);
+    setError(null);
+    try {
+      await api.unresolveCallListEntry(r.resolution_id);
+      setResolved(prev => prev.filter(x => x.resolution_id !== r.resolution_id));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message.replace(/^\d+:/, "") : "Could not put back";
+      setError(msg);
+    } finally {
+      setRestoring(null);
+    }
+  };
+
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   const urgentCount = entries.filter(e => (e.days_left ?? 999) <= 7).length;
   const within30    = entries.filter(e => (e.days_left ?? 999) <= 30).length;
@@ -126,7 +161,7 @@ export default function CallListPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#0F1D5E]">Who To Call Today</h1>
-            <p className="text-sm text-slate-400">{today} · Active customers with deals expiring or due for check-in · click <span className="font-semibold text-emerald-600">Resolved</span> once you have handled a customer</p>
+            <p className="text-sm text-slate-400">{today} · Active customers with deals expiring or due for check-in · click <span className="font-semibold text-emerald-600">Resolved</span> once you have handled a customer · they move to the <span className="font-semibold text-slate-500">Resolved</span> tab</p>
           </div>
         </div>
         <button onClick={() => load(priorityFilter, true)} disabled={refreshing}
@@ -136,7 +171,7 @@ export default function CallListPage() {
       </div>
 
       {/* Stat strip */}
-      {!loading && (
+      {!loading && !showResolved && (
         <div className="grid grid-cols-4 gap-4">
           {[
             { label: "Total Customers", value: entries.length,  color: "text-[#0F1D5E]" },
@@ -157,11 +192,15 @@ export default function CallListPage() {
         {[
           { label: "All Customers", value: undefined },
           { label: "High Priority", value: "high" },
+          { label: "Resolved", value: "resolved" },
         ].map(f => (
           <button key={f.label} onClick={() => setPriorityFilter(f.value)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-              priorityFilter === f.value ? "bg-[#0F1D5E] text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              priorityFilter === f.value
+                ? f.value === "resolved" ? "bg-emerald-600 text-white" : "bg-[#0F1D5E] text-white"
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}>
+            {f.value === "resolved" && <CheckCircle2 className="w-4 h-4" />}
             {f.label}
           </button>
         ))}
@@ -174,7 +213,7 @@ export default function CallListPage() {
         </div>
       )}
 
-      {undo && (
+      {undo && !showResolved && (
         <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
           <span className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -191,6 +230,70 @@ export default function CallListPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-16 text-center text-slate-400 text-sm">Loading customers...</div>
+        ) : showResolved ? (
+          resolved.length === 0 ? (
+            <div className="p-16 text-center">
+              <CheckCircle2 className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 text-sm font-medium">Nothing resolved yet.</p>
+              <p className="text-slate-300 text-xs mt-1">Customers you mark Resolved on the call list will show up here.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    {["#", "Customer", "Phone", "Agent", "Supplier / Plan", "Contract End", "Resolved By", "Resolved On", "Status", ""].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {resolved.map((r, i) => (
+                    <tr key={r.resolution_id}
+                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 cursor-pointer"
+                      onClick={() => router.push(r.entity_url)}>
+                      <td className="px-4 py-3 text-xs font-bold text-slate-400 w-8">{i + 1}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-[#0F1D5E] whitespace-nowrap">{r.name}</p>
+                        {r.sgp_customer_id && <p className="font-mono text-xs text-slate-400">{r.sgp_customer_id}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap font-mono text-xs">{r.phone}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{r.sales_agent || "—"}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600">
+                        <p className="font-medium">{r.supplier || "—"}</p>
+                        {r.plan_name && <p className="text-slate-400">{r.plan_name}</p>}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <DaysLeftBadge days={r.days_left} />
+                        {r.end_date && <p className="text-xs text-slate-400 mt-0.5">{r.end_date}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{r.resolved_by_name || "—"}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{fmtResolvedAt(r.resolved_at)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          r.still_due ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        }`}>
+                          <CheckCircle2 className="w-3 h-3" /> {r.still_due ? "Resolved" : "Renewed / closed"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.still_due && (
+                          <button
+                            onClick={ev => { ev.stopPropagation(); restore(r); }}
+                            disabled={restoring === r.resolution_id}
+                            title="Put this customer back on the Who To Call list"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50">
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            {restoring === r.resolution_id ? "Restoring…" : "Put back"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : entries.length === 0 ? (
           <div className="p-16 text-center">
             <PhoneCall className="w-10 h-10 text-slate-200 mx-auto mb-3" />
