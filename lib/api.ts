@@ -31,6 +31,17 @@ async function request(path: string, options: RequestInit = {}) {
 }
 
 export const api = {
+  // Bank-deposit check per commission statement
+  getDeposits: (from?: string | null, to?: string | null, only?: string | null) => {
+    const q = new URLSearchParams();
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    if (only) q.set("only", only);
+    const qs = q.toString();
+    return request(`/api/v1/uploads/deposits${qs ? `?${qs}` : ""}`);
+  },
+  setStatementReceived: (id: string, body: { amount_received: number | null; received_at?: string | null; notes?: string | null }) =>
+    request(`/api/v1/uploads/${id}/received`, { method: "PUT", body: JSON.stringify(body) }),
   // Payments received (REP → SGP), any month range
   getPaymentsReceived: (from?: string | null, to?: string | null, providers?: string[] | null) => {
     const q = new URLSearchParams();

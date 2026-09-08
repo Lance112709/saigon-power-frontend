@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, CheckCircle, XCircle, Pencil, Trash2, Eye } from "lucide-react";
+import DepositStatusBadge from "@/components/DepositStatusBadge";
 
 const API_URL_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -542,6 +543,7 @@ export default function UploadsPage() {
                   <th className="pb-2 font-medium">Rows</th>
                   <th className="pb-2 font-medium">Imported</th>
                   <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium">Bank deposit</th>
                   <th className="pb-2 font-medium">Date</th>
                   <th className="pb-2 font-medium"></th>
                 </tr>
@@ -557,6 +559,13 @@ export default function UploadsPage() {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[u.status] ?? ""}`}>
                         {u.status}
                       </span>
+                    </td>
+                    <td className="py-3">
+                      {u.deposit ? (
+                        <button onClick={() => router.push(`/uploads/${u.id}`)} title={u.deposit.explanation || "Open statement to record the deposit"}>
+                          <DepositStatusBadge status={u.deposit.status} />
+                        </button>
+                      ) : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="py-3 text-gray-500">{new Date(u.created_at).toLocaleDateString()}</td>
                     <td className="py-3">

@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Banknote, Download, CalendarRange, Building2, TrendingUp, Loader2 } from "lucide-react";
+import { Banknote, Download, CalendarRange, Building2, TrendingUp, Loader2, Landmark, CheckCircle, AlertTriangle } from "lucide-react";
+import DepositStatusBadge from "@/components/DepositStatusBadge";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -59,6 +60,14 @@ export default function PaymentsReceivedPage() {
   const [to, setTo] = useState<string>("");
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [available, setAvailable] = useState<{ first: string; last: string; providers: string[] } | null>(null);
+  const [deposits, setDeposits] = useState<any>(null);
+  const [depLoading, setDepLoading] = useState(false);
+  const [depOnlyOpen, setDepOnlyOpen] = useState(false);
+  const [depEditing, setDepEditing] = useState<string | null>(null);
+  const [depForm, setDepForm] = useState<{ amount: string; date: string; notes: string }>({ amount: "", date: "", notes: "" });
+  const [depSaving, setDepSaving] = useState(false);
+  const [depError, setDepError] = useState<string | null>(null);
+  const [depSeq, setDepSeq] = useState(0);
 
   useEffect(() => {
     if (user && user.role !== "admin") router.push("/dashboard");
@@ -101,6 +110,42 @@ export default function PaymentsReceivedPage() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range.from, range.to, activeProviders]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDepLoading(true);
+    api.getDeposits(range.from, range.to, depOnlyOpen ? "open" : null)
+      .then(d => { if (!cancelled) setDeposits(d); })
+      .catch(e => !cancelled && setDepError(String(e?.message || e).replace(/^\d+:/, "")))
+      .finally(() => !cancelled && setDepLoading(false));
+    return () => { cancelled = true; };
+  }, [range.from, range.to, depOnlyOpen, depSeq]);
+
+  const startDepEdit = (it: any) => {
+    setDepEditing(it.id);
+    setDepError(null);
+    setDepForm({
+      amount: it.amount_received != null ? String(it.amount_received) : "",
+      date: it.received_at || "",
+      notes: it.received_notes || "",
+    });
+  };
+  const saveDep = async (id: string, clear = false) => {
+    setDepSaving(true); setDepError(null);
+    try {
+      const amt = parseFloat(depForm.amount);
+      if (!clear && isNaN(amt)) { setDepError("Enter the deposit amount from your bank."); setDepSaving(false); return; }
+      await api.setStatementReceived(id, clear
+        ? { amount_received: null }
+        : { amount_received: amt, received_at: depForm.date || null, notes: depForm.notes || null });
+      setDepEditing(null);
+      setDepSeq(n => n + 1);
+    } catch (e: any) {
+      setDepError(String(e?.message || e).replace(/^\d+:/, ""));
+    } finally {
+      setDepSaving(false);
+    }
+  };
 
   const years = useMemo(() => {
     if (!available?.first) return [];
@@ -254,6 +299,145 @@ export default function PaymentsReceivedPage() {
             <p className="text-xs text-slate-400 mt-0.5">{t.sub}</p>
           </div>
         ))}
+      </div>
+
+      {/* Bank deposits vs statements */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Landmark className="w-4 h-4 text-[#0F1D5E]" />
+            <h2 className="text-sm font-bold text-[#0F1D5E]">Bank deposits vs statements</h2>
+            {depLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {deposits && (
+              <>
+                {(deposits.counts.overdue || 0) + (deposits.counts.short_paid || 0) + (deposits.counts.over_paid || 0) > 0 ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-700 font-semibold">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {(deposits.counts.overdue || 0) + (deposits.counts.short_paid || 0) + (deposits.counts.over_paid || 0)} need attention
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 font-semibold">
+                    <CheckCircle className="w-3.5 h-3.5" /> Nothing needs attention
+                  </span>
+                )}
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-semibold">{deposits.counts.awaiting || 0} awaiting</span>
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-semibold">{fmt(deposits.totals.not_yet_received)} not yet in bank</span>
+                {deposits.totals.unexplained_difference !== 0 && (
+                  <span className="px-2.5 py-1 rounded-full bg-red-50 text-red-700 font-semibold">{fmt(deposits.totals.unexplained_difference)} unexplained</span>
+                )}
+              </>
+            )}
+            <label className="inline-flex items-center gap-1.5 ml-2 text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={depOnlyOpen} onChange={e => setDepOnlyOpen(e.target.checked)} className="rounded" />
+              Open items only
+            </label>
+          </div>
+        </div>
+        {depError && <div className="mx-5 mt-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 text-sm">{depError}</div>}
+        <div className="overflow-x-auto max-h-[560px] overflow-y-auto">
+          <table className="w-full text-sm whitespace-nowrap">
+            <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider sticky top-0">
+              <tr>
+                <th className="text-left px-5 py-2.5">Month</th>
+                <th className="text-left px-3 py-2.5">Provider</th>
+                <th className="text-right px-3 py-2.5">Statement</th>
+                <th className="text-right px-3 py-2.5">Withheld</th>
+                <th className="text-right px-3 py-2.5">Expected</th>
+                <th className="text-right px-3 py-2.5">In bank</th>
+                <th className="text-right px-3 py-2.5">Difference</th>
+                <th className="text-left px-3 py-2.5">Status</th>
+                <th className="text-right px-5 py-2.5"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {(deposits?.items ?? []).length === 0 && !depLoading && (
+                <tr><td colSpan={9} className="px-5 py-8 text-center text-slate-400">No statements in this range{depOnlyOpen ? " with open deposits" : ""}.</td></tr>
+              )}
+              {(deposits?.items ?? []).map((it: any) => {
+                const editing = depEditing === it.id;
+                const bad = ["short_paid", "over_paid", "overdue"].includes(it.status);
+                return (
+                  <React.Fragment key={it.id}>
+                    <tr className={`border-t border-slate-100 ${bad ? "bg-red-50/40" : ""}`}>
+                      <td className="px-5 py-2 font-medium text-slate-700">{it.statement_month ? longMonth(it.statement_month) : "—"}</td>
+                      <td className="px-3 py-2 text-slate-700">
+                        <button onClick={() => router.push(`/uploads/${it.id}`)} className="hover:underline text-left" title={it.original_filename}>
+                          {it.provider || it.provider_group || "—"}
+                        </button>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">{fmt(it.statement_total)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-slate-500">{it.total_withheld ? fmt(it.total_withheld) : <span className="text-slate-300">—</span>}</td>
+                      <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmt(it.expected_deposit)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {it.amount_received != null ? (
+                          <div>
+                            <div>{fmt(it.amount_received)}</div>
+                            {it.received_at && <div className="text-[11px] text-slate-400">{it.received_at}</div>}
+                          </div>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className={`px-3 py-2 text-right tabular-nums font-semibold ${it.difference == null ? "text-slate-300" : Math.abs(it.difference) < 0.02 ? "text-green-700" : "text-red-600"}`}>
+                        {it.difference == null ? "—" : `${it.difference >= 0 ? "+" : "-"}${fmt(Math.abs(it.difference))}`}
+                      </td>
+                      <td className="px-3 py-2"><span title={it.explanation}><DepositStatusBadge status={it.status} /></span></td>
+                      <td className="px-5 py-2 text-right">
+                        {editing ? (
+                          <button onClick={() => setDepEditing(null)} className="text-xs text-slate-500 hover:underline">Cancel</button>
+                        ) : (
+                          <button onClick={() => startDepEdit(it)}
+                            className="px-3 py-1 rounded-lg bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#182a7a]">
+                            {it.amount_received != null ? "Edit" : "Mark received"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {editing && (
+                      <tr className="bg-slate-50 border-t border-slate-100">
+                        <td colSpan={9} className="px-5 py-3">
+                          <div className="flex flex-wrap items-end gap-3">
+                            <label className="text-xs text-slate-500">
+                              <span className="block mb-1 font-medium">Deposit amount ($)</span>
+                              <input type="number" step="0.01" min="0" value={depForm.amount} autoFocus
+                                onChange={e => setDepForm(f => ({ ...f, amount: e.target.value }))}
+                                placeholder={it.expected_deposit != null ? it.expected_deposit.toFixed(2) : "0.00"}
+                                className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm w-36 bg-white" />
+                            </label>
+                            <label className="text-xs text-slate-500">
+                              <span className="block mb-1 font-medium">Posted to bank on</span>
+                              <input type="date" value={depForm.date} onChange={e => setDepForm(f => ({ ...f, date: e.target.value }))}
+                                className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white" />
+                            </label>
+                            <label className="text-xs text-slate-500 flex-1 min-w-[220px]">
+                              <span className="block mb-1 font-medium">Note (optional)</span>
+                              <input type="text" value={depForm.notes} maxLength={500}
+                                onChange={e => setDepForm(f => ({ ...f, notes: e.target.value }))}
+                                placeholder="e.g. wire fee $15, or one deposit covering two statements"
+                                className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm w-full bg-white" />
+                            </label>
+                            <button onClick={() => saveDep(it.id)} disabled={depSaving}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#182a7a] disabled:opacity-50">
+                              {depSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />} Save
+                            </button>
+                            {it.amount_received != null && (
+                              <button onClick={() => saveDep(it.id, true)} disabled={depSaving}
+                                className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs hover:bg-white disabled:opacity-50">Clear</button>
+                            )}
+                            <span className="text-xs text-slate-400 ml-auto">{it.original_filename}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="px-5 py-3 text-xs text-slate-400 border-t border-slate-100">
+          Type each REP deposit from your bank once it lands. A deposit that is short by exactly the amount the statement reports as withheld is marked explained; any other difference, or a statement with no deposit after its pay window, needs attention.
+        </p>
       </div>
 
       {/* Chart */}

@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircle, XCircle, ArrowLeft, Search, Link2 } from "lucide-react";
+import { CheckCircle, XCircle, ArrowLeft, Search, Link2, Banknote, Loader2 } from "lucide-react";
+import DepositStatusBadge from "@/components/DepositStatusBadge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -134,28 +135,9 @@ export default function UploadDetailPage() {
           </div>
         </div>
 
-        {/* Amount reconciliation summary */}
-        {batch?.amount_received != null && (
-          <div className={`rounded-2xl border p-4 ${Math.abs((batch.total_affinity_amount || 0) - batch.amount_received) < 0.02 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-xs text-slate-500 mb-1">Amount Received</div>
-                <div className="text-lg font-bold text-slate-800">{fmtMoney(batch.amount_received)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500 mb-1">Total Affinity Amount</div>
-                <div className="text-lg font-bold text-slate-800">{fmtMoney(batch.total_affinity_amount)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500 mb-1">Difference</div>
-                <div className={`text-lg font-bold ${Math.abs((batch.total_affinity_amount || 0) - batch.amount_received) < 0.02 ? "text-green-700" : "text-red-600"}`}>
-                  {batch.total_affinity_amount != null
-                    ? `${(batch.total_affinity_amount - batch.amount_received) >= 0 ? "+" : ""}$${(batch.total_affinity_amount - batch.amount_received).toFixed(2)}`
-                    : "—"}
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Bank deposit check */}
+        {batch && batch.status === "confirmed" && (
+          <DepositCard batch={batch} onSaved={setBatch} />
         )}
 
         {/* Tabs + search */}
@@ -313,6 +295,125 @@ export default function UploadDetailPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function DepositCard({ batch, onSaved }: { batch: any; onSaved: (b: any) => void }) {
+  const dep = batch.deposit || {};
+  const [amount, setAmount] = useState<string>(dep.amount_received != null ? String(dep.amount_received) : "");
+  const [date, setDate]     = useState<string>(dep.received_at || "");
+  const [notes, setNotes]   = useState<string>(dep.received_notes || "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]       = useState("");
+
+  useEffect(() => {
+    setAmount(dep.amount_received != null ? String(dep.amount_received) : "");
+    setDate(dep.received_at || "");
+    setNotes(dep.received_notes || "");
+  }, [dep.amount_received, dep.received_at, dep.received_notes]);
+
+  const save = async (clear = false) => {
+    setSaving(true); setErr("");
+    try {
+      const body = clear
+        ? { amount_received: null }
+        : { amount_received: parseFloat(amount), received_at: date || null, notes: notes || null };
+      if (!clear && (amount.trim() === "" || isNaN(body.amount_received as number))) {
+        setErr("Enter the deposit amount from your bank."); setSaving(false); return;
+      }
+      const updated = await authFetch(`/api/v1/uploads/${batch.id}/received`, { method: "PUT", body: JSON.stringify(body) });
+      onSaved({ ...batch, ...updated });
+    } catch (e: any) {
+      setErr(e.message || "Save failed");
+    }
+    setSaving(false);
+  };
+
+  const tone = dep.status === "paid_in_full" || dep.status === "explained_withholding"
+    ? "border-green-200 bg-green-50/40"
+    : dep.status === "short_paid" || dep.status === "over_paid" || dep.status === "overdue"
+      ? "border-red-200 bg-red-50/40"
+      : "border-slate-200 bg-white";
+
+  const recorded = dep.amount_received != null;
+  const diff = dep.difference;
+
+  return (
+    <div className={`rounded-2xl border p-5 shadow-sm ${tone}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <Banknote className="w-4 h-4 text-[#0F1D5E]" />
+          <h2 className="text-sm font-bold text-[#0F1D5E]">Bank deposit check</h2>
+          <DepositStatusBadge status={dep.status} />
+        </div>
+        {dep.expected_pay_date && (
+          <span className="text-xs text-slate-500">Statement pay date {dep.expected_pay_date}</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center mb-4">
+        <div>
+          <div className="text-xs text-slate-500 mb-1">Statement total</div>
+          <div className="text-lg font-bold text-slate-800">{fmtMoney(dep.statement_total)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-slate-500 mb-1">Withheld (per statement)</div>
+          <div className="text-lg font-bold text-slate-800">{dep.total_withheld ? fmtMoney(dep.total_withheld) : "$0.00"}</div>
+        </div>
+        <div>
+          <div className="text-xs text-slate-500 mb-1">Expected deposit</div>
+          <div className="text-lg font-bold text-slate-800">{fmtMoney(dep.expected_deposit)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-slate-500 mb-1">Received in bank</div>
+          <div className="text-lg font-bold text-slate-800">{recorded ? fmtMoney(dep.amount_received) : "—"}</div>
+          {recorded && dep.received_at && <div className="text-[11px] text-slate-400">{dep.received_at}</div>}
+        </div>
+        <div>
+          <div className="text-xs text-slate-500 mb-1">Difference</div>
+          <div className={`text-lg font-bold ${diff == null ? "text-slate-400" : Math.abs(diff) < 0.02 ? "text-green-700" : "text-red-600"}`}>
+            {diff == null ? "—" : `${diff >= 0 ? "+" : "-"}$${Math.abs(diff).toFixed(2)}`}
+          </div>
+        </div>
+      </div>
+
+      {dep.explanation && (
+        <p className="text-sm text-slate-600 mb-4">{dep.explanation}{recorded && dep.received_by ? ` Recorded by ${dep.received_by}.` : ""}</p>
+      )}
+
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-xs text-slate-500">
+          <span className="block mb-1 font-medium">Deposit amount ($)</span>
+          <input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)}
+            placeholder={dep.expected_deposit != null ? dep.expected_deposit.toFixed(2) : "0.00"}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-40 bg-white" />
+        </label>
+        <label className="text-xs text-slate-500">
+          <span className="block mb-1 font-medium">Posted to bank on</span>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white" />
+        </label>
+        <label className="text-xs text-slate-500 flex-1 min-w-[200px]">
+          <span className="block mb-1 font-medium">Note (optional)</span>
+          <input type="text" value={notes} onChange={e => setNotes(e.target.value)} maxLength={500}
+            placeholder="e.g. wire fee $15, or one deposit covering two statements"
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full bg-white" />
+        </label>
+        <button onClick={() => save(false)} disabled={saving}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0F1D5E] text-white text-sm font-semibold hover:bg-[#182a7a] disabled:opacity-50">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+          {recorded ? "Update deposit" : "Mark received"}
+        </button>
+        {recorded && (
+          <button onClick={() => save(true)} disabled={saving}
+            className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 disabled:opacity-50">
+            Clear
+          </button>
+        )}
+      </div>
+      {err && <p className="text-sm text-red-600 mt-2">{err}</p>}
     </div>
   );
 }
