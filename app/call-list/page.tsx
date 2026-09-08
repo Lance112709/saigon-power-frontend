@@ -71,7 +71,7 @@ export default function CallListPage() {
   const [restoring, setRestoring] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Last resolved row, kept for a few seconds so a misclick can be undone
-  const [undo, setUndo] = useState<{ entry: Entry; index: number; id: string | null } | null>(null);
+  const [undo, setUndo] = useState<{ entry: Entry; index: number; id: string | null; note: string } | null>(null);
 
   const showResolved = priorityFilter === "resolved";
 
@@ -110,7 +110,7 @@ export default function CallListPage() {
       setNote("");
       const index = entries.findIndex(x => rowKey(x) === key);
       setEntries(prev => prev.filter(x => rowKey(x) !== key));
-      setUndo({ entry: e, index, id: res?.id ?? null });
+      setUndo({ entry: e, index, id: res?.id ?? null, note: noteText.trim() });
     } catch (err) {
       const msg = err instanceof Error ? err.message.replace(/^\d+:/, "") : "Could not resolve";
       setError(msg);
@@ -220,9 +220,16 @@ export default function CallListPage() {
 
       {undo && !showResolved && (
         <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
-          <span className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span><span className="font-semibold">{undo.entry.name}</span> marked resolved and removed from the list.</span>
+          <span className="flex items-start gap-2 min-w-0">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+            <span className="min-w-0">
+              <span className="font-semibold">{undo.entry.name}</span> marked resolved and removed from the list.
+              {undo.note && (
+                <span className="block mt-0.5 text-xs text-emerald-700/80 whitespace-pre-wrap break-words">
+                  <span className="font-semibold">Note:</span> {undo.note}
+                </span>
+              )}
+            </span>
           </span>
           <button onClick={undoResolve}
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-emerald-300 bg-white text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
