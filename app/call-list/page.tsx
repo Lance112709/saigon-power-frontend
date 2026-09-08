@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { PhoneCall, RefreshCw, ArrowRight, CheckCircle2, Undo2, RotateCcw } from "lucide-react";
+import { PhoneCall, RefreshCw, ArrowRight, CheckCircle2, Undo2, RotateCcw, X } from "lucide-react";
 
 type Entry = {
   name: string;
@@ -65,6 +65,9 @@ export default function CallListPage() {
   const [priorityFilter, setPriorityFilter] = useState<string | undefined>(undefined);
   const [resolving, setResolving] = useState<string | null>(null);
   const [resolved, setResolved] = useState<ResolvedEntry[]>([]);
+  // Row awaiting the "what did you do?" note before it is marked resolved
+  const [pending, setPending] = useState<Entry | null>(null);
+  const [note, setNote] = useState("");
   const [restoring, setRestoring] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Last resolved row, kept for a few seconds so a misclick can be undone
@@ -97,12 +100,14 @@ export default function CallListPage() {
 
   const rowKey = (e: Entry) => `${e.entity_key}|${e.end_date ?? ""}`;
 
-  const resolve = async (e: Entry) => {
+  const resolve = async (e: Entry, noteText: string) => {
     const key = rowKey(e);
     setResolving(key);
     setError(null);
     try {
-      const res = await api.resolveCallListEntry(e.entity_key, e.end_date);
+      const res = await api.resolveCallListEntry(e.entity_key, e.end_date, noteText.trim());
+      setPending(null);
+      setNote("");
       const index = entries.findIndex(x => rowKey(x) === key);
       setEntries(prev => prev.filter(x => rowKey(x) !== key));
       setUndo({ entry: e, index, id: res?.id ?? null });
@@ -242,7 +247,7 @@ export default function CallListPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    {["#", "Customer", "Phone", "Agent", "Supplier / Plan", "Contract End", "Resolved By", "Resolved On", "Status", ""].map(h => (
+                    {["#", "Customer", "Phone", "Agent", "Supplier / Plan", "Contract End", "Resolved By", "Resolved On", "Note", "Status", ""].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -269,6 +274,9 @@ export default function CallListPage() {
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{r.resolved_by_name || "—"}</td>
                       <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{fmtResolvedAt(r.resolved_at)}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600 max-w-xs">
+                        {r.note ? <span className="leading-relaxed whitespace-pre-wrap">{r.note}</span> : <span className="text-slate-300">—</span>}
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
                           r.still_due ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
@@ -349,7 +357,7 @@ export default function CallListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={ev => { ev.stopPropagation(); resolve(e); }}
+                        onClick={ev => { ev.stopPropagation(); setNote(""); setPending(e); }}
                         disabled={resolving === rowKey(e)}
                         title="Done with this customer — remove from the list"
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wide whitespace-nowrap border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 disabled:opacity-50 transition-colors">
@@ -364,6 +372,59 @@ export default function CallListPage() {
           </div>
         )}
       </div>
+
+      {/* Resolve dialog — note is optional */}
+      {pending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+          onClick={() => { if (!resolving) { setPending(null); setNote(""); } }}>
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 p-5 space-y-4"
+            onClick={ev => ev.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-[#0F1D5E] flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Mark as Resolved
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  <span className="font-semibold text-slate-700">{pending.name}</span>
+                  {pending.end_date && <> · contract ends {pending.end_date}</>}
+                </p>
+              </div>
+              <button onClick={() => { setPending(null); setNote(""); }} disabled={!!resolving}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                Note <span className="normal-case font-normal text-slate-400">(optional)</span>
+              </label>
+              <textarea
+                autoFocus
+                value={note}
+                onChange={ev => setNote(ev.target.value)}
+                onKeyDown={ev => { if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") resolve(pending, note); }}
+                rows={3}
+                maxLength={1000}
+                placeholder="e.g. Renewed with Chariot 24-mo, or Customer moving out in October"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 resize-none"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Shown on the Resolved tab. ⌘/Ctrl + Enter to save.</p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => { setPending(null); setNote(""); }} disabled={!!resolving}
+                className="px-4 py-2 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={() => resolve(pending, note)} disabled={!!resolving}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+                <CheckCircle2 className="w-4 h-4" /> {resolving ? "Saving…" : "Mark Resolved"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
