@@ -7,6 +7,7 @@ export const DEPOSIT_STATUS: Record<string, { label: string; cls: string }> = {
   over_paid:             { label: "Over paid",           cls: "bg-amber-100 text-amber-800" },
   overdue:               { label: "Overdue",             cls: "bg-red-100 text-red-700" },
   awaiting:              { label: "Awaiting deposit",    cls: "bg-slate-100 text-slate-600" },
+  not_tracked:           { label: "Not tracked",         cls: "bg-slate-50 text-slate-400 border border-slate-200" },
   unknown:               { label: "—",                   cls: "bg-slate-100 text-slate-500" },
 };
 
