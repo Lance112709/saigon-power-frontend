@@ -457,6 +457,10 @@ export const api = {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/call-list${q}`);
   },
+  resolveCallListEntry: (entityKey: string, endDate: string | null) =>
+    request("/api/v1/call-list/resolve", { method: "POST", body: JSON.stringify({ entity_key: entityKey, end_date: endDate }) }),
+  unresolveCallListEntry: (resolutionId: string) =>
+    request(`/api/v1/call-list/resolve/${resolutionId}`, { method: "DELETE" }),
 
   // Landing Plans
   getLandingPlans: () => request("/api/v1/landing-plans"),
