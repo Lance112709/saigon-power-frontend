@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import ProviderPayCycle from "@/components/ProviderPayCycle";
 import {
   DollarSign, AlertTriangle, CheckCircle, TrendingDown, Copy, HelpCircle,
   RefreshCw, X, Search, Download, Banknote, Siren, Scale, ShieldAlert,
@@ -909,6 +910,9 @@ export default function ReconciliationPage() {
           </div>
         )}
       </div>
+
+      {/* Who has paid this cycle — no scrolling needed */}
+      <ProviderPayCycle compact />
 
       {/* Systemic findings — provider-wide patterns needing action */}
       <SystemicFindings

@@ -40,6 +40,7 @@ export const api = {
     const qs = q.toString();
     return request(`/api/v1/uploads/deposits${qs ? `?${qs}` : ""}`);
   },
+  getDepositCycle: (month?: string | null) => request(`/api/v1/uploads/deposits/cycle${month ? `?month=${month}` : ""}`),
   setStatementReceived: (id: string, body: { amount_received: number | null; received_at?: string | null; notes?: string | null }) =>
     request(`/api/v1/uploads/${id}/received`, { method: "PUT", body: JSON.stringify(body) }),
   // Payments received (REP → SGP), any month range

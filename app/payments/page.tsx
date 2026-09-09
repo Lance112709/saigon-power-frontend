@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Banknote, Download, CalendarRange, Building2, TrendingUp, Loader2, Landmark, CheckCircle, AlertTriangle } from "lucide-react";
 import DepositStatusBadge from "@/components/DepositStatusBadge";
+import ProviderPayCycle from "@/components/ProviderPayCycle";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -284,6 +285,9 @@ export default function PaymentsReceivedPage() {
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</div>}
+
+      {/* Who has paid this cycle */}
+      <ProviderPayCycle />
 
       {/* KPI tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
