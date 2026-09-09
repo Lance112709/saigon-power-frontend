@@ -633,8 +633,21 @@ export default function CommissionsPage() {
                       <tr key={`${row.id}-breakdown`} className="bg-[#F8FAFF] border-b border-slate-200">
                         <td colSpan={7} className="px-6 py-4">
                           <div className="mb-2 flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Paid Deals — {row.agent_name}</span>
-                            <span className="text-xs text-slate-400">· {deals.some(d => d.kind === "statement") ? "share listed per account on the provider's own statement" : "computed from provider payments received this month"}</span>
+                            {(() => {
+                              const enrollOnly = deals.length > 0 && deals.every(d => d.kind === "enrollment");
+                              const rate = enrollOnly ? Math.max(0, ...deals.filter(d => !d.held && !d.excluded).map(d => d.commission)) : 0;
+                              return enrollOnly ? (
+                                <>
+                                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Enrolled Customers — {row.agent_name}</span>
+                                  <span className="text-xs text-slate-400">· {fmt(rate)} per customer enrolled in {MONTHS[row.month - 1]} {row.year}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Paid Deals — {row.agent_name}</span>
+                                  <span className="text-xs text-slate-400">· {deals.some(d => d.kind === "statement") ? "share listed per account on the provider's own statement" : "computed from provider payments received this month"}</span>
+                                </>
+                              );
+                            })()}
                             {(() => {
                               const enr = deals.filter(d => d.kind === "enrollment");
                               if (!enr.length) return null;
@@ -659,10 +672,11 @@ export default function CommissionsPage() {
                                 <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-200">
                                   <th className="pb-2 text-left">Customer</th>
                                   <th className="pb-2 text-left">Provider</th>
-                                  <th className="pb-2 text-right">kWh Paid</th>
-                                  <th className="pb-2 text-right">Gross Received</th>
+                                  {!deals.every(d => d.kind === "enrollment") && <th className="pb-2 text-right">kWh Paid</th>}
+                                  {!deals.every(d => d.kind === "enrollment") && <th className="pb-2 text-right">Gross Received</th>}
+                                  {deals.every(d => d.kind === "enrollment") && <th className="pb-2 text-left">Contract Start</th>}
                                   <th className="pb-2 text-left pl-4">How Calculated</th>
-                                  <th className="pb-2 text-right">Agent Commission</th>
+                                  <th className="pb-2 text-right">{deals.every(d => d.kind === "enrollment") ? "Bonus" : "Agent Commission"}</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100">
@@ -690,8 +704,9 @@ export default function CommissionsPage() {
                                       <span className="block font-mono text-[10px] text-slate-400">{d.esiid || d.address || ""}</span>
                                     </td>
                                     <td className="py-2 pr-4 text-slate-500">{d.supplier}</td>
-                                    <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : (d.kwh_paid ?? 0).toLocaleString()}</td>
-                                    <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : fmt(d.gross_received)}</td>
+                                    {!deals.every(x => x.kind === "enrollment") && <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : (d.kwh_paid ?? 0).toLocaleString()}</td>}
+                                    {!deals.every(x => x.kind === "enrollment") && <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : fmt(d.gross_received)}</td>}
+                                    {deals.every(x => x.kind === "enrollment") && <td className="py-2 pr-4 text-slate-600 whitespace-nowrap">{d.contract_start || "—"}</td>}
                                     <td className="py-2 pl-4 text-slate-500">
                                       {d.excluded
                                         ? <span className="text-red-400 font-semibold">Excluded — {d.plan_type}</span>
@@ -722,10 +737,24 @@ export default function CommissionsPage() {
                                 ))}
                               </tbody>
                               <tfoot>
+                                {deals.every(d => d.kind === "enrollment") ? (() => {
+                                  const paidRows = deals.filter(d => !d.held && !d.excluded && d.commission > 0);
+                                  const rate = paidRows.length ? paidRows[0].commission : 0;
+                                  const heldN = deals.filter(d => d.held).length;
+                                  return (
+                                    <tr className="border-t-2 border-slate-200 font-semibold">
+                                      <td colSpan={4} className="pt-2 text-right text-slate-500">
+                                        {paidRows.length} enrolled × {fmt(rate)}{heldN ? <span className="font-normal text-amber-700"> ({heldN} held at $0)</span> : null} =
+                                      </td>
+                                      <td className="pt-2 text-right text-emerald-600">{fmt(deals.reduce((s,d) => s + d.commission, 0))}</td>
+                                    </tr>
+                                  );
+                                })() : (
                                 <tr className="border-t-2 border-slate-200 font-semibold">
                                   <td colSpan={5} className="pt-2 text-right text-slate-500">Total from paid deals:</td>
                                   <td className="pt-2 text-right text-emerald-600">{fmt(deals.reduce((s,d) => s + d.commission, 0))}</td>
                                 </tr>
+                                )}
                               </tfoot>
                             </table>
                           )}
