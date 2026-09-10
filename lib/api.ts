@@ -88,6 +88,7 @@ export const api = {
   agentPortalCommissions: (agent?: string) => request(`/api/v1/agent-portal/commissions${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalBreakdown: (id: string, agent?: string) => request(`/api/v1/agent-portal/commissions/${id}/breakdown${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalAlerts: (agent?: string) => request(`/api/v1/agent-portal/alerts${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
+  agentPortalRenewals: (agent?: string) => request(`/api/v1/agent-portal/renewals${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
   agentPortalEarnings: (agent?: string) => request(`/api/v1/agent-portal/earnings${agent ? `?agent=${encodeURIComponent(agent)}` : ""}`),
 
   // SGP Agent Commission (tier structure)

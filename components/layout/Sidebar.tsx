@@ -14,13 +14,15 @@ interface NavItem {
   label: string;
   icon: any;
   roles?: Role[];
+  /** Also visible to any non-admin login linked to a sales agent (users.sales_agent_name). */
+  linkedAgent?: boolean;
   hideRoles?: Role[];
   perm?: PermAction;
 }
 
 const links: NavItem[] = [
   { href: "/dashboard",      label: "Dashboard",        icon: LayoutDashboard },
-  { href: "/my-business",    label: "My Business",      icon: Briefcase, roles: ["sales_agent", "admin"] },
+  { href: "/my-business",    label: "My Business",      icon: Briefcase, roles: ["sales_agent", "admin"], linkedAgent: true },
   { href: "/call-list",      label: "Who To Call Today", icon: PhoneCall },
   { href: "/tasks",          label: "Tasks & Follow-Ups", icon: Bell },
   { href: "/rates",          label: "Today's Rates",     icon: Tag },
@@ -101,6 +103,7 @@ export default function Sidebar() {
     if (!user) return false;
     if (item.hideRoles?.includes(user.role)) return false;
     if (item.perm) return can(item.perm);
+    if (item.linkedAgent && user.sales_agent_name) return true;
     if (item.roles) return item.roles.includes(user.role);
     return true;
   };

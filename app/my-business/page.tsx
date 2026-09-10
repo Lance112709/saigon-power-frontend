@@ -35,13 +35,16 @@ function planLabel(c: any): string {
     case "flat_monthly": return `$${c.amount}/mo${scope}`;
     case "flat_per_deal": return `$${c.amount}/new deal${scope}`;
     case "percent_of_commission": return `${c.percent}% of received${scope}`;
+    case "flat_per_enrollment": return `$${c.amount}/enrollment${c.segment ? ` (${c.segment})` : ""}${scope}`;
     default: return "";
   }
 }
 
 export default function MyBusinessPage() {
   const { user } = useAuth();
-  const isAgent = user?.role === "sales_agent";
+  // Own-book users: sales agents, plus any non-admin login linked to a sales agent
+  // (e.g. a manager who also enrolls customers). They never get the preview picker.
+  const isAgent = user?.role === "sales_agent" || (user?.role !== "admin" && !!user?.sales_agent_name);
 
   const [agentList, setAgentList] = useState<string[]>([]);
   const [previewAgent, setPreviewAgent] = useState("");
@@ -83,8 +86,7 @@ export default function MyBusinessPage() {
       setBook(bk);
       setComms(cm.commissions ?? []);
       setAlerts(al.alerts ?? []);
-      const qs = isAgent ? "" : `?sales_agent=${encodeURIComponent(previewAgent)}`;
-      api.getRenewals(qs).then(setRenewals).catch(() => {});
+      api.agentPortalRenewals(agentParam).then((r: any) => setRenewals(r.renewals ?? [])).catch(() => {});
       // heavier aggregate — loads after the page paints
       setEarnings(null);
       api.agentPortalEarnings(agentParam).then(setEarnings).catch(() => {});
@@ -137,6 +139,12 @@ export default function MyBusinessPage() {
               {overview?.agent ? `${overview.agent} — your book, your commissions, your customers.` :
                 "Your book, your commissions, your customers."}
             </p>
+            {overview?.book_from && (
+              <p className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-xs text-white/80 font-medium">
+                <CalendarClock className="w-3.5 h-3.5" />
+                Showing enrollments starting {new Date(overview.book_from + "T00:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" })} onward
+              </p>
+            )}
           </div>
           {!isAgent && (
             <select value={previewAgent} onChange={e => setPreviewAgent(e.target.value)}

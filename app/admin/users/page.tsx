@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, RefreshCw, Shield, Copy, Check, Hash, Pencil, X, Save } from "lucide-react";
 
 const ROLES: Role[] = ["admin", "manager", "csr", "sales_agent"];
+// Roles that can be linked to a sales agent name. Managers who also enroll customers
+// get their own My Business portal scoped to that agent.
+const LINKABLE: Role[] = ["sales_agent", "manager"];
 const ROLE_LABEL: Record<Role, string> = {
   admin: "Admin", manager: "Manager", csr: "CSR", sales_agent: "Sales Agent",
 };
@@ -88,7 +91,7 @@ export default function UsersPage() {
     try {
       const data = await api.createUser({
         ...form,
-        sales_agent_name: form.role === "sales_agent" ? form.sales_agent_name : undefined,
+        sales_agent_name: LINKABLE.includes(form.role as Role) ? form.sales_agent_name : undefined,
       });
       setTempPw({ name: `${form.first_name} ${form.last_name}`, email: form.email, pw: data.temp_password });
       setForm({ first_name: "", last_name: "", email: "", role: "csr", sales_agent_name: "" });
@@ -156,7 +159,7 @@ export default function UsersPage() {
         last_name: editForm.last_name.trim(),
         email: editForm.email.trim(),
         role: editForm.role,
-        sales_agent_name: editForm.role === "sales_agent" ? editForm.sales_agent_name.trim() || null : null,
+        sales_agent_name: LINKABLE.includes(editForm.role as Role) ? editForm.sales_agent_name.trim() || null : null,
       });
       setUsers(prev => prev.map(x => x.id === editUser.id ? { ...x, ...updated } : x));
       setEditUser(null);
@@ -238,9 +241,9 @@ export default function UsersPage() {
                 {ROLES.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
               </select>
             </div>
-            {form.role === "sales_agent" && (
+            {LINKABLE.includes(form.role as Role) && (
               <div className="col-span-2">
-                <label className="block text-xs text-slate-500 mb-1">Agent Name (must match deal records exactly)</label>
+                <label className="block text-xs text-slate-500 mb-1">{form.role === "manager" ? "Linked Sales Agent (optional — gives this manager their own My Business portal)" : "Agent Name (must match deal records exactly)"}</label>
                 <input
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20"
                   placeholder="e.g. Lance Nguyen"
@@ -442,9 +445,9 @@ export default function UsersPage() {
                   {ROLES.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                 </select>
               </div>
-              {editForm.role === "sales_agent" && (
+              {LINKABLE.includes(editForm.role as Role) && (
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Agent Name (must match deal records exactly)</label>
+                  <label className="block text-xs text-slate-500 mb-1">{editForm.role === "manager" ? "Linked Sales Agent (optional — gives this manager their own My Business portal)" : "Agent Name (must match deal records exactly)"}</label>
                   <input className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20"
                     placeholder="e.g. Lance Nguyen"
                     value={editForm.sales_agent_name} onChange={e => setEditForm(f => ({ ...f, sales_agent_name: e.target.value }))} />
