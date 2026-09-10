@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Banknote, Download, CalendarRange, Building2, TrendingUp, Loader2, Landmark, CheckCircle, AlertTriangle } from "lucide-react";
+import { Banknote, Download, CalendarRange, Building2, TrendingUp, Loader2, Landmark, CheckCircle, AlertTriangle, Mail, RefreshCw } from "lucide-react";
 import DepositStatusBadge from "@/components/DepositStatusBadge";
 import ProviderPayCycle from "@/components/ProviderPayCycle";
 import {
@@ -69,6 +69,10 @@ export default function PaymentsReceivedPage() {
   const [depSaving, setDepSaving] = useState(false);
   const [depError, setDepError] = useState<string | null>(null);
   const [depSeq, setDepSeq] = useState(0);
+  const [bank, setBank] = useState<any[]>([]);
+  const [bankBusy, setBankBusy] = useState<string | null>(null);
+  const [bankMsg, setBankMsg] = useState<string | null>(null);
+  const [assignTo, setAssignTo] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (user && user.role !== "admin") router.push("/dashboard");
@@ -121,6 +125,34 @@ export default function PaymentsReceivedPage() {
       .finally(() => !cancelled && setDepLoading(false));
     return () => { cancelled = true; };
   }, [range.from, range.to, depOnlyOpen, depSeq]);
+
+  useEffect(() => {
+    api.getBankDeposits("unmatched").then(setBank).catch(() => setBank([]));
+  }, [depSeq]);
+
+  const runBank = async (what: "alerts" | "statements") => {
+    setBankBusy(what); setBankMsg(null);
+    try {
+      if (what === "alerts") {
+        const r = await api.pollBankAlerts(30);
+        setBankMsg(r.ok === false ? r.error : `${r.deposits_added} new deposit alert(s) read · ${r.matched} matched to statements · ${r.unmatched} still unmatched`);
+      } else {
+        const r = await api.pollLanceStatements(30);
+        const n = (r.imported || []).length;
+        setBankMsg(`${n} statement(s) imported from lance@${n ? ": " + r.imported.map((i: any) => `${i.provider} ${(i.months || []).join("/")}`).join(", ") : ""}${r.errors?.length ? ` · ${r.errors.length} error(s)` : ""}`);
+      }
+      setDepSeq(n => n + 1);
+    } catch (e: any) {
+      setBankMsg(String(e?.message || e).replace(/^\d+:/, ""));
+    } finally {
+      setBankBusy(null);
+    }
+  };
+  const bankAction = async (id: string, body: any) => {
+    try { await api.updateBankDeposit(id, body); setDepSeq(n => n + 1); }
+    catch (e: any) { setBankMsg(String(e?.message || e).replace(/^\d+:/, "")); }
+  };
+  const openStatements = (deposits?.items ?? []).filter((i: any) => i.amount_received == null && i.status !== "not_tracked");
 
   const startDepEdit = (it: any) => {
     setDepEditing(it.id);
@@ -442,6 +474,67 @@ export default function PaymentsReceivedPage() {
         <p className="px-5 py-3 text-xs text-slate-400 border-t border-slate-100">
           Type each REP deposit from your bank once it lands. A deposit that is short by exactly the amount the statement reports as withheld is marked explained; any other difference, or a statement with no deposit after its pay window, needs attention.
         </p>
+      </div>
+
+      {/* Bank deposits read from Chase alerts */}
+      <div id="bank-deposits" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Mail className="w-4 h-4 text-[#0F1D5E]" />
+            <h2 className="text-sm font-bold text-[#0F1D5E]">Bank deposits with no statement</h2>
+            <span className="text-xs text-slate-400">from Chase deposit alerts in lance@ · read and matched automatically every morning</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => runBank("statements")} disabled={!!bankBusy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              {bankBusy === "statements" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Pull statements from lance@
+            </button>
+            <button onClick={() => runBank("alerts")} disabled={!!bankBusy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#182a7a] disabled:opacity-50">
+              {bankBusy === "alerts" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Landmark className="w-3.5 h-3.5" />} Check bank alerts now
+            </button>
+          </div>
+        </div>
+        {bankMsg && <div className="mx-5 mt-3 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-4 py-2 text-sm">{bankMsg}</div>}
+        {bank.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-slate-400">Every deposit read from your bank alerts is tied to a statement. Nothing to chase.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+              <tr>
+                <th className="text-left px-5 py-2.5">Posted</th>
+                <th className="text-right px-3 py-2.5">Amount</th>
+                <th className="text-left px-3 py-2.5">Looks like</th>
+                <th className="text-left px-3 py-2.5">Assign to statement</th>
+                <th className="text-right px-5 py-2.5"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {bank.map((d: any) => (
+                <tr key={d.id} className="border-t border-slate-100">
+                  <td className="px-5 py-2 text-slate-700">{d.posted_at}</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmt(d.amount)}</td>
+                  <td className="px-3 py-2 text-slate-600">{d.likely_provider ? `${d.likely_provider} (guess)` : <span className="text-slate-300">unknown</span>}</td>
+                  <td className="px-3 py-2">
+                    <select value={assignTo[d.id] || ""} onChange={e => setAssignTo(a => ({ ...a, [d.id]: e.target.value }))}
+                      className="border border-slate-200 rounded-lg px-2 py-1 text-xs max-w-[320px]">
+                      <option value="">Choose a statement without a deposit…</option>
+                      {openStatements.map((s: any) => (
+                        <option key={s.id} value={s.id}>{longMonth(s.statement_month)} · {s.provider} · expected {fmt(s.expected_deposit)}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-5 py-2 text-right whitespace-nowrap">
+                    <button disabled={!assignTo[d.id]} onClick={() => bankAction(d.id, { upload_batch_id: assignTo[d.id] })}
+                      className="px-3 py-1 rounded-lg bg-[#0F1D5E] text-white text-xs font-semibold disabled:opacity-40 mr-2">Assign</button>
+                    <button onClick={() => bankAction(d.id, { status: "ignored", notes: "not a provider deposit" })}
+                      className="px-3 py-1 rounded-lg border border-slate-200 text-slate-500 text-xs hover:bg-slate-50">Ignore</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Chart */}

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { ChevronLeft, ChevronRight, CheckCircle2, Clock, CircleDashed, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Clock, CircleDashed, Loader2, AlertTriangle } from "lucide-react";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 function longMonth(m: string) { return `${MONTHS[parseInt(m.slice(5, 7), 10) - 1]} ${m.slice(0, 4)}`; }
@@ -36,6 +36,7 @@ export default function ProviderPayCycle({ compact = false }: { compact?: boolea
 
   const open = (e: any) => { if (e.batch_ids?.length === 1) router.push(`/uploads/${e.batch_ids[0]}`); else router.push("/payments"); };
   const paid = data?.paid ?? [], awaiting = data?.awaiting ?? [], missing = data?.missing ?? [];
+  const unmatched = data?.unmatched_deposits ?? [];
   const total = data?.providers ?? 0;
 
   return (
@@ -55,6 +56,7 @@ export default function ProviderPayCycle({ compact = false }: { compact?: boolea
                 <span className="font-semibold text-emerald-700">{paid.length} of {total} providers paid</span>
                 {" · "}{awaiting.length} statement{awaiting.length === 1 ? "" : "s"} in, deposit pending
                 {" · "}{missing.length} not received yet
+                {unmatched.length > 0 && <span className="text-red-700 font-semibold">{" · "}{unmatched.length} deposit{unmatched.length === 1 ? "" : "s"} in the bank with no statement</span>}
                 {" · "}{fmt(data.totals?.received)} in the bank
               </p>
             )}
@@ -80,6 +82,14 @@ export default function ProviderPayCycle({ compact = false }: { compact?: boolea
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100">
               <Clock className="w-3.5 h-3.5" /> {e.provider}
               <span className="font-normal text-amber-700/80">{fmt(e.expected_deposit)} pending</span>
+            </button>
+          ))}
+          {unmatched.map((d: any) => (
+            <button key={d.id} onClick={() => router.push("/payments#bank-deposits")}
+              title={`Deposit of ${fmt(d.amount)} posted ${d.posted_at} has no statement in the CRM${d.likely_provider ? ` — looks like ${d.likely_provider}` : ""}. Find the statement in email and upload it.`}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">
+              <AlertTriangle className="w-3.5 h-3.5" /> {d.likely_provider ? `${d.likely_provider}?` : "Unknown payer"}
+              <span className="font-normal">{fmt(d.amount)} paid · no statement</span>
             </button>
           ))}
           {missing.map((e: any) => (

@@ -40,6 +40,11 @@ export const api = {
     const qs = q.toString();
     return request(`/api/v1/uploads/deposits${qs ? `?${qs}` : ""}`);
   },
+  getBankDeposits: (status?: string | null) => request(`/api/v1/uploads/deposits/bank${status ? `?status=${status}` : ""}`),
+  pollBankAlerts: (lookbackDays = 14) => request(`/api/v1/uploads/deposits/bank/poll?lookback_days=${lookbackDays}`, { method: "POST" }),
+  pollLanceStatements: (lookbackDays = 12) => request(`/api/v1/uploads/deposits/bank/statements-poll?lookback_days=${lookbackDays}`, { method: "POST" }),
+  updateBankDeposit: (id: string, body: { status?: string; upload_batch_id?: string; notes?: string }) =>
+    request(`/api/v1/uploads/deposits/bank/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   getDepositCycle: (month?: string | null) => request(`/api/v1/uploads/deposits/cycle${month ? `?month=${month}` : ""}`),
   setStatementReceived: (id: string, body: { amount_received: number | null; received_at?: string | null; notes?: string | null }) =>
     request(`/api/v1/uploads/${id}/received`, { method: "PUT", body: JSON.stringify(body) }),
