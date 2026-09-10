@@ -19,11 +19,51 @@ const fmtMonth = (m?: string) => {
 };
 const fmtUsd = (v: number) => "$" + (v ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const byEsi = (rows: any[], esi: string) => esi ? rows.filter(p => p.esi_id === esi) : rows;
 
-function MonthlyUsageCard({ data }: { data: any }) {
+// Mirrors the backend's total / latest_status, but over the filtered rows.
+function summarize(rows: any[]) {
+  const rank: Record<string, number> = { unpaid: 2, partial: 1, paid: 0 };
+  const months: Record<string, string> = {};
+  for (const p of rows) {
+    const m = String(p.payment_date || "").slice(0, 7);
+    if (!m) continue;
+    const st = p.status || "paid";
+    if (!(m in months) || (rank[st] ?? 0) > (rank[months[m]] ?? 0)) months[m] = st;
+  }
+  const latest = Object.keys(months).sort().reverse()[0];
+  return { total: rows.reduce((s, p) => s + (Number(p.amount) || 0), 0), latestStatus: latest ? months[latest] : null };
+}
+
+function EsiFilter({ esiIds, value, onChange }: { esiIds: string[]; value: string; onChange: (v: string) => void }) {
+  if (esiIds.length < 2) return null;
+  const pill = (active: boolean) =>
+    `px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${active
+      ? "bg-[#0F1D5E] text-white border-[#0F1D5E]"
+      : "bg-white text-slate-500 border-slate-200 hover:bg-[#EEF1FA] hover:text-[#0F1D5E]"}`;
+  return (
+    <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2 flex-wrap">
+      <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ESI ID</span>
+      <button onClick={() => onChange("")} className={pill(!value)}>All meters</button>
+      {esiIds.map(e => (
+        <button key={e} onClick={() => onChange(e)} className={`${pill(value === e)} font-mono`} title={e}>
+          …{e.slice(-6)}
+        </button>
+      ))}
+      {value && <span className="text-[11px] font-mono text-slate-400 ml-1">{value}</span>}
+    </div>
+  );
+}
+
+
+function MonthlyUsageCard({ data, esi, onEsiChange, showFilter }: {
+  data: any; esi: string; onEsiChange: (v: string) => void; showFilter: boolean;
+}) {
   const [showAll, setShowAll] = useState(false);
-  const rows = (data?.payments || []).filter((p: any) => p.kwh != null && p.service_end);
-  if (!rows.length) return null;
+  const allRows = (data?.payments || []).filter((p: any) => p.kwh != null && p.service_end);
+  if (!allRows.length) return null;
+  const rows = byEsi(allRows, esi);
+  const esiIds: string[] = data?.esi_ids?.length ? data.esi_ids : Array.from(new Set(allRows.map((p: any) => String(p.esi_id))));
 
   const buckets: Record<string, { month: string; kwh: number; meters: Set<string> }> = {};
   for (const p of rows) {
@@ -39,7 +79,7 @@ function MonthlyUsageCard({ data }: { data: any }) {
   const totalKwh = rows.reduce((s: number, p: any) => s + (Number(p.kwh) || 0), 0);
   const detail = [...rows].sort((a: any, b: any) => String(b.service_end).localeCompare(String(a.service_end)));
   const visible = showAll ? detail : detail.slice(0, 12);
-  const multiMeter = (data?.esi_ids || []).length > 1;
+  const multiMeter = !esi && esiIds.length > 1;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -47,11 +87,16 @@ function MonthlyUsageCard({ data }: { data: any }) {
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-[#0F1D5E]" />
           <h3 className="text-sm font-bold text-[#0F1D5E]">Monthly Usage</h3>
+          {esi && <span className="text-[11px] font-mono text-slate-400">· {esi}</span>}
         </div>
         <span className="text-sm text-slate-500">
-          Lifetime metered <span className="font-bold text-slate-700">{Math.round(totalKwh).toLocaleString()} kWh</span>
+          {esi ? "Metered on this ESI ID" : "Lifetime metered"} <span className="font-bold text-slate-700">{Math.round(totalKwh).toLocaleString()} kWh</span>
         </span>
       </div>
+      {showFilter && <EsiFilter esiIds={esiIds} value={esi} onChange={onEsiChange} />}
+      {rows.length === 0 ? (
+        <p className="px-5 py-6 text-center text-slate-400 text-sm">No usage on file for this ESI ID.</p>
+      ) : (<>
 
       <div className="px-4 pt-4" style={{ height: 170 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -104,6 +149,7 @@ function MonthlyUsageCard({ data }: { data: any }) {
           {showAll ? <>Show fewer <ChevronUp className="w-3.5 h-3.5" /></> : <>Show all {detail.length} periods <ChevronDown className="w-3.5 h-3.5" /></>}
         </button>
       )}
+      </>)}
     </div>
   );
 }
@@ -116,6 +162,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
   const [usage, setUsage] = useState<any>(null);
   const [failed, setFailed] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [esi, setEsi] = useState("");
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
@@ -124,14 +171,18 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
     else if (dealId) params.deal_id = dealId;
     else if (leadId) params.lead_id = leadId;
     else return;
+    setEsi("");
     (api as any).getCommissionUsage(params).then(setUsage).catch(() => {});
     if (!isAdmin) return;
     (api as any).getCommissionPayments(params).then(setData).catch(() => setFailed(true));
   }, [isAdmin, customerId, dealId, leadId]);
 
-  if (!isAdmin || failed) return <MonthlyUsageCard data={usage} />;
+  if (!isAdmin || failed) return <MonthlyUsageCard data={usage} esi={esi} onEsiChange={setEsi} showFilter />;
 
-  const payments = data?.payments || [];
+  const allPayments: any[] = data?.payments || [];
+  const esiIds: string[] = data?.esi_ids?.length ? data.esi_ids : Array.from(new Set(allPayments.map(p => String(p.esi_id))));
+  const payments = byEsi(allPayments, esi);
+  const summary = esi ? summarize(payments) : { total: data?.total ?? 0, latestStatus: data?.latest_status ?? null };
   const visible = showAll ? payments : payments.slice(0, 12);
 
   return (
@@ -140,23 +191,27 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-[#0F1D5E]" />
-          <h3 className="text-sm font-bold text-[#0F1D5E]">Commission Payments ({payments.length})</h3>
+          <h3 className="text-sm font-bold text-[#0F1D5E]">Commission Payments ({payments.length}{esi && allPayments.length !== payments.length ? ` of ${allPayments.length}` : ""})</h3>
           <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">Admin only</span>
         </div>
         {data && payments.length > 0 && (
           <div className="flex items-center gap-3">
-            {data.latest_status && (
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[data.latest_status]}`}>
-                Latest month: {STATUS_LABEL[data.latest_status]}
+            {summary.latestStatus && (
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[summary.latestStatus]}`}>
+                Latest month: {STATUS_LABEL[summary.latestStatus]}
               </span>
             )}
-            <span className="text-sm text-slate-500">Total received <span className="font-bold text-emerald-600">{fmtUsd(data.total)}</span></span>
+            <span className="text-sm text-slate-500">Total received <span className="font-bold text-emerald-600">{fmtUsd(summary.total)}</span></span>
           </div>
         )}
       </div>
 
+      {data && allPayments.length > 0 && <EsiFilter esiIds={esiIds} value={esi} onChange={setEsi} />}
+
       {!data ? (
         <p className="px-5 py-6 text-center text-slate-400 text-sm">Loading payments…</p>
+      ) : payments.length === 0 && esi ? (
+        <p className="px-5 py-6 text-center text-slate-400 text-sm">No commission payments found for ESI ID {esi}.</p>
       ) : payments.length === 0 ? (
         <p className="px-5 py-6 text-center text-slate-400 text-sm">
           No commission payments found for {data.esi_ids?.length ? `ESI ID${data.esi_ids.length > 1 ? "s" : ""} ${data.esi_ids.join(", ")}` : "this record (no ESI ID on file)"}.
@@ -205,7 +260,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
       )}
     </div>
 
-    <MonthlyUsageCard data={usage} />
+    <MonthlyUsageCard data={usage} esi={esi} onEsiChange={setEsi} showFilter={!(data && allPayments.length > 0)} />
     </>
   );
 }
