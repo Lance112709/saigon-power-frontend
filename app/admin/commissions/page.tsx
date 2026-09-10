@@ -572,7 +572,9 @@ export default function CommissionsPage() {
                           if (!sm || !sm.enrolled) return null;
                           return (
                             <span className="block text-[11px] text-slate-400 whitespace-nowrap">
-                              {sm.enrolled} enrolled · <span className="text-emerald-600">{sm.new_enrollments ?? 0} new</span> · <span className="text-violet-600">{sm.renewals ?? 0} renewals</span>
+                              {sm.enrolled} enrolled{sm.new_enrollments == null
+                                ? <span className="text-amber-600"> · recalculate for the latest rules</span>
+                                : <> · <span className="text-emerald-600">{sm.new_enrollments} new</span> · <span className="text-violet-600">{sm.renewals ?? 0} renewals</span></>}
                               {sm.held ? <span className="text-amber-600"> · {sm.held} held</span> : null}
                             </span>
                           );
