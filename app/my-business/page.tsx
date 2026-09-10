@@ -91,7 +91,7 @@ export default function MyBusinessPage() {
       api.agentPortalRenewals(agentParam).then((r: any) => setRenewals(r.renewals ?? [])).catch(() => {});
       // heavier aggregate — loads after the page paints
       setEarnings(null);
-      api.agentPortalEarnings(agentParam).then(setEarnings).catch(() => {});
+      if (isAdmin) api.agentPortalEarnings(agentParam).then(setEarnings).catch(() => {});
     } catch (e: any) {
       setErr(e?.message || "Failed to load");
     }
@@ -279,7 +279,7 @@ export default function MyBusinessPage() {
       )}
 
       {/* Earnings — what my book generates vs what providers actually paid */}
-      {earnings && (
+      {isAdmin && earnings && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
             <div>
