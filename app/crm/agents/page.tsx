@@ -36,16 +36,23 @@ const PLAN_TYPES = [
   "Solar Buy-Back",
 ];
 
-type PlanComponent = { type: string; value: string; supplier: string };
+type PlanComponent = { type: string; value: string; supplier: string; segment?: string };
 
-function componentLabel(c: { type: string; value?: string | number; supplier?: string }): string {
+const SEGMENTS = [
+  { value: "", label: "All customers" },
+  { value: "residential", label: "Residential only" },
+  { value: "commercial", label: "Commercial only" },
+];
+
+function componentLabel(c: { type: string; value?: string | number; supplier?: string; segment?: string }): string {
   const v = c.value ?? "";
   const scope = c.supplier ? ` (${c.supplier})` : "";
+  const seg = c.segment ? `${c.segment} ` : "";
   switch (c.type) {
     case "per_kwh":               return `$${v}/kWh${scope}`;
     case "flat_monthly":          return `$${v}/mo${scope}`;
     case "flat_per_deal":         return `$${v}/new deal${scope}`;
-    case "flat_per_enrollment":   return `$${v}/enrolled customer${scope}`;
+    case "flat_per_enrollment":   return `$${v}/enrolled ${seg}customer${scope}`;
     case "percent_of_commission": return `${v}% of received${scope}`;
     case "statement_column":      return `statement column "${v}"${scope}`;
     default:                      return `${v}${scope}`;
@@ -61,6 +68,7 @@ function rulesToComponents(rules: any): PlanComponent[] {
       type: c.type || "per_kwh",
       value: c.type === "statement_column" ? String(c.column_pattern ?? "") : String(c.rate ?? c.amount ?? c.percent ?? ""),
       supplier: c.supplier || "",
+      segment: c.type === "flat_per_enrollment" ? (c.segment || "") : "",
     }));
   }
   const out: PlanComponent[] = [];
@@ -81,6 +89,7 @@ function componentsToRules(components: PlanComponent[], exclude_plan_types: stri
       .map(c => {
         const n = parseFloat(c.value);
         const base: any = { type: c.type, supplier: c.supplier || null };
+        if (c.type === "flat_per_enrollment" && c.segment) base.segment = c.segment;
         if (c.type === "statement_column") { base.column_pattern = c.value.trim(); return base; }
         if (c.type === "per_kwh") base.rate = n;
         else if (c.type === "percent_of_commission") base.percent = n;
@@ -193,7 +202,7 @@ export default function AgentsPage() {
   };
 
   const addComponent = () => {
-    setEditRules(r => ({ ...r, components: [...r.components, { type: "flat_per_deal", value: "", supplier: "" }] }));
+    setEditRules(r => ({ ...r, components: [...r.components, { type: "flat_per_deal", value: "", supplier: "", segment: "" }] }));
   };
 
   const removeComponent = (i: number) => {
@@ -587,6 +596,14 @@ export default function AgentsPage() {
                                       value={c.value} onChange={e => setComponent(i, "value", e.target.value)} />
                                   </div>
                                 )}
+                                {c.type === "flat_per_enrollment" && (
+                                  <div className="w-40">
+                                    <label className={labelCls}>Customers</label>
+                                    <select className={inputCls} value={c.segment || ""} onChange={e => setComponent(i, "segment", e.target.value)}>
+                                      {SEGMENTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                                    </select>
+                                  </div>
+                                )}
                                 <div className="flex-1">
                                   <label className={labelCls}>Provider</label>
                                   <select className={inputCls} value={c.supplier} onChange={e => setComponent(i, "supplier", e.target.value)}>
@@ -612,7 +629,7 @@ export default function AgentsPage() {
                       <p className="text-xs font-bold text-[#0F1D5E]">Plan Summary</p>
                       {editRules.components.filter(c => c.value !== "").map((c, i) => (
                         <div key={i} className="flex justify-between text-xs">
-                          <span className="text-slate-500">{c.supplier || "All providers"}</span>
+                          <span className="text-slate-500">{c.supplier || "All providers"}{c.type === "flat_per_enrollment" && c.segment ? ` · ${c.segment}` : ""}</span>
                           <span className="font-semibold text-[#0F1D5E]">{componentLabel(c)}</span>
                         </div>
                       ))}

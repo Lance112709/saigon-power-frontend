@@ -32,6 +32,7 @@ interface Deal {
   deal_source?: string;
   kind?: "enrollment" | "paid" | "statement";
   enrollment_type?: "new" | "renewal";
+  segment?: "residential" | "commercial";
   prior_contract?: { source: string; id: string; customer: string; supplier: string; agent: string; contract_start: string; contract_end: string } | null;
   held?: boolean;
   hold_reason?: string;
@@ -635,11 +636,15 @@ export default function CommissionsPage() {
                           <div className="mb-2 flex items-center gap-2 flex-wrap">
                             {(() => {
                               const enrollOnly = deals.length > 0 && deals.every(d => d.kind === "enrollment");
-                              const rate = enrollOnly ? Math.max(0, ...deals.filter(d => !d.held && !d.excluded).map(d => d.commission)) : 0;
+                              const rateFor = (seg: string) => { const r = deals.find(d => d.segment === seg && !d.held && !d.excluded && d.commission > 0); return r ? r.commission : 0; };
+                              const rates = Array.from(new Set(deals.filter(d => !d.held && !d.excluded && d.commission > 0).map(d => d.commission)));
+                              const rateTxt = rates.length <= 1
+                                ? `${fmt(rates[0] ?? 0)} per customer`
+                                : `${fmt(rateFor("residential"))} residential · ${fmt(rateFor("commercial"))} commercial`;
                               return enrollOnly ? (
                                 <>
                                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Enrolled Customers — {row.agent_name}</span>
-                                  <span className="text-xs text-slate-400">· {fmt(rate)} per customer enrolled in {MONTHS[row.month - 1]} {row.year}</span>
+                                  <span className="text-xs text-slate-400">· {rateTxt} enrolled in {MONTHS[row.month - 1]} {row.year}</span>
                                 </>
                               ) : (
                                 <>
@@ -689,6 +694,9 @@ export default function CommissionsPage() {
                                       )}
                                       {d.kind === "statement" && (
                                         <span className="ml-1.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-[10px] font-bold">STATEMENT</span>
+                                      )}
+                                      {d.kind === "enrollment" && d.segment === "commercial" && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-[10px] font-bold">COMMERCIAL</span>
                                       )}
                                       {d.kind === "enrollment" && (
                                         d.enrollment_type === "renewal"
@@ -740,11 +748,16 @@ export default function CommissionsPage() {
                                 {deals.every(d => d.kind === "enrollment") ? (() => {
                                   const paidRows = deals.filter(d => !d.held && !d.excluded && d.commission > 0);
                                   const rate = paidRows.length ? paidRows[0].commission : 0;
+                                  const mixed = new Set(paidRows.map(d => d.commission)).size > 1;
                                   const heldN = deals.filter(d => d.held).length;
+                                  const segMath = ["residential", "commercial"].map(seg => {
+                                    const rows = paidRows.filter(d => (d.segment || "residential") === seg);
+                                    return rows.length ? `${rows.length} ${seg} × ${fmt(rows[0].commission)}` : "";
+                                  }).filter(Boolean).join(" + ");
                                   return (
                                     <tr className="border-t-2 border-slate-200 font-semibold">
                                       <td colSpan={4} className="pt-2 text-right text-slate-500">
-                                        {paidRows.length} enrolled × {fmt(rate)}{heldN ? <span className="font-normal text-amber-700"> ({heldN} held at $0)</span> : null} =
+                                        {mixed ? segMath : `${paidRows.length} enrolled × ${fmt(rate)}`}{heldN ? <span className="font-normal text-amber-700"> ({heldN} held at $0)</span> : null} =
                                       </td>
                                       <td className="pt-2 text-right text-emerald-600">{fmt(deals.reduce((s,d) => s + d.commission, 0))}</td>
                                     </tr>
