@@ -73,6 +73,7 @@ export default function PaymentsReceivedPage() {
   const [bankBusy, setBankBusy] = useState<string | null>(null);
   const [bankMsg, setBankMsg] = useState<string | null>(null);
   const [assignTo, setAssignTo] = useState<Record<string, string>>({});
+  const [showSmall, setShowSmall] = useState(false);
 
   useEffect(() => {
     if (user && user.role !== "admin") router.push("/dashboard");
@@ -496,8 +497,18 @@ export default function PaymentsReceivedPage() {
           </div>
         </div>
         {bankMsg && <div className="mx-5 mt-3 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-4 py-2 text-sm">{bankMsg}</div>}
-        {bank.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-slate-400">Every deposit read from your bank alerts is tied to a statement. Nothing to chase.</p>
+        {(() => { const shown = bank.filter((d: any) => showSmall || d.amount >= 150); const hidden = bank.length - shown.length; return (<>
+        {hidden > 0 && (
+          <p className="px-5 pt-3 text-xs text-slate-400">
+            {hidden} small credit{hidden === 1 ? "" : "s"} under $150 hidden (card payouts, memberships).{" "}
+            <button onClick={() => setShowSmall(true)} className="underline">Show them</button>
+          </p>
+        )}
+        {showSmall && bank.some((d: any) => d.amount < 150) && (
+          <p className="px-5 pt-3 text-xs text-slate-400"><button onClick={() => setShowSmall(false)} className="underline">Hide small credits</button></p>
+        )}
+        {shown.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-slate-400">Every provider-sized deposit read from your bank alerts is tied to a statement. Nothing to chase.</p>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
@@ -510,7 +521,7 @@ export default function PaymentsReceivedPage() {
               </tr>
             </thead>
             <tbody>
-              {bank.map((d: any) => (
+              {shown.map((d: any) => (
                 <tr key={d.id} className="border-t border-slate-100">
                   <td className="px-5 py-2 text-slate-700">{d.posted_at}</td>
                   <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmt(d.amount)}</td>
@@ -535,6 +546,7 @@ export default function PaymentsReceivedPage() {
             </tbody>
           </table>
         )}
+        </>); })()}
       </div>
 
       {/* Chart */}
