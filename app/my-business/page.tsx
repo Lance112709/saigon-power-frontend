@@ -45,6 +45,8 @@ export default function MyBusinessPage() {
   // Own-book users: sales agents, plus any non-admin login linked to a sales agent
   // (e.g. a manager who also enrolls customers). They never get the preview picker.
   const isAgent = user?.role === "sales_agent" || (user?.role !== "admin" && !!user?.sales_agent_name);
+  // Account Alerts (reconciliation findings) are admin-only.
+  const isAdmin = user?.role === "admin";
 
   const [agentList, setAgentList] = useState<string[]>([]);
   const [previewAgent, setPreviewAgent] = useState("");
@@ -80,7 +82,7 @@ export default function MyBusinessPage() {
         api.agentPortalOverview(agentParam),
         api.agentPortalBook(agentParam),
         api.agentPortalCommissions(agentParam),
-        api.agentPortalAlerts(agentParam),
+        isAdmin ? api.agentPortalAlerts(agentParam) : Promise.resolve({ alerts: [] }),
       ]);
       setOverview(ov);
       setBook(bk);
@@ -94,7 +96,7 @@ export default function MyBusinessPage() {
       setErr(e?.message || "Failed to load");
     }
     setLoading(false);
-  }, [user, isAgent, previewAgent, agentParam]);
+  }, [user, isAgent, isAdmin, previewAgent, agentParam]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -156,7 +158,7 @@ export default function MyBusinessPage() {
         </div>
 
         {overview && (
-          <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+          <div className={`relative grid grid-cols-2 ${isAdmin ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-3 mt-6`}>
             <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3.5">
               <p className="text-xs text-white/60 font-medium flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Active Accounts</p>
               <p className="text-2xl font-bold mt-1 tabular-nums">{overview.active_deals}</p>
@@ -180,11 +182,11 @@ export default function MyBusinessPage() {
               <p className={`text-2xl font-bold mt-1 tabular-nums ${overview.renewals_60d > 0 ? "text-amber-300" : ""}`}>{overview.renewals_60d}</p>
               <p className="text-[11px] text-white/50 mt-0.5">contracts ending soon — lock them in</p>
             </div>
-            <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3.5">
+            {isAdmin && <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3.5">
               <p className="text-xs text-white/60 font-medium flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 text-rose-300" /> Account Alerts</p>
               <p className={`text-2xl font-bold mt-1 tabular-nums ${alerts.length > 0 ? "text-rose-300" : "text-emerald-300"}`}>{alerts.length}</p>
               <p className="text-[11px] text-white/50 mt-0.5">customers needing attention</p>
-            </div>
+            </div>}
           </div>
         )}
 
@@ -390,7 +392,8 @@ export default function MyBusinessPage() {
             )}
           </div>
 
-          {/* Alerts */}
+          {/* Alerts — admin only */}
+          {isAdmin && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100">
               <h2 className="text-sm font-bold text-[#0F1D5E]">Account Alerts</h2>
@@ -421,7 +424,7 @@ export default function MyBusinessPage() {
                 })}
               </div>
             )}
-          </div>
+          </div>)}
 
           {/* Renewals due */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
