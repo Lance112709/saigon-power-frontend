@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import RenewalsHoldovers from "@/components/RenewalsHoldovers";
 import {
   UserPlus, Zap, DollarSign, AlertTriangle, TrendingUp,
   ArrowUpRight, FileText, Clock, Activity, Users, Search, X,
@@ -762,6 +763,9 @@ export default function DashboardPage() {
 
         {/* Business Health */}
         {showFinance && health && <BusinessHealth data={health} />}
+
+        {/* Renewals by month + expired-not-renewed holdovers (admin) */}
+        {showFinance && <RenewalsHoldovers />}
 
         {/* GiaDienRe Website */}
         {gdr && (
