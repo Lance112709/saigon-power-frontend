@@ -764,8 +764,8 @@ export default function DashboardPage() {
         {/* Business Health */}
         {showFinance && health && <BusinessHealth data={health} />}
 
-        {/* Renewals by month + expired-not-renewed holdovers (admin) */}
-        {showFinance && <RenewalsHoldovers />}
+        {/* Expired-not-renewed holdovers (admin + manager); renewals-by-month inside is admin-only */}
+        {(user?.role === "admin" || user?.role === "manager") && <RenewalsHoldovers />}
 
         {/* GiaDienRe Website */}
         {gdr && (

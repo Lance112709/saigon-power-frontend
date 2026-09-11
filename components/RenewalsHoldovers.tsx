@@ -34,12 +34,13 @@ export default function RenewalsHoldovers() {
   const hold = data?.holdovers;
   const holdRows: any[] = (hold?.deals ?? []).filter((h: any) => holdFilter === "all" || h.still_paying);
 
-  if (!data) return null;
+  if (!data || !hold) return null;
+  const showRenewals = !!data.renewals;   // admin only (API omits it for managers)
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-      {/* Renewals by month */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className={`grid grid-cols-1 ${showRenewals ? "xl:grid-cols-2" : ""} gap-4`}>
+      {/* Renewals by month (admin) */}
+      {showRenewals && <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h3 className="text-sm font-bold text-[#0F1D5E] flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Renewals by Month</h3>
@@ -90,9 +91,9 @@ export default function RenewalsHoldovers() {
             </p>
           )}
         </div>
-      </div>
+      </div>}
 
-      {/* Holdovers */}
+      {/* Holdovers (admin + manager) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 flex-wrap">
           <div>
