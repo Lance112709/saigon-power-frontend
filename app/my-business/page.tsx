@@ -386,11 +386,17 @@ export default function MyBusinessPage() {
                         ) : (
                           <div className="space-y-1 max-h-64 overflow-y-auto">
                             {(breakdown[c.id].deals ?? []).map((d: any) => (
-                              <div key={d.esiid} className="flex items-center gap-2 text-xs py-1">
-                                <span className="font-medium text-slate-700 truncate w-36">{d.customer || d.esiid}</span>
+                              <div key={d.deal_id || d.esiid} className="flex items-start gap-2 text-xs py-1">
+                                <span className="w-56 shrink-0">
+                                  <span className="font-medium text-slate-700 block truncate">{d.customer || d.esiid}</span>
+                                  {d.address && <span className="block text-[11px] text-slate-400 truncate" title={d.address}>{d.address}</span>}
+                                </span>
                                 {d.first_payment && <span className="px-1.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">NEW</span>}
+                                {d.kind === "enrollment" && d.enrollment_type === "renewal" && <span className="px-1.5 rounded bg-violet-100 text-violet-700 text-[10px] font-bold">RENEWAL</span>}
+                                {d.kind === "enrollment" && d.enrollment_type === "new" && <span className="px-1.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">NEW</span>}
+                                {d.held && <span className="px-1.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold">HELD</span>}
                                 <span className="text-slate-400 truncate flex-1">{d.excluded ? `excluded — ${d.plan_type}` : d.applied}</span>
-                                <span className="font-semibold text-emerald-600 tabular-nums">{fmt(d.commission)}</span>
+                                <span className={`font-semibold tabular-nums ${d.commission < 0 ? "text-red-600" : d.held ? "text-amber-700" : "text-emerald-600"}`}>{fmt(d.commission)}</span>
                               </div>
                             ))}
                           </div>
