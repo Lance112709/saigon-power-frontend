@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Search, XCircle, FileText, TrendingDown, CalendarDays } from "lucide-react";
@@ -35,6 +36,7 @@ export default function DroppedDealsPage() {
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
   const [offset, setOffset] = useState(0);
+  const [showStillPaying, setShowStillPaying] = useState(false);
   const LIMIT = 500;
 
   const load = useCallback(async (off = 0) => {
@@ -99,10 +101,15 @@ export default function DroppedDealsPage() {
               <XCircle className="w-6 h-6 text-red-300" /> Dropped Deals
             </h1>
             <p className="text-white/60 mt-1 text-sm">
-              Every terminated contract — pipeline and imported — with the provider-reported reason when it came from a commission statement.
+              Contracts with evidence of a real loss: reported dropped on a provider statement, terminated explicitly, or ended with no payment in the last {summary?.paid_months_checked?.length ?? 3} statement months.
             </p>
           </div>
         </div>
+        {summary?.excluded && (
+          <p className="relative mt-3 text-[11px] text-white/45">
+            Not counted as dropped: {summary.excluded.superseded} superseded by a live deal on the same meter · {summary.excluded.no_esiid} with no ESI ID · {summary.excluded.converted_pipeline} pipeline copies of converted leads · {summary.excluded.still_paying} still being paid by the provider (review list below)
+          </p>
+        )}
         <div className="relative grid grid-cols-3 gap-3 mt-5 max-w-2xl">
           {[
             { icon: TrendingDown, label: "Total Dropped", value: summary?.total ?? deals.length, sub: month ? fmtMonth(month) : "all time" },
@@ -117,6 +124,50 @@ export default function DroppedDealsPage() {
           ))}
         </div>
       </div>
+
+      {/* Still paying but marked inactive — review list (managers) */}
+      {(summary?.still_paying?.length ?? 0) > 0 && (
+        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+          <button onClick={() => setShowStillPaying(v => !v)}
+            className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-amber-50/40">
+            <div>
+              <h2 className="text-sm font-bold text-amber-800">Marked inactive, but the provider is still paying ({summary.still_paying.length})</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Paid on the {summary.paid_months_checked?.map(fmtMonth).join(", ")} statements with no live deal on the meter. Likely month-to-month holdovers or wrong status — not counted as dropped.</p>
+            </div>
+            <span className="text-xs font-semibold text-amber-700 shrink-0">{showStillPaying ? "Hide" : "Review"}</span>
+          </button>
+          {showStillPaying && (
+            <div className="border-t border-amber-100 overflow-x-auto max-h-[420px] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50">
+                  <tr className="border-b border-slate-100">
+                    {["Customer", "Provider", "ESI ID", "Contract", "Provider status", "Last paid", "Agent"].map(h => (
+                      <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.still_paying.map((r: any) => (
+                    <tr key={r.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60">
+                      <td className="px-4 py-2.5 font-semibold text-slate-700 whitespace-nowrap">
+                        {r.customer_id ? <Link href={`/crm/customers/${r.customer_id}`} className="hover:underline">{r.lead_name || "—"}</Link>
+                          : r.lead_id ? <Link href={`/crm/leads/${r.lead_id}`} className="hover:underline">{r.lead_name || "—"}</Link>
+                          : (r.lead_name || "—")}
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{r.supplier || "—"}</td>
+                      <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400">{r.esiid}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap">{r.start_date || "?"} → {r.end_date || "?"}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap">{r.provider_status ? `${r.provider_status}${r.provider_status_date ? ` (${r.provider_status_date})` : ""}` : "—"}</td>
+                      <td className="px-4 py-2.5 text-xs font-semibold text-emerald-700 whitespace-nowrap">{fmtMonth(r.last_paid_month)}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap">{r.sales_agent || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Drops by month */}
       {chartData.length > 0 && (
