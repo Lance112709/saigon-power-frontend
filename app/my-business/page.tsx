@@ -360,9 +360,19 @@ export default function MyBusinessPage() {
                       className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 text-left">
                       <ChevronRight className={`w-4 h-4 text-slate-300 transition-transform ${expandedComm === c.id ? "rotate-90" : ""}`} />
                       <span className="font-semibold text-[#0F1D5E] w-32">{MONTHS[c.month - 1]} {c.year}</span>
-                      <span className="text-xs text-slate-400">{c.total_deals} paid deals</span>
-                      {c.summary?.gross_received != null && (
-                        <span className="text-xs text-slate-400 hidden sm:inline">· gross {fmt(c.summary.gross_received)}</span>
+                      {c.summary?.enrollment_only ? (
+                        <span className="text-xs text-slate-400">
+                          {c.summary.enrolled ?? c.total_deals} enrolled
+                          {c.summary.new_enrollments != null && <span className="hidden sm:inline"> · {c.summary.new_enrollments} new · {c.summary.renewals ?? 0} renewals</span>}
+                          {c.summary.held ? <span className="text-amber-600"> · {c.summary.held} held</span> : null}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-xs text-slate-400">{c.total_deals} paid deals</span>
+                          {c.summary?.gross_received != null && (
+                            <span className="text-xs text-slate-400 hidden sm:inline">· gross {fmt(c.summary.gross_received)}</span>
+                          )}
+                        </>
                       )}
                       <span className={`ml-auto px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_BADGE[c.status] ?? "bg-slate-100 text-slate-500"}`}>
                         {c.status.replace("_", " ")}
