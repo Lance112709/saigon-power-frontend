@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { RefreshCw, Hourglass, ChevronDown, ChevronUp } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, LabelList } from "recharts";
 
 const fmtMonth = (m?: string | null) => {
   if (!m) return "—";
@@ -27,7 +27,12 @@ export default function RenewalsHoldovers() {
 
   const byMonth: any[] = data?.renewals?.by_month ?? [];
   const nowKey = new Date().toISOString().slice(0, 7);
-  const chart = useMemo(() => byMonth.map(m => ({ ...m, label: fmtMonth(m.month) })), [byMonth]);
+  const chart = useMemo(() => byMonth.map(m => ({
+    ...m, label: fmtMonth(m.month),
+    decided: m.due - (m.pending ?? 0),
+    rate: m.due ? Math.round((m.renewed / m.due) * 100) : null,               // of all due
+    rate_decided: (m.due - (m.pending ?? 0)) ? Math.round((m.renewed / (m.due - (m.pending ?? 0))) * 100) : null, // of those already past end date
+  })), [byMonth]);
   const selected = byMonth.find(m => m.month === month);
   const hold = data?.holdovers;
   const holdRows: any[] = (hold?.deals ?? []).filter((h: any) => holdFilter === "all" || h.still_paying);
@@ -51,9 +56,9 @@ export default function RenewalsHoldovers() {
             <div><p className="text-xl font-bold text-amber-600 tabular-nums">{data.renewals.next_3.due}</p><p className="text-[10px] text-slate-400 uppercase tracking-wider">due next 3 mo</p></div>
           </div>
         </div>
-        <div className="px-3 pt-3" style={{ height: 180 }}>
+        <div className="px-3 pt-3" style={{ height: 190 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chart} margin={{ top: 4, right: 8, bottom: 0, left: 0 }} barGap={2} barCategoryGap="30%">
+            <BarChart data={chart} margin={{ top: 14, right: 8, bottom: 0, left: 0 }} barGap={2} barCategoryGap="30%">
               <CartesianGrid vertical={false} stroke="#eef1f6" />
               <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} interval={1} />
               <YAxis tickLine={false} axisLine={false} width={28} allowDecimals={false} tick={{ fontSize: 10, fill: "#94a3b8" }} />
@@ -61,12 +66,13 @@ export default function RenewalsHoldovers() {
                 formatter={(v: any, name: any) => [v, name]}
                 labelFormatter={(l: any, pl: any) => {
                   const r = pl?.[0]?.payload; if (!r) return l;
-                  return `${l} · ${r.due} due · ${r.renewed} renewed${r.holdover ? ` · ${r.holdover} holdover` : ""}${r.dropped ? ` · ${r.dropped} dropped` : ""}${r.pending ? ` · ${r.pending} pending` : ""}`;
+                  return `${l} · ${r.due} due · ${r.renewed} renewed${r.rate != null ? ` (${r.rate}%)` : ""}${r.holdover ? ` · ${r.holdover} holdover` : ""}${r.dropped ? ` · ${r.dropped} dropped` : ""}${r.pending ? ` · ${r.pending} pending` : ""}`;
                 }} />
               <Bar dataKey="due" name="Due to end" fill="#cbd5e1" radius={[4, 4, 0, 0]} maxBarSize={18} isAnimationActive={false} cursor="pointer"
                 onClick={(d: any) => setMonth(m => (m === d.month ? "" : d.month))} />
               <Bar dataKey="renewed" name="Renewed" radius={[4, 4, 0, 0]} maxBarSize={18} isAnimationActive={false} cursor="pointer"
                 onClick={(d: any) => setMonth(m => (m === d.month ? "" : d.month))}>
+                <LabelList dataKey="rate" position="top" formatter={(v: any) => (v == null ? "" : `${v}%`)} style={{ fontSize: 9, fill: "#475569", fontWeight: 600 }} />
                 {chart.map(c => <Cell key={c.month} fill={month === c.month ? "#0F1D5E" : c.month > nowKey ? "#f59e0b" : c.month === nowKey ? "#1baf7a" : "#2a78d6"} />)}
               </Bar>
             </BarChart>
@@ -83,8 +89,9 @@ export default function RenewalsHoldovers() {
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                 <p className="font-semibold text-slate-700">
                   {fmtMonth(month)}: {selected.due} due · {selected.renewed} renewed
+                  {selected.due ? <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">{Math.round(selected.renewed / selected.due * 100)}%</span> : null}
                   {selected.holdover ? ` · ${selected.holdover} holdover` : ""}{selected.dropped ? ` · ${selected.dropped} dropped` : ""}{selected.pending ? ` · ${selected.pending} still to decide` : ""}
-                  <span className="text-slate-400 font-normal"> — {selected.by_provider.slice(0, 4).map(([p, d, r]: any) => `${p} ${r}/${d}`).join(" · ")}</span>
+                  <span className="text-slate-400 font-normal"> — {selected.by_provider.slice(0, 4).map(([p, d, r]: any) => `${p} ${r}/${d} (${d ? Math.round(r / d * 100) : 0}%)`).join(" · ")}</span>
                 </p>
                 <button onClick={() => setMonth("")} className="text-[#0F1D5E] font-semibold hover:underline">clear</button>
               </div>
@@ -119,6 +126,7 @@ export default function RenewalsHoldovers() {
           <div className="flex gap-3 text-right">
             <div><p className="text-xl font-bold text-amber-600 tabular-nums">{hold.still_paying}</p><p className="text-[10px] text-slate-400 uppercase tracking-wider">still paying us</p></div>
             <div><p className="text-xl font-bold text-slate-500 tabular-nums">{hold.total}</p><p className="text-[10px] text-slate-400 uppercase tracking-wider">all expired</p></div>
+            <div><p className="text-xl font-bold text-emerald-600 tabular-nums">{hold.total ? `${Math.round(hold.still_paying / hold.total * 100)}%` : "—"}</p><p className="text-[10px] text-slate-400 uppercase tracking-wider">retained on default</p></div>
           </div>
         </div>
         <div className="px-5 py-3 space-y-2">
@@ -128,7 +136,7 @@ export default function RenewalsHoldovers() {
               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-amber-400 rounded-full" style={{ width: `${hold.total ? (p.count / hold.total) * 100 : 0}%` }} />
               </div>
-              <span className="w-24 text-right text-slate-500 tabular-nums">{p.still_paying} paying / {p.count}</span>
+              <span className="w-36 text-right text-slate-500 tabular-nums">{p.still_paying} / {p.count} paying <span className="font-semibold text-slate-700">({p.count ? Math.round(p.still_paying / p.count * 100) : 0}%)</span></span>
             </div>
           ))}
           <p className="text-[11px] text-slate-400 pt-1">
