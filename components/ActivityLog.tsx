@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { History, ChevronDown, ChevronUp, Bot, User } from "lucide-react";
 
 type Change = { field: string; from: any; to: any };
@@ -34,17 +35,22 @@ const when = (iso: string) => {
 };
 
 export default function ActivityLog({ customerId, leadId, dealId }: { customerId?: string; leadId?: string; dealId?: string }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [events, setEvents] = useState<Event[] | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    if (!isAdmin) return;
     const p = customerId ? api.getCustomerActivity(customerId)
       : dealId ? api.getCrmDealActivity(dealId)
       : leadId ? api.getLeadActivity(leadId) : null;
     if (!p) return;
     p.then((r: any) => setEvents(r.events ?? [])).catch(() => setEvents([]));
-  }, [customerId, leadId, dealId]);
+  }, [isAdmin, customerId, leadId, dealId]);
+
+  if (!isAdmin) return null;   // admin-only
 
   const visible = showAll ? (events ?? []) : (events ?? []).slice(0, 15);
 
@@ -54,6 +60,7 @@ export default function ActivityLog({ customerId, leadId, dealId }: { customerId
         <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-[#0F1D5E]" />
           <h3 className="text-sm font-bold text-[#0F1D5E]">Activity Log{events ? ` (${events.length})` : ""}</h3>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">Admin only</span>
         </div>
         <span className="text-[11px] text-slate-400">Who changed what, and when · newest first</span>
       </div>
