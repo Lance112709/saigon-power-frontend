@@ -7,6 +7,7 @@ import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown
 import SendSmsModal from "@/components/SendSmsModal";
 import SendEmailModal from "@/components/SendEmailModal";
 import CommissionPayments from "@/components/CommissionPayments";
+import ActivityLog from "@/components/ActivityLog";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -1485,6 +1486,7 @@ export default function LeadDetailPage() {
 
       {/* Commission Payments (admin only) */}
       <CommissionPayments leadId={id} />
+      <ActivityLog leadId={id} />
 
       {/* ── Tasks & Follow-Ups ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

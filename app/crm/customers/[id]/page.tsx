@@ -12,6 +12,7 @@ import {
 import SendSmsModal from "@/components/SendSmsModal";
 import SendEmailModal from "@/components/SendEmailModal";
 import CommissionPayments from "@/components/CommissionPayments";
+import ActivityLog from "@/components/ActivityLog";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 const labelCls = "block text-sm text-slate-700 mb-1";
@@ -1468,6 +1469,7 @@ export default function CustomerProfilePage() {
 
           {/* Commission Payments (admin only) */}
           <CommissionPayments customerId={id} />
+          <ActivityLog customerId={id} />
 
           {/* Tasks & Follow-Ups */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
