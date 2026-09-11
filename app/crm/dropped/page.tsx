@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Search, XCircle, FileText, TrendingDown, CalendarDays } from "lucide-react";
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
-} from "recharts";
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,, LabelList } from "recharts";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
@@ -72,7 +71,12 @@ export default function DroppedDealsPage() {
     label: fmtMonthShort(b.month),
     Drops: b.count,
     reported: b.provider_reported,
+    rate: b.rate,                       // % of the book active at the start of that month
+    activeAtStart: b.active_at_start,
   })), [byMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  const thisMonthRate = byMonth.find(b => b.month === thisMonthKey)?.rate ?? null;
+  const last12Drops = last12.filter(b => b.month < thisMonthKey).slice(-12).reduce((s, b) => s + b.count, 0);
+  const trailingRate = summary?.active_book ? (last12Drops / summary.active_book) * 100 : null;
 
   const ChartTip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -80,8 +84,8 @@ export default function DroppedDealsPage() {
     return (
       <div className="bg-[#0F1D5E] text-white rounded-xl px-3 py-2 shadow-xl text-xs space-y-0.5">
         <p className="font-bold">{label}</p>
-        <p>{row.Drops} deal{row.Drops !== 1 ? "s" : ""} dropped</p>
-        <p className="text-white/60">{row.reported} reported by provider statements</p>
+        <p>{row.Drops} deal{row.Drops !== 1 ? "s" : ""} dropped{row.rate != null ? ` · ${row.rate}% of the book` : ""}</p>
+        <p className="text-white/60">{row.reported} reported by provider statements{row.activeAtStart ? ` · ${row.activeAtStart.toLocaleString()} active at month start` : ""}</p>
         <p className="text-white/40 pt-0.5">click to {month === row.month ? "clear filter" : "filter this month"}</p>
       </div>
     );
@@ -112,9 +116,12 @@ export default function DroppedDealsPage() {
         )}
         <div className="relative grid grid-cols-3 gap-3 mt-5 max-w-2xl">
           {[
-            { icon: TrendingDown, label: "Total Dropped", value: summary?.total ?? deals.length, sub: month ? fmtMonth(month) : "all time" },
-            { icon: CalendarDays, label: "Dropped This Month", value: droppedThisMonth, sub: fmtMonth(thisMonthKey) },
-            { icon: FileText, label: "Reported by Statements", value: summary?.provider_reported ?? 0, sub: "with provider reason" },
+            { icon: TrendingDown, label: "Total Dropped", value: summary?.total ?? deals.length,
+              sub: month ? fmtMonth(month) : summary?.dropped_share != null ? `${summary.dropped_share}% of every account we've had · ${summary.active_book?.toLocaleString()} active now` : "all time" },
+            { icon: CalendarDays, label: "Dropped This Month", value: droppedThisMonth,
+              sub: `${fmtMonth(thisMonthKey)}${thisMonthRate != null ? ` · ${thisMonthRate}% of the book` : ""}${trailingRate != null ? ` · ${trailingRate.toFixed(1)}% trailing 12 mo` : ""}` },
+            { icon: FileText, label: "Reported by Statements", value: summary?.provider_reported ?? 0,
+              sub: summary?.total ? `${Math.round((summary.provider_reported / summary.total) * 100)}% with a provider reason` : "with provider reason" },
           ].map(({ icon: Icon, label, value, sub }) => (
             <div key={label} className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3">
               <p className="text-xs text-white/60 font-medium flex items-center gap-1.5"><Icon className="w-3.5 h-3.5" />{label}</p>
@@ -175,7 +182,7 @@ export default function DroppedDealsPage() {
           <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-sm font-bold text-[#0F1D5E]">Drops by Month</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Click a bar to see that month's dropped deals below</p>
+              <p className="text-xs text-slate-400 mt-0.5">% = drops as a share of the book active at the start of that month · click a bar to see that month's deals</p>
             </div>
             {month && (
               <button onClick={() => setMonth("")}
@@ -186,13 +193,14 @@ export default function DroppedDealsPage() {
           </div>
           <div className="px-3 py-2">
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke="#eef1f6" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={32} />
                 <Tooltip content={<ChartTip />} cursor={{ fill: "#0F1D5E08" }} />
                 <Bar dataKey="Drops" maxBarSize={40} isAnimationActive={false} radius={[4, 4, 0, 0]}
                   onClick={(d: any) => setMonth(m => (m === d.month ? "" : d.month))} cursor="pointer">
+                  <LabelList dataKey="rate" position="top" formatter={(v: any) => (v == null ? "" : `${Number(v).toFixed(1)}%`)} style={{ fontSize: 10, fill: "#64748b", fontWeight: 600 }} />
                   {chartData.map(d => (
                     <Cell key={d.month} fill={month === d.month ? "#0F1D5E" : "#e34948"} />
                   ))}
