@@ -811,64 +811,6 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Recent Leads */}
-        <Card title={`Recent Leads · ${recentLeads.length} shown`} action="View all" actionHref="/crm/leads">
-          {recentLeads.length === 0 ? (
-            <div className="p-10 text-center">
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
-                <UserPlus className="w-5 h-5 text-blue-500" />
-              </div>
-              <p className="text-sm font-medium text-slate-500">No leads yet</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    {["Name", "Contact", "Address", "Service", "Status", "Date"].map(h => (
-                      <th key={h} className="px-5 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentLeads.map((l, i) => (
-                    <tr key={l.id} onClick={() => router.push(`/crm/leads/${l.id}`)}
-                      className={`border-b border-slate-50 last:border-0 hover:bg-blue-50/40 cursor-pointer transition-colors ${i % 2 === 0 ? "" : "bg-slate-50/30"}`}>
-                      <td className="px-5 py-3.5 font-bold text-slate-800">{l.full_name}</td>
-                      <td className="px-5 py-3.5">
-                        <p className="text-slate-600 text-xs font-medium">{l.phone}</p>
-                        {l.email && <p className="text-xs text-slate-400 mt-0.5">{l.email}</p>}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-500 text-xs">{l.address}, {l.city}</td>
-                      <td className="px-5 py-3.5">
-                        {l.product_type ? (
-                          <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700">
-                            {l.product_type}
-                          </span>
-                        ) : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                          l.status === "converted" ? "bg-emerald-50 text-emerald-700" :
-                          l.deal_status === "Active" ? "bg-emerald-50 text-emerald-700" :
-                          "bg-blue-50 text-blue-700"
-                        }`}>
-                          {l.status === "converted" ? "Converted" : l.deal_status ?? "Lead"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-400 text-xs">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(l.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
 
       </div>
     </div>
