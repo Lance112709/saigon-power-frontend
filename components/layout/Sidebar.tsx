@@ -26,15 +26,19 @@ const links: NavItem[] = [
   { href: "/call-list",      label: "Who To Call Today", icon: PhoneCall },
   { href: "/tasks",          label: "Tasks & Follow-Ups", icon: Bell },
   { href: "/rates",          label: "Today's Rates",     icon: Tag },
-  { href: "/forecast",       label: "Revenue Forecast",  icon: TrendingUp, perm: "view_forecast" },
   { href: "/pricing",        label: "Commercial Pricing", icon: Tag },
-  { href: "/uploads",        label: "Upload Statements", icon: Upload, perm: "view_uploads" },
   { href: "/admin/enrollments", label: "Enrollments",     icon: FileSignature, roles: ["admin", "manager"] },
-  { href: "/reconciliation", label: "Reconciliation",    icon: RefreshCw, perm: "view_reconciliation" },
-  { href: "/payments",       label: "Payments Received", icon: DollarSign, roles: ["admin"] },
-  { href: "/disputes",       label: "Disputes",          icon: Scale, roles: ["admin"] },
   { href: "/scorecards",     label: "Provider Scorecards", icon: Award, roles: ["admin"] },
   { href: "/suppliers",      label: "Suppliers",         icon: Building2, roles: ["admin", "manager"] },
+];
+
+const accountingLinks: NavItem[] = [
+  { href: "/forecast",          label: "Revenue Forecast",  icon: TrendingUp, perm: "view_forecast" },
+  { href: "/uploads",           label: "Upload Statements", icon: Upload,     perm: "view_uploads" },
+  { href: "/reconciliation",    label: "Reconciliation",    icon: RefreshCw,  perm: "view_reconciliation" },
+  { href: "/payments",          label: "Payments Received", icon: DollarSign, roles: ["admin"] },
+  { href: "/disputes",          label: "Disputes",          icon: Scale,      roles: ["admin"] },
+  { href: "/admin/commissions", label: "Commissions",       icon: DollarSign, roles: ["admin"] },
 ];
 
 const crmLinks: NavItem[] = [
@@ -164,6 +168,13 @@ export default function Sidebar() {
       <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5 scrollbar-hide">
         {links.filter(canSee).map(item => <NavLink key={item.href} {...item} />)}
 
+        {accountingLinks.filter(canSee).length > 0 && (
+          <>
+            <SectionLabel>Accounting</SectionLabel>
+            {accountingLinks.filter(canSee).map(item => <NavLink key={item.href} {...item} />)}
+          </>
+        )}
+
         {crmLinks.filter(canSee).length > 0 && (
           <>
             <SectionLabel>CRM</SectionLabel>
@@ -180,7 +191,6 @@ export default function Sidebar() {
             <SectionLabel>Admin</SectionLabel>
             <NavLink href="/admin/ai?tab=alerts" label="Alerts" icon={Bell} badge={openAlerts} />
             <NavLink href="/admin/users" label="User Management" icon={Shield} />
-            <NavLink href="/admin/commissions" label="Commissions" icon={DollarSign} />
             <NavLink href="/admin/commission-rules" label="Commission Rules" icon={BookOpenCheck} />
             <NavLink href="/admin/sgp-commission" label="SGP Agents" icon={Trophy} />
             <NavLink href="/admin/contract-template" label="Contract Template" icon={FileText} />
