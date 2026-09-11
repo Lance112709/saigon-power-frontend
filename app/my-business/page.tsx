@@ -122,7 +122,8 @@ export default function MyBusinessPage() {
   }, [book, bookSearch]);
 
   const activeDeals = (book?.deals ?? []).filter((d: any) => d.active);
-  const months: string[] = book?.months_checked ?? [];
+  // Paid-on-statement columns are admin-only (backend omits them too).
+  const months: string[] = isAdmin ? (book?.months_checked ?? []) : [];
 
   if (!user) return null;
 
@@ -459,7 +460,7 @@ export default function MyBusinessPage() {
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-bold text-[#0F1D5E]">My Book ({activeDeals.length} active)</h2>
-                <p className="text-xs text-slate-400 mt-0.5">✓ = commission received on that month's statement</p>
+                {isAdmin && <p className="text-xs text-slate-400 mt-0.5">✓ = commission received on that month's statement</p>}
               </div>
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
