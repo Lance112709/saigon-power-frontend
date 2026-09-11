@@ -453,6 +453,10 @@ export const api = {
     request(`/api/v1/agent-commissions/${id}/close-out`, { method: "PATCH", body: JSON.stringify(data || {}) }),
   markAgentCommissionPaid: (id: string, data?: object) =>
     request(`/api/v1/agent-commissions/${id}/mark-paid`, { method: "PATCH", body: JSON.stringify(data || {}) }),
+  getAgentPaidSummary: (params?: Record<string, string>) => {
+    const q = params && Object.keys(params).length ? `?${new URLSearchParams(params)}` : "";
+    return request(`/api/v1/agent-commissions/paid-summary${q}`);
+  },
   getAgentCommissionBreakdown: (id: string) =>
     request(`/api/v1/agent-commissions/${id}/breakdown`),
   decideHeldEnrollment: (source: string, dealId: string, decision: "release" | "reject", data?: { reason?: string; month?: string }) =>

@@ -209,6 +209,228 @@ function parseSummary(notes?: string): { enrolled?: number; new_enrollments?: nu
   try { const j = JSON.parse(notes); return j && typeof j === "object" ? j : null; } catch { return null; }
 }
 
+// ── Paid to agents (month range / YTD) ──────────────────────────────────────
+
+interface PaidSummary {
+  from: string | null; to: string | null; records: number;
+  totals: { paid: number; owed: number; pending: number };
+  by_month: { year: number; month: number; paid: number; owed: number; pending: number; agents: number }[];
+  by_agent: { agent_name: string; paid: number; owed: number; pending: number; months_paid: number; last_paid_at: string | null }[];
+  detail: { id: string; agent_name: string; year: number; month: number; status: string; total_commission: number; paid_at: string | null; paid_by: string | null }[];
+}
+
+type RangePreset = "month" | "last_month" | "ytd" | "last12" | "all" | "custom";
+
+const ym = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
+
+function presetRange(preset: RangePreset, now: Date): { from?: string; to?: string } {
+  const y = now.getFullYear(), m = now.getMonth() + 1;
+  switch (preset) {
+    case "month":      return { from: ym(y, m), to: ym(y, m) };
+    case "last_month": { const d = new Date(y, m - 2, 1); return { from: ym(d.getFullYear(), d.getMonth() + 1), to: ym(d.getFullYear(), d.getMonth() + 1) }; }
+    case "ytd":        return { from: ym(y, 1), to: ym(y, m) };
+    case "last12":     { const d = new Date(y, m - 12, 1); return { from: ym(d.getFullYear(), d.getMonth() + 1), to: ym(y, m) }; }
+    case "all":        return {};
+    default:           return {};
+  }
+}
+
+function PaidToAgentsPanel({ inputCls }: { inputCls: string }) {
+  const now = new Date();
+  const [preset, setPreset] = useState<RangePreset>("ytd");
+  const [from, setFrom] = useState(ym(now.getFullYear(), 1));
+  const [to, setTo] = useState(ym(now.getFullYear(), now.getMonth() + 1));
+  const [view, setView] = useState<"month" | "agent" | "detail">("month");
+  const [data, setData] = useState<PaidSummary | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(true);
+
+  const range = preset === "custom" ? { from, to } : presetRange(preset, now);
+
+  useEffect(() => {
+    let alive = true;
+    setBusy(true);
+    const params: Record<string, string> = {};
+    if (range.from) params.from = range.from;
+    if (range.to) params.to = range.to;
+    api.getAgentPaidSummary(params).then(d => { if (alive) setData(d); }).catch(() => { if (alive) setData(null); }).finally(() => { if (alive) setBusy(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range.from, range.to]);
+
+  const label = (y: number, m: number) => `${MONTHS[m - 1].slice(0, 3)} ${y}`;
+  const rangeLabel = !range.from && !range.to ? "All time" : `${range.from || "…"} → ${range.to || "…"}`;
+  const PRESETS: { key: RangePreset; label: string }[] = [
+    { key: "month", label: "This month" }, { key: "last_month", label: "Last month" }, { key: "ytd", label: "YTD" },
+    { key: "last12", label: "Last 12 months" }, { key: "all", label: "All time" }, { key: "custom", label: "Custom" },
+  ];
+  const monthOptions = (() => {
+    const out: string[] = [];
+    for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--)
+      for (let m = (y === now.getFullYear() ? now.getMonth() + 1 : 12); m >= 1; m--) out.push(ym(y, m));
+    return out;
+  })();
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3 border-b border-slate-100">
+        <button onClick={() => setOpen(o => !o)} className="flex items-center gap-2 text-left">
+          {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          <div>
+            <p className="text-sm font-bold text-[#0F1D5E]">Paid to Agents</p>
+            <p className="text-xs text-slate-400">Commission periods {rangeLabel} · what has been paid out, what is approved but unpaid, and what is still only calculated</p>
+          </div>
+        </button>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {PRESETS.map(p => (
+            <button key={p.key} onClick={() => setPreset(p.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${preset === p.key ? "bg-[#0F1D5E] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+              {p.label}
+            </button>
+          ))}
+          {preset === "custom" && (
+            <>
+              <select value={from} onChange={e => setFrom(e.target.value)} className={`${inputCls} py-1.5`}>
+                {monthOptions.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <span className="text-slate-400 text-xs">to</span>
+              <select value={to} onChange={e => setTo(e.target.value)} className={`${inputCls} py-1.5`}>
+                {monthOptions.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </>
+          )}
+        </div>
+      </div>
+
+      {open && (
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { label: "Paid out", value: data?.totals.paid ?? 0, color: "text-emerald-600", note: "marked paid" },
+              { label: "Approved, not yet paid", value: data?.totals.owed ?? 0, color: "text-amber-600", note: "approved or closed out" },
+              { label: "Calculated only", value: data?.totals.pending ?? 0, color: "text-slate-500", note: "awaiting approval" },
+            ].map(c => (
+              <div key={c.label} className="rounded-xl bg-[#F8FAFF] border border-slate-100 p-4">
+                <p className="text-xs text-slate-500 font-medium">{c.label}</p>
+                <p className={`text-2xl font-bold mt-0.5 ${c.color}`}>{busy && !data ? "…" : fmt(c.value)}</p>
+                <p className="text-[11px] text-slate-400">{c.note}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {(["month", "agent", "detail"] as const).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${view === v ? "bg-[#EEF1FA] text-[#0F1D5E]" : "text-slate-500 hover:bg-slate-50"}`}>
+                {v === "month" ? "By month" : v === "agent" ? "By agent" : "Every record"}
+              </button>
+            ))}
+            <span className="ml-auto text-xs text-slate-400">{data ? `${data.records} record${data.records === 1 ? "" : "s"}` : ""}{busy ? " · refreshing…" : ""}</span>
+          </div>
+
+          {!data || data.records === 0 ? (
+            <p className="text-xs text-slate-400 py-4 text-center">{busy ? "Loading…" : "No commission records in this range."}</p>
+          ) : view === "month" ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-200">
+                    <th className="py-2 text-left">Commission month</th>
+                    <th className="py-2 text-right">Agents</th>
+                    <th className="py-2 text-right">Paid out</th>
+                    <th className="py-2 text-right">Approved, unpaid</th>
+                    <th className="py-2 text-right">Calculated only</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {[...data.by_month].reverse().map(m => (
+                    <tr key={`${m.year}-${m.month}`} className="hover:bg-slate-50/60">
+                      <td className="py-2 font-medium text-slate-700">{label(m.year, m.month)}</td>
+                      <td className="py-2 text-right text-slate-500">{m.agents}</td>
+                      <td className="py-2 text-right font-semibold text-emerald-600">{fmt(m.paid)}</td>
+                      <td className="py-2 text-right text-amber-600">{m.owed ? fmt(m.owed) : "—"}</td>
+                      <td className="py-2 text-right text-slate-400">{m.pending ? fmt(m.pending) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-200 font-semibold">
+                    <td className="pt-2 text-slate-500" colSpan={2}>Total</td>
+                    <td className="pt-2 text-right text-emerald-600">{fmt(data.totals.paid)}</td>
+                    <td className="pt-2 text-right text-amber-600">{fmt(data.totals.owed)}</td>
+                    <td className="pt-2 text-right text-slate-400">{fmt(data.totals.pending)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : view === "agent" ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-200">
+                    <th className="py-2 text-left">Agent</th>
+                    <th className="py-2 text-right">Months paid</th>
+                    <th className="py-2 text-right">Paid out</th>
+                    <th className="py-2 text-right">Approved, unpaid</th>
+                    <th className="py-2 text-right">Calculated only</th>
+                    <th className="py-2 text-right">Last payment</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {data.by_agent.map(a => (
+                    <tr key={a.agent_name} className="hover:bg-slate-50/60">
+                      <td className="py-2 font-medium text-slate-700">{a.agent_name}</td>
+                      <td className="py-2 text-right text-slate-500">{a.months_paid}</td>
+                      <td className="py-2 text-right font-semibold text-emerald-600">{fmt(a.paid)}</td>
+                      <td className="py-2 text-right text-amber-600">{a.owed ? fmt(a.owed) : "—"}</td>
+                      <td className="py-2 text-right text-slate-400">{a.pending ? fmt(a.pending) : "—"}</td>
+                      <td className="py-2 text-right text-slate-500 text-xs">{a.last_paid_at ? fmtDate(a.last_paid_at) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-200 font-semibold">
+                    <td className="pt-2 text-slate-500" colSpan={2}>Total</td>
+                    <td className="pt-2 text-right text-emerald-600">{fmt(data.totals.paid)}</td>
+                    <td className="pt-2 text-right text-amber-600">{fmt(data.totals.owed)}</td>
+                    <td className="pt-2 text-right text-slate-400">{fmt(data.totals.pending)}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : (
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-200">
+                    <th className="py-2 text-left">Agent</th>
+                    <th className="py-2 text-left">Commission month</th>
+                    <th className="py-2 text-left">Status</th>
+                    <th className="py-2 text-right">Amount</th>
+                    <th className="py-2 text-left pl-4">Paid on</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {data.detail.map(r => (
+                    <tr key={r.id} className="hover:bg-slate-50/60">
+                      <td className="py-2 font-medium text-slate-700">{r.agent_name}</td>
+                      <td className="py-2 text-slate-600">{label(r.year, r.month)}</td>
+                      <td className="py-2"><StatusBadge status={r.status as Commission["status"]} /></td>
+                      <td className={`py-2 text-right font-semibold ${r.status === "paid" ? "text-emerald-600" : "text-slate-500"}`}>{fmt(r.total_commission)}</td>
+                      <td className="py-2 pl-4 text-xs text-slate-500">{r.paid_at ? `${fmtDate(r.paid_at)}${r.paid_by ? ` · ${r.paid_by}` : ""}` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CommissionsPage() {
   const router  = useRouter();
   const { user } = useAuth();
@@ -434,6 +656,9 @@ export default function CommissionsPage() {
           </div>
         ))}
       </div>
+
+      {/* Paid to agents — month range / YTD */}
+      <PaidToAgentsPanel inputCls={inputCls} />
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
