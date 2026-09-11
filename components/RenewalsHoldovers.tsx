@@ -21,7 +21,7 @@ export default function RenewalsHoldovers() {
   const [data, setData] = useState<any>(null);
   const [month, setMonth] = useState<string>("");
   const [showHold, setShowHold] = useState(false);
-  const [holdFilter, setHoldFilter] = useState<"all" | "paying">("paying");
+  const [holdFilter, setHoldFilter] = useState<"all" | "paying" | "stopped">("paying");
 
   useEffect(() => { api.getRenewalStats().then(setData).catch(() => setData(null)); }, []);
 
@@ -35,7 +35,9 @@ export default function RenewalsHoldovers() {
   })), [byMonth]);
   const selected = byMonth.find(m => m.month === month);
   const hold = data?.holdovers;
-  const holdRows: any[] = (hold?.deals ?? []).filter((h: any) => holdFilter === "all" || h.still_paying);
+  const holdRows: any[] = (hold?.deals ?? []).filter((h: any) =>
+    holdFilter === "all" ? true : holdFilter === "paying" ? h.still_paying : !h.still_paying);
+  const stopped = hold ? hold.total - hold.still_paying : 0;
 
   if (!data || !hold) return null;
   const showRenewals = !!data.renewals;   // admin only (API omits it for managers)
@@ -124,9 +126,9 @@ export default function RenewalsHoldovers() {
             <p className="text-xs text-slate-400 mt-0.5">Active contracts past their end date with no new contract on the meter — on the provider's default rate</p>
           </div>
           <div className="flex gap-3 text-right">
-            <div><p className="text-xl font-bold text-amber-600 tabular-nums">{hold.still_paying}</p><p className="text-[10px] text-slate-400 uppercase tracking-wider">still paying us</p></div>
             <div><p className="text-xl font-bold text-slate-500 tabular-nums">{hold.total}</p><p className="text-[10px] text-slate-400 uppercase tracking-wider">all expired</p></div>
-            <div><p className="text-xl font-bold text-emerald-600 tabular-nums">{hold.total ? `${Math.round(hold.still_paying / hold.total * 100)}%` : "—"}</p><p className="text-[10px] text-slate-400 uppercase tracking-wider">retained on default</p></div>
+            <div><p className="text-xl font-bold text-amber-600 tabular-nums">{hold.still_paying} <span className="text-xs font-semibold text-amber-500">{hold.total ? `${Math.round(hold.still_paying / hold.total * 100)}%` : ""}</span></p><p className="text-[10px] text-slate-400 uppercase tracking-wider">still paying us</p></div>
+            <div><p className="text-xl font-bold text-red-600 tabular-nums">{stopped} <span className="text-xs font-semibold text-red-400">{hold.total ? `${Math.round(stopped / hold.total * 100)}%` : ""}</span></p><p className="text-[10px] text-slate-400 uppercase tracking-wider">stopped paying</p></div>
           </div>
         </div>
         <div className="px-5 py-3 space-y-2">
@@ -136,11 +138,13 @@ export default function RenewalsHoldovers() {
               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-amber-400 rounded-full" style={{ width: `${hold.total ? (p.count / hold.total) * 100 : 0}%` }} />
               </div>
-              <span className="w-36 text-right text-slate-500 tabular-nums">{p.still_paying} / {p.count} paying <span className="font-semibold text-slate-700">({p.count ? Math.round(p.still_paying / p.count * 100) : 0}%)</span></span>
+              <span className="w-52 text-right text-slate-500 tabular-nums whitespace-nowrap">
+                <span className="text-amber-700 font-semibold">{p.still_paying} paying</span> · <span className="text-red-600 font-semibold">{p.count - p.still_paying} stopped</span> / {p.count} <span className="text-slate-400">({p.count ? Math.round(p.still_paying / p.count * 100) : 0}% kept)</span>
+              </span>
             </div>
           ))}
           <p className="text-[11px] text-slate-400 pt-1">
-            "Still paying" = commission received on the {hold.paid_months_checked?.map(fmtMonth).join(", ")} statements. The rest have expired with no recent payment and are probably gone.
+            "Still paying" = commission received on the {hold.paid_months_checked?.map(fmtMonth).join(", ")} statements (customer stayed with the provider on the default rate). "Stopped paying" = expired and nothing received on those statements — likely gone, but the provider has not reported it yet.
           </p>
         </div>
         <button onClick={() => setShowHold(v => !v)}
@@ -150,10 +154,10 @@ export default function RenewalsHoldovers() {
         {showHold && (
           <div className="border-t border-slate-100">
             <div className="px-5 py-2 flex items-center gap-2 text-[11px] bg-slate-50/60">
-              {(["paying", "all"] as const).map(f => (
+              {(["paying", "stopped", "all"] as const).map(f => (
                 <button key={f} onClick={() => setHoldFilter(f)}
                   className={`px-2.5 py-1 rounded-full font-semibold border ${holdFilter === f ? "bg-[#0F1D5E] text-white border-[#0F1D5E]" : "bg-white text-slate-500 border-slate-200"}`}>
-                  {f === "paying" ? `Still paying (${hold.still_paying})` : `All expired (${hold.total})`}
+                  {f === "paying" ? `Still paying (${hold.still_paying})` : f === "stopped" ? `Stopped paying (${stopped})` : `All expired (${hold.total})`}
                 </button>
               ))}
             </div>
