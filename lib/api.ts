@@ -453,6 +453,14 @@ export const api = {
     request(`/api/v1/agent-commissions/${id}/close-out`, { method: "PATCH", body: JSON.stringify(data || {}) }),
   markAgentCommissionPaid: (id: string, data?: object) =>
     request(`/api/v1/agent-commissions/${id}/mark-paid`, { method: "PATCH", body: JSON.stringify(data || {}) }),
+  closeCommissionMonth: (data: { year: number; month: number; paid_at?: string; notes?: string; skip_held?: boolean; ids?: string[] }) =>
+    request("/api/v1/agent-commissions/close-month", { method: "POST", body: JSON.stringify(data) }),
+  getCommissionDigest: (year: number, month: number) =>
+    request(`/api/v1/agent-commissions/digest?year=${year}&month=${month}`),
+  sendCommissionDigest: (data: { year: number; month: number }) =>
+    request("/api/v1/agent-commissions/digest/send", { method: "POST", body: JSON.stringify(data) }),
+  normalizeAgentNames: (data: { dry_run: boolean; renames?: Record<string, string> }) =>
+    request("/api/v1/agent-commissions/agent-names/normalize", { method: "POST", body: JSON.stringify(data) }),
   getAgentPaidSummary: (params?: Record<string, string>) => {
     const q = params && Object.keys(params).length ? `?${new URLSearchParams(params)}` : "";
     return request(`/api/v1/agent-commissions/paid-summary${q}`);

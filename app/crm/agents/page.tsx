@@ -81,9 +81,11 @@ function rulesToComponents(rules: any): PlanComponent[] {
   return out;
 }
 
-function componentsToRules(components: PlanComponent[], exclude_plan_types: string[]) {
+function componentsToRules(components: PlanComponent[], exclude_plan_types: string[], clawback_days?: string) {
+  const cb = parseInt(clawback_days || "", 10);
   return {
     version: 2,
+    ...(cb > 0 ? { clawback_days: cb } : {}),
     components: components
       .filter(c => c.value.trim() !== "" && (c.type === "statement_column" || !isNaN(parseFloat(c.value))))
       .map(c => {
@@ -105,6 +107,7 @@ const EMPTY = { name: "", email: "", phone: "", agent_type: "" };
 const EMPTY_RULES = {
   components: [] as PlanComponent[],
   exclude_plan_types: [] as string[],
+  clawback_days: "" as string,
 };
 
 export default function AgentsPage() {
@@ -159,6 +162,7 @@ export default function AgentsPage() {
     setEditRules({
       components: rulesToComponents(rules),
       exclude_plan_types: rules.exclude_plan_types || [],
+      clawback_days: rules.clawback_days ? String(rules.clawback_days) : "",
     });
     setEditError("");
     setActiveTab(tab);
@@ -226,7 +230,7 @@ export default function AgentsPage() {
     setEditSaving(true);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     try {
-      const commission_rules = componentsToRules(editRules.components, editRules.exclude_plan_types || []);
+      const commission_rules = componentsToRules(editRules.components, editRules.exclude_plan_types || [], editRules.clawback_days);
 
       const res = await api.updateSalesAgent(editAgent.id, { ...editForm, commission_rules });
       if (!res || (typeof res === "object" && "error" in res)) {
@@ -622,6 +626,22 @@ export default function AgentsPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Clawback window */}
+                  {editRules.components.some(c => c.type === "flat_per_enrollment") && (
+                    <div className="bg-slate-50 rounded-xl p-3 flex items-end gap-3">
+                      <div className="w-32">
+                        <label className={labelCls}>Clawback window (days)</label>
+                        <input type="number" min="0" step="1" className={inputCls} placeholder="e.g. 60"
+                          value={editRules.clawback_days || ""}
+                          onChange={e => setEditRules(r => ({ ...r, clawback_days: e.target.value }))} />
+                      </div>
+                      <p className="text-[11px] text-slate-400 pb-2.5">
+                        If an enrolled customer cancels within this many days of the contract start, the enrollment bonus is taken back
+                        (same month: not paid; later month: a negative line on that month's payout). Leave blank for no clawback.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Preview */}
                   {(editRules.components.length > 0 || editRules.exclude_plan_types.length > 0) && (

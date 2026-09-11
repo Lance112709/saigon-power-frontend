@@ -30,9 +30,11 @@ interface Commission {
 interface Deal {
   deal_id: string;
   deal_source?: string;
-  kind?: "enrollment" | "paid" | "statement";
+  kind?: "enrollment" | "paid" | "statement" | "clawback";
   enrollment_type?: "new" | "renewal";
   segment?: "residential" | "commercial";
+  auto_decision?: "reject" | "release" | null;
+  cancelled?: string;
   prior_contract?: { source: string; id: string; customer: string; supplier: string; agent: string; contract_start: string; contract_end: string } | null;
   held?: boolean;
   hold_reason?: string;
@@ -233,6 +235,178 @@ function presetRange(preset: RangePreset, now: Date): { from?: string; to?: stri
     case "all":        return {};
     default:           return {};
   }
+}
+
+function MonthCloseModal({ year, month, rows, onClose, onDone }: {
+  year: number; month: number; rows: Commission[]; onClose: () => void; onDone: () => void;
+}) {
+  const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const open = rows.filter(r => r.status !== "paid" && (r.total_commission || 0) > 0);
+  const heldOf = (r: Commission) => parseSummary(r.notes)?.held || 0;
+  const payable = open.filter(r => !heldOf(r));
+  const total = payable.reduce((s, r) => s + (r.total_commission || 0), 0);
+  const run = async () => {
+    setBusy(true);
+    try {
+      const res = await api.closeCommissionMonth({ year, month, paid_at: paidAt, notes });
+      setResult(res);
+      onDone();
+    } catch (e: any) {
+      alert(e?.message?.replace(/^\d+:/, "") || "Could not close the month");
+    } finally { setBusy(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div>
+          <h3 className="text-lg font-bold text-[#0F1D5E]">Pay {MONTHS[month - 1]} {year}</h3>
+          <p className="text-sm text-slate-500 mt-1">Approves, closes out and marks paid every agent below in one step.</p>
+        </div>
+        {result ? (
+          <div className="space-y-2 text-sm">
+            <p className="font-semibold text-emerald-700">Paid {result.paid.length} agent{result.paid.length === 1 ? "" : "s"} · {fmt(result.paid_total)} · dated {result.paid_at}</p>
+            {result.skipped?.length > 0 && (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                <p className="font-semibold mb-1">Skipped</p>
+                {result.skipped.map((s: any, i: number) => <p key={i}>{s.agent_name} — {s.reason}</p>)}
+              </div>
+            )}
+            <div className="flex justify-end pt-2">
+              <button onClick={onClose} className="px-4 py-2 rounded-xl bg-[#0F1D5E] text-white text-sm font-semibold">Done</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="rounded-xl bg-[#F8FAFF] border border-slate-100 divide-y divide-slate-100 max-h-56 overflow-y-auto">
+              {open.length === 0 && <p className="p-3 text-xs text-slate-400">Nothing unpaid for this month.</p>}
+              {open.map(r => (
+                <div key={r.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                  <span className="text-slate-700">{r.agent_name}{heldOf(r) ? <span className="ml-2 text-[11px] text-amber-700 font-semibold">{heldOf(r)} held — will be skipped</span> : null}</span>
+                  <span className={`font-semibold ${heldOf(r) ? "text-slate-400 line-through" : "text-emerald-600"}`}>{fmt(r.total_commission)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Payment date</label>
+                <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Note (optional)</label>
+                <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Zelle batch" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-sm text-slate-500">{payable.length} agent{payable.length === 1 ? "" : "s"} · <b className="text-emerald-600">{fmt(total)}</b></span>
+              <div className="flex gap-2">
+                <button onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-600">Cancel</button>
+                <button onClick={run} disabled={busy || payable.length === 0}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50">
+                  {busy ? "Paying…" : `Pay ${fmt(total)}`}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface DigestItem { agent: string; text: string; link?: string; fix?: { from: string; to: string } | null }
+interface Digest { label: string; count: number; agents: number; payout_total: number; items: Record<string, DigestItem[]> }
+const DIGEST_TITLES: Record<string, string> = {
+  held: "Held enrollment bonuses — Release or Reject",
+  unregistered_agents: "Deals credited to unregistered agent names",
+  no_agent: "Paid accounts with no agent on the deal",
+  no_plan: "Agents with activity but no commission plan",
+  swings: "Payouts that moved ±30% vs the last 3 months",
+  name_fixes: "Agent name spellings to fix",
+  clawbacks: "Clawbacks this month (early cancellations)",
+  unpaid_older: "Earlier months still not paid",
+};
+
+function NeedsAttentionPanel({ year, month, onChanged }: { year: number; month: number; onChanged: () => void }) {
+  const [data, setData] = useState<Digest | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [fixing, setFixing] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  useEffect(() => { setData(null); setMsg(""); }, [year, month]);
+  const check = async () => {
+    setBusy(true); setMsg("");
+    try { setData(await api.getCommissionDigest(year, month)); }
+    catch (e: any) { setMsg(e?.message?.replace(/^\d+:/, "") || "Could not build the checklist"); }
+    finally { setBusy(false); }
+  };
+  const email = async () => {
+    setSending(true);
+    try { const r = await api.sendCommissionDigest({ year, month }); setMsg(r.sent ? `Emailed to ${r.to}` : "Email not sent — RESEND_API_KEY missing?"); }
+    catch (e: any) { setMsg(e?.message || "Could not send"); }
+    finally { setSending(false); }
+  };
+  const rename = async (fix: { from: string; to: string }) => {
+    if (!confirm(`Rename '${fix.from}' to '${fix.to}' on every deal?`)) return;
+    setFixing(fix.from);
+    try {
+      const r = await api.normalizeAgentNames({ dry_run: false, renames: { [fix.from]: fix.to } });
+      setMsg(`Renamed on ${r.changed} deal${r.changed === 1 ? "" : "s"} — recalculate to apply.`);
+      onChanged();
+      await check();
+    } catch (e: any) { setMsg(e?.message?.replace(/^\d+:/, "") || "Rename failed"); }
+    finally { setFixing(null); }
+  };
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3 border-b border-slate-100">
+        <div>
+          <p className="text-sm font-bold text-[#0F1D5E]">Needs attention before paying {MONTHS[month - 1]} {year}</p>
+          <p className="text-xs text-slate-400">Held bonuses, unregistered agent names, missing plans, unusual swings, clawbacks, unpaid earlier months. Emailed to you automatically on the 8th.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {msg && <span className="text-xs text-slate-500">{msg}</span>}
+          <button onClick={email} disabled={sending} className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-semibold hover:bg-slate-200 disabled:opacity-50">
+            {sending ? "Sending…" : "Email me this"}
+          </button>
+          <button onClick={check} disabled={busy} className="px-3 py-1.5 rounded-lg bg-[#0F1D5E] text-white text-xs font-semibold hover:bg-[#1a2d7a] disabled:opacity-50">
+            {busy ? "Checking… (can take a minute)" : data ? "Re-check" : "Check now"}
+          </button>
+        </div>
+      </div>
+      {data && (
+        <div className="p-5 space-y-4">
+          {data.count === 0 ? (
+            <p className="text-sm text-emerald-700 font-semibold">Nothing needs your attention — {data.agents} agents, {fmt(data.payout_total)} ready to pay.</p>
+          ) : Object.entries(DIGEST_TITLES).map(([key, title]) => {
+            const items = data.items[key] || [];
+            if (!items.length) return null;
+            return (
+              <div key={key}>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{title} ({items.length})</p>
+                <ul className="space-y-1">
+                  {items.map((it, i) => (
+                    <li key={i} className="text-sm text-slate-700 flex items-start gap-2 flex-wrap">
+                      <span>{it.agent && <b>{it.agent} · </b>}{it.text}</span>
+                      {it.fix && (
+                        <button disabled={fixing === it.fix.from} onClick={() => rename(it.fix!)}
+                          className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 disabled:opacity-50">
+                          {fixing === it.fix.from ? "Renaming…" : `Rename to ${it.fix.to}`}
+                        </button>
+                      )}
+                      {it.link && !it.fix && <a href={it.link} className="text-[11px] text-[#0F1D5E] underline">open</a>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PaidToAgentsPanel({ inputCls }: { inputCls: string }) {
@@ -460,6 +634,7 @@ export default function CommissionsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [modal, setModal] = useState<Modal | null>(null);
+  const [closeOpen, setCloseOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [breakdown, setBreakdown] = useState<Record<string, Deal[]>>({});
   const [deciding, setDeciding] = useState<Record<string, boolean>>({});
@@ -635,7 +810,17 @@ export default function CommissionsPage() {
           <RefreshCw className={`w-4 h-4 ${calcLoading ? "animate-spin" : ""}`} />
           {calcLoading ? "Calculating…" : `Calculate ${MONTHS[month - 1]} ${year}`}
         </button>
+        <button
+          onClick={() => setCloseOpen(true)}
+          disabled={!rows.some(r => r.status !== "paid" && (r.total_commission || 0) > 0)}
+          title="Approve, close out and mark paid every agent for this month in one step"
+          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50"
+        >
+          <CheckCircle className="w-4 h-4" />
+          Pay {MONTHS[month - 1]} {year}
+        </button>
       </div>
+      {closeOpen && <MonthCloseModal year={year} month={month} rows={rows} onClose={() => setCloseOpen(false)} onDone={load} />}
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -656,6 +841,9 @@ export default function CommissionsPage() {
           </div>
         ))}
       </div>
+
+      {/* Pre-payout checklist */}
+      <NeedsAttentionPanel year={year} month={month} onChanged={load} />
 
       {/* Paid to agents — month range / YTD */}
       <PaidToAgentsPanel inputCls={inputCls} />
@@ -862,7 +1050,7 @@ export default function CommissionsPage() {
                         <td colSpan={7} className="px-6 py-4">
                           <div className="mb-2 flex items-center gap-2 flex-wrap">
                             {(() => {
-                              const enrollOnly = deals.length > 0 && deals.every(d => d.kind === "enrollment");
+                              const enrollOnly = deals.length > 0 && deals.every(d => d.kind === "enrollment" || d.kind === "clawback");
                               const rateFor = (seg: string) => { const r = deals.find(d => d.segment === seg && !d.held && !d.excluded && d.commission > 0); return r ? r.commission : 0; };
                               const rates = Array.from(new Set(deals.filter(d => !d.held && !d.excluded && d.commission > 0).map(d => d.commission)));
                               const rateTxt = rates.length <= 1
@@ -904,11 +1092,11 @@ export default function CommissionsPage() {
                                 <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-200">
                                   <th className="pb-2 text-left">Customer</th>
                                   <th className="pb-2 text-left">Provider</th>
-                                  {!deals.every(d => d.kind === "enrollment") && <th className="pb-2 text-right">kWh Paid</th>}
-                                  {!deals.every(d => d.kind === "enrollment") && <th className="pb-2 text-right">Gross Received</th>}
-                                  {deals.every(d => d.kind === "enrollment") && <th className="pb-2 text-left">Contract Start</th>}
+                                  {!deals.every(d => d.kind === "enrollment" || d.kind === "clawback") && <th className="pb-2 text-right">kWh Paid</th>}
+                                  {!deals.every(d => d.kind === "enrollment" || d.kind === "clawback") && <th className="pb-2 text-right">Gross Received</th>}
+                                  {deals.every(d => d.kind === "enrollment" || d.kind === "clawback") && <th className="pb-2 text-left">Contract Start</th>}
                                   <th className="pb-2 text-left pl-4">How Calculated</th>
-                                  <th className="pb-2 text-right">{deals.every(d => d.kind === "enrollment") ? "Bonus" : "Agent Commission"}</th>
+                                  <th className="pb-2 text-right">{deals.every(d => d.kind === "enrollment" || d.kind === "clawback") ? "Bonus" : "Agent Commission"}</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100">
@@ -921,6 +1109,18 @@ export default function CommissionsPage() {
                                       )}
                                       {d.kind === "statement" && (
                                         <span className="ml-1.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-[10px] font-bold">STATEMENT</span>
+                                      )}
+                                      {d.kind === "clawback" && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-bold">CLAWBACK</span>
+                                      )}
+                                      {d.hold_reason === "auto_rejected" && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[10px] font-bold" title="Same contract entered twice — the other record pays. Use Pay anyway to override.">DUPLICATE · $0</span>
+                                      )}
+                                      {d.hold_reason === "cancelled" && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-bold">CANCELLED · $0</span>
+                                      )}
+                                      {d.kind === "enrollment" && d.auto_decision === "release" && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold" title="Earlier contract was inactive and with another provider — released automatically">AUTO-OK</span>
                                       )}
                                       {d.kind === "enrollment" && d.segment === "commercial" && (
                                         <span className="ml-1.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-[10px] font-bold">COMMERCIAL</span>
@@ -939,13 +1139,21 @@ export default function CommissionsPage() {
                                       <span className="block font-mono text-[10px] text-slate-400">{d.esiid || d.address || ""}</span>
                                     </td>
                                     <td className="py-2 pr-4 text-slate-500">{d.supplier}</td>
-                                    {!deals.every(x => x.kind === "enrollment") && <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : (d.kwh_paid ?? 0).toLocaleString()}</td>}
-                                    {!deals.every(x => x.kind === "enrollment") && <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : fmt(d.gross_received)}</td>}
-                                    {deals.every(x => x.kind === "enrollment") && <td className="py-2 pr-4 text-slate-600 whitespace-nowrap">{d.contract_start || "—"}</td>}
+                                    {!deals.every(x => x.kind === "enrollment" || x.kind === "clawback") && <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : (d.kwh_paid ?? 0).toLocaleString()}</td>}
+                                    {!deals.every(x => x.kind === "enrollment" || x.kind === "clawback") && <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : fmt(d.gross_received)}</td>}
+                                    {deals.every(x => x.kind === "enrollment" || x.kind === "clawback") && <td className="py-2 pr-4 text-slate-600 whitespace-nowrap">{d.contract_start || "—"}</td>}
                                     <td className="py-2 pl-4 text-slate-500">
                                       {d.excluded
                                         ? <span className="text-red-400 font-semibold">Excluded — {d.plan_type}</span>
                                         : d.applied}
+                                      {d.hold_reason === "auto_rejected" && d.deal_source && (
+                                        <div className="mt-1">
+                                          <button disabled={!!deciding[d.deal_id]} onClick={() => decideHeld(row, d, "release")}
+                                            className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-600 text-[11px] font-semibold hover:bg-slate-50 disabled:opacity-50">
+                                            Pay anyway
+                                          </button>
+                                        </div>
+                                      )}
                                       {d.held && d.hold_reason !== "rejected" && d.duplicate_of && (
                                         <div className="mt-1 text-[11px] text-amber-900">
                                           Other contract: <b>{d.duplicate_of.customer || "—"}</b> · {d.duplicate_of.contract_start} → {d.duplicate_of.contract_end || "open"}
@@ -972,7 +1180,7 @@ export default function CommissionsPage() {
                                 ))}
                               </tbody>
                               <tfoot>
-                                {deals.every(d => d.kind === "enrollment") ? (() => {
+                                {deals.every(d => d.kind === "enrollment" || d.kind === "clawback") ? (() => {
                                   const paidRows = deals.filter(d => !d.held && !d.excluded && d.commission > 0);
                                   const rate = paidRows.length ? paidRows[0].commission : 0;
                                   const mixed = new Set(paidRows.map(d => d.commission)).size > 1;
@@ -984,7 +1192,7 @@ export default function CommissionsPage() {
                                   return (
                                     <tr className="border-t-2 border-slate-200 font-semibold">
                                       <td colSpan={4} className="pt-2 text-right text-slate-500">
-                                        {mixed ? segMath : `${paidRows.length} enrolled × ${fmt(rate)}`}{heldN ? <span className="font-normal text-amber-700"> ({heldN} held at $0)</span> : null} =
+                                        {mixed ? segMath : `${paidRows.length} enrolled × ${fmt(rate)}`}{heldN ? <span className="font-normal text-amber-700"> ({heldN} held at $0)</span> : null}{(() => { const cb = deals.filter(d => d.kind === "clawback"); return cb.length ? <span className="font-normal text-red-600"> − {cb.length} clawback{cb.length > 1 ? "s" : ""} {fmt(-cb.reduce((s, d) => s + d.commission, 0))}</span> : null; })()} =
                                       </td>
                                       <td className="pt-2 text-right text-emerald-600">{fmt(deals.reduce((s,d) => s + d.commission, 0))}</td>
                                     </tr>
