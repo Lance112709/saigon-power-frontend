@@ -245,6 +245,7 @@ function BusinessHealth({ data }: { data: any }) {
   const growth = (data.growth ?? []).filter((g: any) => Object.keys(g.by_provider ?? {}).length > 0);
   const chart = growth.map((g: any) => ({
     label: fmtMonthShort(g.month), Gained: g.gained, Lost: -g.lost, net: g.net,
+    transfers: g.transfers ?? 0, book: g.book ?? 0, measured: g.measured_share ?? 100, awaiting: g.awaiting ?? [],
   }));
   const book = data.book ?? {};
   const wb = data.winback ?? {};
@@ -254,12 +255,15 @@ function BusinessHealth({ data }: { data: any }) {
     if (!active || !payload?.length) return null;
     const g = payload.find((p: any) => p.dataKey === "Gained")?.value ?? 0;
     const l = Math.abs(payload.find((p: any) => p.dataKey === "Lost")?.value ?? 0);
+    const row = payload[0]?.payload ?? {};
     return (
       <div className="bg-[#0F1D5E] text-white rounded-xl px-3 py-2 shadow-xl text-xs space-y-0.5">
-        <p className="font-bold">{label}</p>
+        <p className="font-bold">{label} <span className="font-normal text-white/50">· book {Number(row.book ?? 0).toLocaleString()}</span></p>
         <p className="text-emerald-300">+{g} new accounts</p>
         <p className="text-red-300">−{l} confirmed lost</p>
+        {row.transfers > 0 && <p className="text-white/60">{row.transfers} moved between providers (not counted)</p>}
         <p className="border-t border-white/20 pt-0.5 font-bold">net {g - l >= 0 ? "+" : ""}{g - l}</p>
+        {row.measured < 60 && <p className="text-amber-300 pt-0.5">Partial: only {row.measured}% of the book confirmable — waiting on {row.awaiting.join(", ")}</p>}
       </div>
     );
   };
@@ -279,7 +283,7 @@ function BusinessHealth({ data }: { data: any }) {
             <div>
               <h3 className="text-sm font-bold text-slate-800">Net Account Growth</h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Real gains vs confirmed losses (an account absent 2+ months) — bounce-proof
+                Whole-book gains vs confirmed losses (absent 2+ statements) — provider transfers don't count
               </p>
             </div>
             <div className="flex items-center gap-3 text-xs font-semibold">
