@@ -91,14 +91,20 @@ export default function ForecastPage() {
 
   const monthly: any[] = data?.monthly ?? [];
   const bySupplier: any[] = data?.by_supplier ?? [];
-  const chartData = monthly.map(r => ({ month: fmtMonth(r.month), amount: r.amount, raw: r.month }));
-
   const now = new Date();
   const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  // Left of the seam: what providers actually paid (last 12 statement months).
+  // Right of it: the projection from this month forward.
+  const actuals: any[] = (data?.actuals ?? []).filter((a: any) => a.month < nowKey).slice(-12);
+  const chartData = [
+    ...actuals.map((a: any) => ({ month: fmtMonth(a.month), amount: a.amount, raw: a.month, kind: a.complete ? "actual" : "partial" })),
+    ...monthly.map(r => ({ month: fmtMonth(r.month), amount: r.amount, raw: r.month, kind: r.month === nowKey ? "now" : "future" })),
+  ];
+  const receivedLast12: number = data?.received_last_12 ?? actuals.filter((a: any) => a.complete).reduce((s: number, a: any) => s + a.amount, 0);
   const future = monthly.filter(r => r.month >= nowKey);
   const next12 = future.slice(0, 12);
   const next12Total = next12.reduce((s, r) => s + r.amount, 0);
-  const peak = chartData.reduce((best, r) => (r.amount > (best?.amount ?? 0) ? r : best), null as any);
+  const peak = chartData.filter(r => r.kind === "future" || r.kind === "now").reduce((best, r) => (r.amount > (best?.amount ?? 0) ? r : best), null as any);
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-6">
@@ -125,7 +131,7 @@ export default function ForecastPage() {
           value={fmt$(data?.total_projected ?? 0)} sub={`all active + future deals · ${data?.horizon_months ?? 60} months`} />
         <GlowCard gradient="bg-gradient-to-br from-[#2a78d6] to-[#0F1D5E]"
           icon={<TrendingUp className="w-3.5 h-3.5" />} label="Next 12 Months"
-          value={fmt$(next12Total)} sub={`${next12.length} months in view`} />
+          value={fmt$(next12Total)} sub={receivedLast12 > 0 ? `vs ${fmt$(receivedLast12)} received in the last 12 statement months` : `${next12.length} months in view`} />
         <GlowCard gradient="bg-gradient-to-br from-violet-500 to-[#4a3aa7]"
           icon={<CalendarDays className="w-3.5 h-3.5" />} label="Avg. Monthly"
           value={fmt$(data?.avg_monthly ?? 0)} sub="across the forecast period" />
@@ -168,7 +174,7 @@ export default function ForecastPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
-            <h2 className="text-sm font-bold text-[#0F1D5E]">Monthly Commission Forecast</h2>
+            <h2 className="text-sm font-bold text-[#0F1D5E]">Received vs. Forecast</h2>
             <p className="text-xs text-slate-400 mt-0.5">
               kWh/mo (seasonal, from statements) × paid rate per deal
               {data?.rate_sources && <> · rates: {data.rate_sources.meter_observed} observed on statements, {(data.rate_sources.contract_adjusted ?? 0) + (data.rate_sources.contract ?? 0)} from contract</>}
@@ -176,8 +182,11 @@ export default function ForecastPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#334155] inline-block" /> Received
+            </span>
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block" /> Past
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block" /> Statements still importing
             </span>
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
               <span className="w-2.5 h-2.5 rounded-full bg-[#1baf7a] inline-block" /> This month
@@ -213,13 +222,15 @@ export default function ForecastPage() {
                 tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
               <Tooltip cursor={{ fill: "#0F1D5E08" }} content={
                 <NavyTooltip lines={(p: any) => [
-                  { k: "Projected commission", v: fmt$(p.amount), dot: p.raw === nowKey ? "#1baf7a" : "#2a78d6" },
+                  p.kind === "actual" ? { k: "Received from providers", v: fmt$(p.amount), dot: "#334155" }
+                  : p.kind === "partial" ? { k: "Received so far (statements still importing)", v: fmt$(p.amount), dot: "#cbd5e1" }
+                  : { k: "Projected commission", v: fmt$(p.amount), dot: p.kind === "now" ? "#1baf7a" : "#2a78d6" },
                 ]} />
               } />
               <Bar dataKey="amount" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                 {chartData.map((entry, i) => (
                   <Cell key={i}
-                    fill={entry.raw === nowKey ? "url(#nowBar)" : entry.raw < nowKey ? "#cbd5e1" : "url(#futureBar)"} />
+                    fill={entry.kind === "now" ? "url(#nowBar)" : entry.kind === "actual" ? "#334155" : entry.kind === "partial" ? "#cbd5e1" : "url(#futureBar)"} />
                 ))}
               </Bar>
             </BarChart>
