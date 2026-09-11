@@ -112,8 +112,8 @@ export default function ForecastPage() {
             <TrendingUp className="w-6 h-6 text-emerald-300" /> Revenue Forecast
           </h1>
           <p className="text-white/60 mt-1 text-sm">
-            Projected commission from {data?.contributing_deals ?? 0} active deals — real statement usage × contracted adder,
-            up to 24 months out.
+            Projected commission from {data?.contributing_deals ?? 0} active deals — statement usage shaped by the seasonal curve × the rate each provider actually pays,
+            up to {data?.horizon_months ?? 60} months out.
           </p>
         </div>
       </div>
@@ -122,7 +122,7 @@ export default function ForecastPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <GlowCard gradient="bg-gradient-to-br from-emerald-500 to-green-700"
           icon={<DollarSign className="w-3.5 h-3.5" />} label="Total Projected"
-          value={fmt$(data?.total_projected ?? 0)} sub="all active + future deals · 24 months" />
+          value={fmt$(data?.total_projected ?? 0)} sub={`all active + future deals · ${data?.horizon_months ?? 60} months`} />
         <GlowCard gradient="bg-gradient-to-br from-[#2a78d6] to-[#0F1D5E]"
           icon={<TrendingUp className="w-3.5 h-3.5" />} label="Next 12 Months"
           value={fmt$(next12Total)} sub={`${next12.length} months in view`} />
@@ -170,7 +170,8 @@ export default function ForecastPage() {
           <div>
             <h2 className="text-sm font-bold text-[#0F1D5E]">Monthly Commission Forecast</h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Est. commission = kWh/mo × adder ($/kWh) per deal
+              kWh/mo (seasonal, from statements) × paid rate per deal
+              {data?.rate_sources && <> · rates: {data.rate_sources.meter_observed} observed on statements, {(data.rate_sources.contract_adjusted ?? 0) + (data.rate_sources.contract ?? 0)} from contract</>}
               {peak && <> · peak {peak.month} at <span className="font-semibold text-[#0F1D5E]">{fmt$(peak.amount)}</span></>}
             </p>
           </div>
@@ -194,7 +195,7 @@ export default function ForecastPage() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} barSize={26}>
+            <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} maxBarSize={26}>
               <defs>
                 <linearGradient id="futureBar" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#2a78d6" />
@@ -206,7 +207,8 @@ export default function ForecastPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
+                interval={chartData.length > 30 ? 5 : chartData.length > 18 ? 2 : 0} />
               <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
                 tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
               <Tooltip cursor={{ fill: "#0F1D5E08" }} content={
@@ -222,6 +224,24 @@ export default function ForecastPage() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        )}
+        {data?.seasonality && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Seasonal usage curve <span className="normal-case font-normal text-slate-400">— same-meter statement history, {data.seasonality_meters?.toLocaleString()} meters · 1.00 = annual average</span>
+            </p>
+            <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
+              {data.seasonality.map((m: any) => (
+                <div key={m.month} className="text-center">
+                  <div className="h-10 flex items-end justify-center">
+                    <div className={`w-full rounded-t ${m.index >= 1 ? "bg-[#2a78d6]" : "bg-slate-300"}`} style={{ height: `${Math.max(6, Math.min(100, m.index / 1.5 * 100))}%` }} />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">{m.month}</p>
+                  <p className="text-[10px] font-semibold text-slate-600 tabular-nums">{m.index.toFixed(2)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
