@@ -1136,8 +1136,7 @@ export default function CommissionsPage() {
                                           {d.hold_reason === "rejected" ? "REJECTED" : "HELD — REVIEW"}
                                         </span>
                                       )}
-                                      {d.address && <span className="block text-[11px] text-slate-500">{d.address}</span>}
-                                      {d.esiid && <span className="block font-mono text-[10px] text-slate-400">{d.esiid}</span>}
+                                      <span className="block text-[11px] text-slate-500" title={d.esiid ? `ESI ID ${d.esiid}` : undefined}>{d.address || (d.esiid ? `ESI ID ${d.esiid}` : "")}</span>
                                     </td>
                                     <td className="py-2 pr-4 text-slate-500">{d.supplier}</td>
                                     {!deals.every(x => x.kind === "enrollment" || x.kind === "clawback") && <td className="py-2 pr-4 text-right text-slate-600">{d.kind === "enrollment" ? "—" : (d.kwh_paid ?? 0).toLocaleString()}</td>}
