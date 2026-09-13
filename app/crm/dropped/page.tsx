@@ -111,7 +111,7 @@ export default function DroppedDealsPage() {
         </div>
         {summary?.excluded && (
           <p className="relative mt-3 text-[11px] text-white/45">
-            Not counted as dropped: {summary.excluded.superseded} superseded by a live deal on the same meter · {summary.excluded.no_esiid} with no ESI ID · {summary.excluded.converted_pipeline} pipeline copies of converted leads · {summary.excluded.still_paying} still being paid by the provider (review list below)
+            Not counted as dropped: {summary.excluded.superseded} superseded by a live deal on the same meter · {summary.excluded.no_esiid} with no ESI ID · {summary.excluded.still_paying} still being paid by the provider (review list below)
           </p>
         )}
         <div className="relative grid grid-cols-3 gap-3 mt-5 max-w-2xl">
