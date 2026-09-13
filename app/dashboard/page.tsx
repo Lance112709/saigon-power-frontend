@@ -712,18 +712,21 @@ export default function DashboardPage() {
         {showFinance && (
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: "Active Contracts",        value: portfolio.active_contracts ?? 0,             fmt: (v: number) => v.toLocaleString(), icon: <Users className="w-4 h-4" />,        color: "text-blue-600",    bg: "bg-blue-50" },
-              { label: "Received Last Month",     value: stats?.finance?.received_last_month ?? 0,    fmt: fmt$,                              icon: <DollarSign className="w-4 h-4" />,   color: "text-emerald-600", bg: "bg-emerald-50" },
+              { label: "Active Contracts",        value: portfolio.active_contracts ?? 0,             fmt: (v: number) => v.toLocaleString(), icon: <Users className="w-4 h-4" />,        color: "text-blue-600",    bg: "bg-blue-50",
+                sub: portfolio.active_meters ? `${Number(portfolio.active_meters).toLocaleString()} distinct meters${portfolio.no_esiid ? ` · ${portfolio.no_esiid} records without ESI ID` : ""}` : undefined },
+              { label: "Received Last Month",     value: stats?.finance?.received_last_month ?? 0,    fmt: fmt$,                              icon: <DollarSign className="w-4 h-4" />,   color: "text-emerald-600", bg: "bg-emerald-50",
+                sub: stats?.finance ? `${fmtMonthShort(stats.finance.received_month)}${stats.finance.providers_reported < stats.finance.total_providers ? ` · ${stats.finance.providers_reported} of ${stats.finance.total_providers} providers reported so far` : " · all providers in"}` : undefined },
               { label: "Pipeline Est. / mo",      value: portfolio.commission_mo ?? 0,                fmt: fmt$,                              icon: <TrendingUp className="w-4 h-4" />,   color: "text-violet-600",  bg: "bg-violet-50" },
               { label: "At-risk ≤ 30 days",       value: portfolio.at_risk ?? 0,                      fmt: (v: number) => String(v),          icon: <AlertTriangle className="w-4 h-4" />, color: "text-amber-600",   bg: "bg-amber-50" },
-            ].map(({ label, value, fmt, icon, color, bg }) => (
+            ].map(({ label, value, fmt, icon, color, bg, sub }: any) => (
               <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center shrink-0`}>
                   {icon}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className={`text-2xl font-black ${color}`}>{fmt(value)}</p>
                   <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+                  {sub && <p className="text-[11px] text-slate-400 mt-0.5 truncate" title={sub}>{sub}</p>}
                 </div>
               </div>
             ))}
