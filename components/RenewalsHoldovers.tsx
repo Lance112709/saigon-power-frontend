@@ -16,7 +16,7 @@ const OUTCOME: Record<string, string> = {
 };
 const fmtDate = (d?: string | null) => d ? new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
-/** Admin dashboard card: renewals by month + contracts that expired without a renewal (holdovers). */
+/** Admin + manager dashboard card: renewals by month + contracts that expired without a renewal (holdovers). */
 export default function RenewalsHoldovers() {
   const [data, setData] = useState<any>(null);
   const [month, setMonth] = useState<string>("");
@@ -40,7 +40,7 @@ export default function RenewalsHoldovers() {
   const stopped = hold ? hold.total - hold.still_paying : 0;
 
   if (!data || !hold) return null;
-  const showRenewals = !!data.renewals;   // admin only (API omits it for managers)
+  const showRenewals = !!data.renewals;   // admins and managers (API returns it for both)
 
   return (
     <div className={`grid grid-cols-1 ${showRenewals ? "xl:grid-cols-2" : ""} gap-4`}>
