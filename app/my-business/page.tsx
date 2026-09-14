@@ -168,14 +168,14 @@ export default function MyBusinessPage() {
               </p>
             </div>
             <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3.5">
-              <p className="text-xs text-white/60 font-medium flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" /> Last Payout</p>
+              <p className="text-xs text-white/60 font-medium flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" /> Total Received</p>
               <p className="text-2xl font-bold mt-1 tabular-nums">
-                {overview.last_commission ? fmt(overview.last_commission.total_commission) : "—"}
+                {overview.paid_months > 0 ? fmt(overview.total_received) : "—"}
               </p>
               <p className="text-[11px] text-white/50 mt-0.5">
-                {overview.last_commission
-                  ? `${MONTHS[overview.last_commission.month - 1]} ${overview.last_commission.year} · ${overview.last_commission.status}`
-                  : "no payouts calculated yet"}
+                {overview.last_paid
+                  ? `${overview.paid_months} paid month${overview.paid_months === 1 ? "" : "s"} · last paid ${MONTHS[overview.last_paid.month - 1]} ${overview.last_paid.year}`
+                  : "no commission paid yet"}
               </p>
             </div>
             <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3.5">
