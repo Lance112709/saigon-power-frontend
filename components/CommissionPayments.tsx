@@ -64,6 +64,7 @@ function MonthlyUsageCard({ data, esi, onEsiChange, showFilter }: {
   if (!allRows.length) return null;
   const rows = byEsi(allRows, esi);
   const esiIds: string[] = data?.esi_ids?.length ? data.esi_ids : Array.from(new Set(allRows.map((p: any) => String(p.esi_id))));
+  const scopedEsi = esi || (esiIds.length === 1 ? esiIds[0] : "");  // single-meter record (deal page) — name the meter
 
   const buckets: Record<string, { month: string; kwh: number; meters: Set<string> }> = {};
   for (const p of rows) {
@@ -87,10 +88,10 @@ function MonthlyUsageCard({ data, esi, onEsiChange, showFilter }: {
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-[#0F1D5E]" />
           <h3 className="text-sm font-bold text-[#0F1D5E]">Monthly Usage</h3>
-          {esi && <span className="text-[11px] font-mono text-slate-400">· {esi}</span>}
+          {scopedEsi && <span className="text-[11px] font-mono text-slate-400">· ESI {scopedEsi}</span>}
         </div>
         <span className="text-sm text-slate-500">
-          {esi ? "Metered on this ESI ID" : "Lifetime metered"} <span className="font-bold text-slate-700">{Math.round(totalKwh).toLocaleString()} kWh</span>
+          {scopedEsi ? "Metered on this ESI ID" : "Lifetime metered"} <span className="font-bold text-slate-700">{Math.round(totalKwh).toLocaleString()} kWh</span>
         </span>
       </div>
       {showFilter && <EsiFilter esiIds={esiIds} value={esi} onChange={onEsiChange} />}
@@ -182,6 +183,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
   const allPayments: any[] = data?.payments || [];
   const esiIds: string[] = data?.esi_ids?.length ? data.esi_ids : Array.from(new Set(allPayments.map(p => String(p.esi_id))));
   const payments = byEsi(allPayments, esi);
+  const scopedEsi = esi || (esiIds.length === 1 ? esiIds[0] : "");  // single-meter record (deal page)
   const summary = esi ? summarize(payments) : { total: data?.total ?? 0, latestStatus: data?.latest_status ?? null };
   const visible = showAll ? payments : payments.slice(0, 12);
 
@@ -192,6 +194,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
         <div className="flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-[#0F1D5E]" />
           <h3 className="text-sm font-bold text-[#0F1D5E]">Commission Payments ({payments.length}{esi && allPayments.length !== payments.length ? ` of ${allPayments.length}` : ""})</h3>
+          {scopedEsi && <span className="text-[11px] font-mono text-slate-400">· ESI {scopedEsi}</span>}
           <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">Admin only</span>
         </div>
         {data && payments.length > 0 && (
@@ -201,7 +204,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
                 Latest month: {STATUS_LABEL[summary.latestStatus]}
               </span>
             )}
-            <span className="text-sm text-slate-500">Total received <span className="font-bold text-emerald-600">{fmtUsd(summary.total)}</span></span>
+            <span className="text-sm text-slate-500">{scopedEsi ? "Received on this ESI ID" : "Total received"} <span className="font-bold text-emerald-600">{fmtUsd(summary.total)}</span></span>
           </div>
         )}
       </div>
