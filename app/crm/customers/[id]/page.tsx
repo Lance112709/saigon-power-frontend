@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, User, MapPin, Phone, Mail, Calendar, Hash,
   Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare, RefreshCw, Ban, FileEdit, AlertCircle,
-  Paperclip, Upload, Download, FileText, Loader2, DollarSign,
+  Paperclip, Upload, Download, FileText, Loader2,
 } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
 import SendEmailModal from "@/components/SendEmailModal";
@@ -1252,9 +1252,9 @@ export default function CustomerProfilePage() {
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
                           <button onClick={e => { e.stopPropagation(); router.push(`/crm/deals/${d.id}`); }}
-                            title={d.esiid ? `Commission payments & monthly usage for ESI ${d.esiid}` : "Open this deal"}
+                            title={d.esiid ? `Monthly usage for ESI ${d.esiid}` : "Open this deal"}
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#EEF1FA] text-[#0F1D5E] hover:bg-[#0F1D5E] hover:text-white transition-colors">
-                            <DollarSign className="w-3 h-3" /> Commission & Usage
+                            <Zap className="w-3 h-3" /> Usage
                           </button>
                           {d.deal_status === "ACTIVE" && (
                             <>
