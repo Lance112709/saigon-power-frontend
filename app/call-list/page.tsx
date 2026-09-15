@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { PhoneCall, RefreshCw, ArrowRight, CheckCircle2, Undo2, RotateCcw, X } from "lucide-react";
+import { PhoneCall, RefreshCw, ArrowRight, CheckCircle2, Undo2, RotateCcw, X, CalendarDays } from "lucide-react";
 
 type Entry = {
   name: string;
@@ -27,6 +27,25 @@ type ResolvedEntry = Entry & {
   resolved_at: string | null;
   note: string | null;
   still_due: boolean;
+};
+
+type MonthBucket = { month: string; label: string; count: number };
+
+const NO_MONTH = "none";
+// "2026-10" for an October 2026 end date; NO_MONTH when the row has no end date (mirrors the backend)
+const monthKey = (endDate: string | null) => {
+  const d = (endDate || "").slice(0, 7);
+  return d.length === 7 && d[4] === "-" ? d : NO_MONTH;
+};
+const monthLabel = (key: string) =>
+  key === NO_MONTH ? "No end date"
+    : new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleString("en-US", { month: "short", year: "numeric" });
+const monthCounts = (rows: { end_date: string | null }[]): MonthBucket[] => {
+  const counts = new Map<string, number>();
+  rows.forEach(r => { const k = monthKey(r.end_date); counts.set(k, (counts.get(k) || 0) + 1); });
+  const keys = [...counts.keys()].filter(k => k !== NO_MONTH).sort();
+  if (counts.has(NO_MONTH)) keys.push(NO_MONTH);
+  return keys.map(k => ({ month: k, label: monthLabel(k), count: counts.get(k) || 0 }));
 };
 
 const fmtResolvedAt = (iso: string | null) =>
@@ -63,6 +82,9 @@ export default function CallListPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string | undefined>(undefined);
+  // Contract-end month toggle: undefined = every month
+  const [month, setMonth] = useState<string | undefined>(undefined);
+  const [months, setMonths] = useState<MonthBucket[]>([]);
   const [resolving, setResolving] = useState<string | null>(null);
   const [resolved, setResolved] = useState<ResolvedEntry[]>([]);
   // Row awaiting the "what did you do?" note before it is marked resolved
@@ -75,7 +97,7 @@ export default function CallListPage() {
 
   const showResolved = priorityFilter === "resolved";
 
-  const load = async (pf?: string, isRefresh = false) => {
+  const load = async (pf?: string, m?: string, isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     if (pf === "resolved") {
       const data = await api.getResolvedCallList().catch(() => []);
@@ -83,14 +105,26 @@ export default function CallListPage() {
     } else {
       const params: Record<string, string> = { limit: "100" };
       if (pf) params.priority_filter = pf;
-      const data = await api.getCallList(params).catch(() => []);
-      setEntries(data);
+      if (m) params.month = m;
+      const data = await api.getCallListWithMonths(params).catch(() => ({ entries: [], months: [] }));
+      setEntries(data?.entries ?? []);
+      setMonths(data?.months ?? []);
     }
     setLoading(false);
     setRefreshing(false);
   };
 
-  useEffect(() => { load(priorityFilter); }, [priorityFilter]);
+  useEffect(() => { load(priorityFilter, month); }, [priorityFilter, month]);
+
+  // Resolved rows are filtered here — the tab already holds the full list
+  const resolvedShown = month ? resolved.filter(r => monthKey(r.end_date) === month) : resolved;
+  const monthOptions = showResolved ? monthCounts(resolved) : months;
+  const monthTotal = monthOptions.reduce((n, b) => n + b.count, 0);
+
+  // Drop a stale month selection if the current tab has nothing in it
+  useEffect(() => {
+    if (month && !loading && !monthOptions.some(b => b.month === month)) setMonth(undefined);
+  }, [month, loading, monthOptions]);
 
   useEffect(() => {
     if (!undo) return;
@@ -169,7 +203,7 @@ export default function CallListPage() {
             <p className="text-sm text-slate-400">{today} · Active customers with deals expiring or due for check-in · click <span className="font-semibold text-emerald-600">Resolved</span> once you have handled a customer · they move to the <span className="font-semibold text-slate-500">Resolved</span> tab</p>
           </div>
         </div>
-        <button onClick={() => load(priorityFilter, true)} disabled={refreshing}
+        <button onClick={() => load(priorityFilter, month, true)} disabled={refreshing}
           className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
           <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh
         </button>
@@ -211,6 +245,31 @@ export default function CallListPage() {
         ))}
       </div>
 
+      {/* Month toggle — contract-end month; counts are for the current tab */}
+      {!loading && monthOptions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1">
+            <CalendarDays className="w-3.5 h-3.5" /> Contract ends
+          </span>
+          {[{ month: "", label: "All months", count: monthTotal }, ...monthOptions].map(b => {
+            const active = (month ?? "") === b.month;
+            return (
+              <button key={b.month || "all"} onClick={() => setMonth(b.month || undefined)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
+                  active
+                    ? "bg-[#0F1D5E] border-[#0F1D5E] text-white"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}>
+                {b.label}
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>
+                  {b.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {error && (
         <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
           <span>{error}</span>
@@ -243,10 +302,10 @@ export default function CallListPage() {
         {loading ? (
           <div className="p-16 text-center text-slate-400 text-sm">Loading customers...</div>
         ) : showResolved ? (
-          resolved.length === 0 ? (
+          resolvedShown.length === 0 ? (
             <div className="p-16 text-center">
               <CheckCircle2 className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-              <p className="text-slate-400 text-sm font-medium">Nothing resolved yet.</p>
+              <p className="text-slate-400 text-sm font-medium">{month ? `Nothing resolved with a contract ending ${monthLabel(month)}.` : "Nothing resolved yet."}</p>
               <p className="text-slate-300 text-xs mt-1">Customers you mark Resolved on the call list will show up here.</p>
             </div>
           ) : (
@@ -260,7 +319,7 @@ export default function CallListPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {resolved.map((r, i) => (
+                  {resolvedShown.map((r, i) => (
                     <tr key={r.resolution_id}
                       className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 cursor-pointer"
                       onClick={() => router.push(r.entity_url)}>
@@ -312,7 +371,7 @@ export default function CallListPage() {
         ) : entries.length === 0 ? (
           <div className="p-16 text-center">
             <PhoneCall className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm font-medium">No customers to call right now.</p>
+            <p className="text-slate-400 text-sm font-medium">{month ? `No customers with a contract ending ${monthLabel(month)}.` : "No customers to call right now."}</p>
             <p className="text-slate-300 text-xs mt-1">Customers with active deals will appear here.</p>
           </div>
         ) : (

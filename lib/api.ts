@@ -493,6 +493,11 @@ export const api = {
     const q = params ? "?" + new URLSearchParams(params).toString() : "";
     return request(`/api/v1/call-list${q}`);
   },
+  // Same list, plus the contract-end months present (for the month toggle); returns {entries, months}
+  getCallListWithMonths: (params?: Record<string, string>) => {
+    const q = "?" + new URLSearchParams({ ...(params || {}), include_months: "1" }).toString();
+    return request(`/api/v1/call-list${q}`);
+  },
   getResolvedCallList: () => request("/api/v1/call-list/resolved?limit=300"),
   resolveCallListEntry: (entityKey: string, endDate: string | null, note?: string) =>
     request("/api/v1/call-list/resolve", { method: "POST", body: JSON.stringify({ entity_key: entityKey, end_date: endDate, note: note || null }) }),
