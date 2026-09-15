@@ -6,6 +6,23 @@ import { api } from "@/lib/api";
 import { RefreshCw, Search, X, ChevronRight, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
+// Contract-end month helpers — the month select just drives the From/To date filters,
+// so the backend query and the CSV export pick it up unchanged.
+const lastDayOf = (key: string) => {
+  const y = Number(key.slice(0, 4)), m = Number(key.slice(5, 7));
+  return `${key}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
+};
+const monthLabel = (key: string) =>
+  new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+const monthCounts = (rows: { end_date?: string | null }[]) => {
+  const counts = new Map<string, number>();
+  rows.forEach(r => {
+    const k = (r.end_date || "").slice(0, 7);
+    if (k.length === 7 && k[4] === "-") counts.set(k, (counts.get(k) || 0) + 1);
+  });
+  return [...counts.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, count]) => ({ month, count }));
+};
+
 const inputCls = "border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 text-slate-700";
 
 function DaysChip({ days }: { days: number | null }) {
@@ -32,6 +49,16 @@ export default function RenewalsPage() {
   const [provider, setProvider] = useState("");
   const [salesAgent, setSalesAgent] = useState("");
   const [search, setSearch] = useState("");
+  // Months that have deals, with counts — refreshed whenever the list loads without a date range
+  const [monthOptions, setMonthOptions] = useState<{ month: string; count: number }[]>([]);
+  // The month select is "on" only while From/To are exactly that month's bounds
+  const selectedMonth =
+    /^\d{4}-\d{2}-01$/.test(startDate) && endDate === lastDayOf(startDate.slice(0, 7)) ? startDate.slice(0, 7) : "";
+  const pickMonth = (key: string) => {
+    if (!key) { setStartDate(""); setEndDate(""); return; }
+    setStartDate(`${key}-01`);
+    setEndDate(lastDayOf(key));
+  };
 
   useEffect(() => {
     (api as any).getRenewalFilters().then((f: any) => {
@@ -51,6 +78,7 @@ export default function RenewalsPage() {
       const qs = new URLSearchParams(params).toString();
       const data = await (api as any).getRenewals(qs ? `?${qs}` : "");
       setDeals(data);
+      if (!startDate && !endDate) setMonthOptions(monthCounts(data));
     } catch {}
     setLoading(false);
   }, [startDate, endDate, provider, salesAgent]);
@@ -154,7 +182,7 @@ export default function RenewalsPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
 
           {/* Search */}
           <div className="lg:col-span-2 relative">
@@ -166,6 +194,20 @@ export default function RenewalsPage() {
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 bg-white"
             />
+          </div>
+
+          {/* Contract End Month — shortcut that fills From/To */}
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">End Month</label>
+            <select value={selectedMonth} onChange={e => pickMonth(e.target.value)} className={`${inputCls} w-full`}>
+              <option value="">All months</option>
+              {monthOptions.map(o => (
+                <option key={o.month} value={o.month}>{monthLabel(o.month)} ({o.count})</option>
+              ))}
+              {selectedMonth && !monthOptions.some(o => o.month === selectedMonth) && (
+                <option value={selectedMonth}>{monthLabel(selectedMonth)}</option>
+              )}
+            </select>
           </div>
 
           {/* Contract End From */}
