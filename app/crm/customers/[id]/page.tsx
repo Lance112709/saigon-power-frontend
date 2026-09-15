@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft, User, MapPin, Phone, Mail, Calendar, Hash,
   Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare, RefreshCw, Ban, FileEdit, AlertCircle,
-  Paperclip, Upload, Download, FileText, Loader2,
+  Paperclip, Upload, Download, FileText, Loader2, Building2,
 } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
 import SendEmailModal from "@/components/SendEmailModal";
@@ -741,7 +741,7 @@ export default function CustomerProfilePage() {
   // Edit state
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    full_name: "", phone: "", email: "", dob: "",
+    full_name: "", business_name: "", phone: "", email: "", dob: "",
     mailing_address: "", city: "", state: "", postal_code: "", notes: "", anxh: "",
   });
   const [saving, setSaving] = useState(false);
@@ -778,6 +778,7 @@ export default function CustomerProfilePage() {
     const firstAnxh = deals.map((d: any) => d.anxh).find(Boolean) || "";
     setEditForm({
       full_name: data.full_name || "",
+      business_name: data.business_name || "",
       phone: data.phone || "",
       email: data.email || "",
       dob: data.dob || "",
@@ -815,6 +816,7 @@ export default function CustomerProfilePage() {
     const firstAnxh = deals.map((d: any) => d.anxh).find(Boolean) || "";
     setEditForm({
       full_name: customer.full_name || "",
+      business_name: customer.business_name || "",
       phone: customer.phone || "",
       email: customer.email || "",
       dob: customer.dob || "",
@@ -1070,6 +1072,11 @@ export default function CustomerProfilePage() {
             <div className="min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl font-bold">{customer.full_name}</h2>
+                {customer.business_name && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/20">
+                    <Building2 className="w-3.5 h-3.5" /> {customer.business_name}
+                  </span>
+                )}
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider bg-emerald-400/20 text-emerald-200 border border-emerald-300/30 uppercase">Customer</span>
                 {customer.membership?.active && (
                   <span title={`${customer.membership.plan_name || "Member"}${customer.membership.since ? " · since " + new Date(customer.membership.since).toLocaleDateString() : ""}`}
@@ -1138,6 +1145,10 @@ export default function CustomerProfilePage() {
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Full Name</label>
               <input className={inputCls} value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Business Name <span className="text-slate-400">(optional)</span></label>
+              <input className={inputCls} placeholder="e.g. Bliss Nails Spa" value={editForm.business_name} onChange={e => setEditForm(f => ({ ...f, business_name: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Phone</label>

@@ -300,7 +300,7 @@ function CrmCustomersContent() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search name, email, or phone..."
+                placeholder="Search name, business, email, or phone..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 bg-white"
@@ -431,6 +431,7 @@ function CrmCustomersContent() {
                     )}
                     <td className="px-5 py-3.5 font-semibold text-[#0F1D5E]">
                       {c.full_name}
+                      {c.business_name && <span className="block text-xs font-medium text-slate-400 mt-0.5">{c.business_name}</span>}
                       {c.is_member && (
                         <span title="SmartCare Member — give extra care"
                           className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700 align-middle">⭐ SmartCare</span>
