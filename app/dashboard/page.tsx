@@ -315,6 +315,12 @@ function BusinessHealth({ data }: { data: any }) {
           <p className="text-[11px] text-white/50 mt-1">
             {book.paying_accounts?.toLocaleString()} paying accounts × {fmt$(book.ltv_per_account ?? 0)} lifetime value
           </p>
+          {book.paying_window?.from && (
+            <p className="text-[10px] text-white/40 mt-0.5"
+               title={Object.entries(book.paying_window.by_provider ?? {}).map(([p, v]: any) => `${p}: ${v.accounts.toLocaleString()} on ${v.month}`).join("\n")}>
+              Meters on each provider&apos;s newest statement, {fmtMonthShort(book.paying_window.from)} – {fmtMonthShort(book.paying_window.to)} · hover for the split
+            </p>
+          )}
           <div className="grid grid-cols-3 gap-2 mt-4 text-center">
             {[
               { l: "Avg / account / mo", v: `$${book.arpa ?? 0}` },
