@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import {
   AlertCircle, Clock, CalendarDays, CheckCircle2, Plus, X,
-  Trash2, Check, ChevronDown, Bell,
+  Trash2, Check, ChevronDown, Bell, ExternalLink,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -11,7 +11,7 @@ type Task = {
   id: string; lead_id?: string; deal_id?: string; customer_id?: string;
   task_type: string; title: string; description?: string;
   due_date: string; status: string; priority: string;
-  assigned_to?: string; entity_name?: string; completed_at?: string;
+  assigned_to?: string; entity_name?: string; entity_link?: string | null; completed_at?: string;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -190,11 +190,19 @@ function TaskRow({ task, onComplete, onDelete }: {
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  // Clicking the task opens the linked customer / lead account in a new tab.
+  const openAccount = () => { if (task.entity_link) window.open(task.entity_link, "_blank", "noopener"); };
   return (
-    <tr className={`border-b border-slate-100 last:border-0 hover:bg-slate-50/70 ${task.status === "completed" ? "opacity-50" : ""}`}>
+    <tr onClick={openAccount}
+      title={task.entity_link ? `Open ${task.entity_name || "account"} in a new tab` : undefined}
+      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50/70 ${task.entity_link ? "cursor-pointer" : ""} ${task.status === "completed" ? "opacity-50" : ""}`}>
       <td className="px-4 py-3">
         <p className="font-semibold text-sm text-slate-800">{task.title}</p>
-        {task.entity_name && <p className="text-xs text-slate-400 mt-0.5">{task.entity_name}</p>}
+        {task.entity_name && (
+          <p className={`text-xs mt-0.5 inline-flex items-center gap-1 ${task.entity_link ? "text-[#0F1D5E] font-medium hover:underline" : "text-slate-400"}`}>
+            {task.entity_name}{task.entity_link && <ExternalLink className="w-3 h-3" />}
+          </p>
+        )}
         {task.description && <p className="text-xs text-slate-400 mt-0.5 italic">{task.description}</p>}
       </td>
       <td className="px-4 py-3">
@@ -214,7 +222,7 @@ function TaskRow({ task, onComplete, onDelete }: {
         </span>
       </td>
       <td className="px-4 py-3 text-xs text-slate-500">{task.assigned_to || "—"}</td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           {task.status !== "completed" && (
             <button
