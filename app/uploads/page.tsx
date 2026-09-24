@@ -363,6 +363,51 @@ export default function UploadsPage() {
                       </div>
                     </div>
                   )}
+                  {confirmed.absence_sync && (confirmed.absence_sync.deactivated > 0 || confirmed.absence_sync.pending) && (
+                    <div className="border-t pt-3 mt-3">
+                      <div className="text-xs font-semibold text-gray-600 mb-2">
+                        Accounts missing from the last 3 statements
+                        <span className="text-gray-400 font-normal ml-1">
+                          ({confirmed.absence_sync.active} active deals checked, window {confirmed.absence_sync.window} – {confirmed.absence_sync.latest})
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {confirmed.absence_sync.deactivated > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+                            {confirmed.absence_sync.deactivated} deactivated — no payment in 3 months
+                          </span>
+                        )}
+                        {(confirmed.absence_sync.switched ?? []).length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold"
+                                title={(confirmed.absence_sync.switched as any[]).map((x) => `${x.name || x.esiid} → ${x.paid_by}`).join("\n")}>
+                            {confirmed.absence_sync.switched.length} switched provider — relabel
+                          </span>
+                        )}
+                        {confirmed.absence_sync.in_grace > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs">
+                            {confirmed.absence_sync.in_grace} new contracts still in grace
+                          </span>
+                        )}
+                        {confirmed.absence_sync.pending && (
+                          <button
+                            onClick={async () => {
+                              if (!confirm(
+                                `${confirmed.absence_sync.held} of ${confirmed.absence_sync.active} active deals have no payment on the last 3 statements.\n\n` +
+                                `That is more than half the book, which usually means a partial or stub statement. Deactivate them anyway?`)) return;
+                              try {
+                                const r = await authFetch(`/api/v1/uploads/${confirmed.upload_batch_id}/apply-statuses`, { method: "POST" });
+                                setConfirmed((c: any) => ({ ...c, absence_sync: { ...(r.absence_sync ?? {}), pending: false },
+                                  status_sync: c.status_sync ? { ...r, pending: false } : c.status_sync }));
+                              } catch (e: any) { alert(e.message || "Failed"); }
+                            }}
+                            className="ml-auto px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700"
+                          >
+                            {confirmed.absence_sync.held} held — review looks right, deactivate
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {(confirmed.warnings ?? []).map((w: string, i: number) => (
                     <div key={i} className="text-xs text-yellow-700 mt-2">⚠ {w}</div>
                   ))}
