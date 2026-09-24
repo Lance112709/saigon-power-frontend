@@ -224,7 +224,8 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block">Energy Rate ($/kWh) *</label>
-              <input type="number" step="0.0001" className={inpCls("energy_rate")} value={form.energy_rate} onChange={e => set("energy_rate", e.target.value)} placeholder="0.0000" />
+              <input type="number" step="0.0001" className={inpCls("energy_rate")} value={form.energy_rate} onChange={e => set("energy_rate", e.target.value)} placeholder="0.0850" />
+              <p className="text-[11px] text-slate-400 mt-1">Enter in $/kWh, e.g. 0.085 for 8.5¢ (cents entries are converted on save)</p>
               {errMsg("energy_rate")}
             </div>
             <div>

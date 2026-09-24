@@ -241,8 +241,11 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
                 {CONTRACT_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
               </FormSelect>
 
-              <FormInput label="Contract Rate ($/kWh) *" placeholder="0.109" type="number" error={errors.rate}
-                value={form.rate} onChange={v => setStr("rate", v)} />
+              <div>
+                <FormInput label="Contract Rate ($/kWh) *" placeholder="0.109" type="number" error={errors.rate}
+                  value={form.rate} onChange={v => setStr("rate", v)} />
+                <p className="text-[11px] text-slate-400 mt-1">Enter in $/kWh, e.g. 0.085 for 8.5¢ (cents entries are converted on save)</p>
+              </div>
 
               {form.meter_type === "Commercial" && (
                 <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
