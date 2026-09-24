@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Mail, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Mail, Loader2, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 import { RefreshCw, Search, X, ChevronRight, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -35,7 +34,6 @@ function DaysChip({ days }: { days: number | null }) {
 }
 
 export default function RenewalsPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [exporting, setExporting] = useState(false);
@@ -272,10 +270,11 @@ export default function RenewalsPage() {
                   <tr
                     key={d.deal_id}
                     className={`border-b border-slate-100 last:border-0 hover:bg-slate-50/70 cursor-pointer transition-colors ${expired ? "opacity-50" : ""}`}
-                    onClick={() => router.push(d.customer_id ? `/crm/customers/${d.customer_id}` : `/crm/leads/${d.lead_id}`)}
+                    title={`Open ${d.full_name || "account"} in a new tab`}
+                    onClick={() => window.open(d.customer_id ? `/crm/customers/${d.customer_id}` : `/crm/leads/${d.lead_id}`, "_blank", "noopener")}
                   >
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-[#0F1D5E]">{d.full_name || "—"}</p>
+                      <p className="font-semibold text-[#0F1D5E] inline-flex items-center gap-1 hover:underline">{d.full_name || "—"}<ExternalLink className="w-3 h-3 text-slate-400" /></p>
                       {d.phone && <p className="text-xs text-slate-400 mt-0.5">{d.phone}</p>}
                     </td>
                     <td className="px-4 py-3 text-slate-600">{d.provider || "—"}</td>
