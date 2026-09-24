@@ -420,6 +420,12 @@ const ADD_DEAL_TYPES = ["New Business", "Renew", "TOS", "TOAO"];
 const ADD_SERVICE_ORDER_TYPES = ["PMVI", "MVI", "SWI"];
 const ADD_RENEW_SERVICE_ORDER_TYPES = ["PMVI", "MVI", "SWI", "Renewed with same REP"];
 
+/** Deal names are generated, never typed: "<REP> — <street address>" (e.g. "Heritage Power — 12334 Test Dr"). */
+const dealName = (supplier: string, street: string) => {
+  const rep = (supplier || "").trim(), addr = (street || "").trim().replace(/\s+/g, " ");
+  return rep && addr ? `${rep} — ${addr}` : "";
+};
+
 const EMPTY_DEAL = {
   flag_tos: false, flag_toao: false, flag_deposit: false, flag_special_deal: false, flag_promo_10: false, flag_delinked: false,
   deal_status: "ACTIVE",
@@ -500,7 +506,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
       const fullAddress = [form.service_address, form.service_city, form.service_state, form.service_zip]
         .filter(Boolean).join(", ");
       await api.createCrmDeal(customerId, {
-        deal_name:            form.deal_name,
+        deal_name:            dealName(form.supplier, form.service_address),
         provider:             form.supplier,
         esiid:                form.esiid,
         service_address:      fullAddress,
@@ -609,8 +615,13 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
                 {SUPPLIERS.map(s => <option key={s} value={s}>{s}</option>)}
               </FormSelect>
 
-              <FormInput label="Deal Name" placeholder="e.g. Main Meter"
-                value={form.deal_name} onChange={v => setStr("deal_name", v)} />
+              <div>
+                <label className={labelCls}>Deal Name <span className="font-normal text-slate-400">(auto: REP — service address)</span></label>
+                <input readOnly tabIndex={-1} aria-readonly="true"
+                  className={`${inputCls} bg-slate-50 text-slate-500 cursor-not-allowed`}
+                  value={dealName(form.supplier, form.service_address)}
+                  placeholder="Pick a REP and enter the service address" />
+              </div>
 
               <FormSelect label="Product Type *" error={errors.product_type} value={form.product_type} onChange={v => setStr("product_type", v)}>
                 <option value="">— Select —</option>

@@ -139,6 +139,8 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
     try {
       await api.renewCrmDeal(deal.id, {
         deal_status: form.status.toUpperCase(),
+        // deal names are generated: "<REP> — <street address>"
+        deal_name: form.supplier && form.service_address ? `${form.supplier.trim()} — ${form.service_address.trim().replace(/\s+/g, " ")}` : undefined,
         provider: form.supplier,
         plan_name: form.plan_name,
         rate_type: form.rate_type,
