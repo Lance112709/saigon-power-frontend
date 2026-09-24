@@ -47,6 +47,8 @@ export default function RenewalsPage() {
   const [provider, setProvider] = useState("");
   const [salesAgent, setSalesAgent] = useState("");
   const [search, setSearch] = useState("");
+  // Which summary chip is selected: "" = all, or expired / urgent / upcoming
+  const [bucket, setBucket] = useState<"" | "expired" | "urgent" | "upcoming">("");
   // Months that have deals, with counts — refreshed whenever the list loads without a date range
   const [monthOptions, setMonthOptions] = useState<{ month: string; count: number }[]>([]);
   // The month select is "on" only while From/To are exactly that month's bounds
@@ -84,10 +86,10 @@ export default function RenewalsPage() {
   useEffect(() => { load(); }, [load]);
 
   const clearFilters = () => {
-    setStartDate(""); setEndDate(""); setProvider(""); setSalesAgent(""); setSearch("");
+    setStartDate(""); setEndDate(""); setProvider(""); setSalesAgent(""); setSearch(""); setBucket("");
   };
 
-  const hasFilters = startDate || endDate || provider || salesAgent || search;
+  const hasFilters = startDate || endDate || provider || salesAgent || search || bucket;
 
   const filtered = search
     ? deals.filter(d =>
@@ -123,9 +125,17 @@ export default function RenewalsPage() {
     setTimeout(() => setEmailMsg(""), 6000);
   };
 
-  const expiredCount  = filtered.filter(d => (d.days_left ?? 1) < 0).length;
-  const urgentCount   = filtered.filter(d => d.days_left != null && d.days_left >= 0 && d.days_left <= 30).length;
-  const upcomingCount = filtered.filter(d => d.days_left != null && d.days_left > 30).length;
+  const isExpired  = (d: any) => (d.days_left ?? 1) < 0;
+  const isUrgent   = (d: any) => d.days_left != null && d.days_left >= 0 && d.days_left <= 30;
+  const isUpcoming = (d: any) => d.days_left != null && d.days_left > 30;
+  const expiredCount  = filtered.filter(isExpired).length;
+  const urgentCount   = filtered.filter(isUrgent).length;
+  const upcomingCount = filtered.filter(isUpcoming).length;
+  // Rows in the table: the search-filtered list, narrowed to the selected chip
+  const shown = bucket === "expired" ? filtered.filter(isExpired)
+    : bucket === "urgent" ? filtered.filter(isUrgent)
+    : bucket === "upcoming" ? filtered.filter(isUpcoming)
+    : filtered;
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-5">
@@ -167,17 +177,24 @@ export default function RenewalsPage() {
 
       {/* Summary chips */}
       <div className="flex gap-3">
-        {[
-          { label: "Expired", count: expiredCount, color: "bg-slate-100 text-slate-500" },
-          { label: "Due ≤ 30 days", count: urgentCount, color: "bg-red-50 text-red-600 border border-red-100" },
-          { label: "Due 31–60+ days", count: upcomingCount, color: "bg-amber-50 text-amber-700 border border-amber-100" },
-          { label: "Total", count: filtered.length, color: "bg-[#EEF1FA] text-[#0F1D5E] border border-[#0F1D5E]/10" },
-        ].map(s => (
-          <div key={s.label} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold ${s.color}`}>
-            <span>{s.label}</span>
-            <span className="font-black">{s.count}</span>
-          </div>
-        ))}
+        {([
+          { key: "expired", label: "Expired", count: expiredCount, color: "bg-slate-100 text-slate-500" },
+          { key: "urgent", label: "Due ≤ 30 days", count: urgentCount, color: "bg-red-50 text-red-600 border border-red-100" },
+          { key: "upcoming", label: "Due 31–60+ days", count: upcomingCount, color: "bg-amber-50 text-amber-700 border border-amber-100" },
+          { key: "", label: "Total", count: filtered.length, color: "bg-[#EEF1FA] text-[#0F1D5E] border border-[#0F1D5E]/10" },
+        ] as const).map(s => {
+          const active = bucket === s.key;
+          return (
+            <button key={s.label} type="button"
+              onClick={() => setBucket(active && s.key !== "" ? "" : s.key)}
+              aria-pressed={active}
+              title={s.key === "" ? "Show all accounts" : `Show only ${s.label.toLowerCase()} accounts`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-shadow ${s.color} ${active ? "ring-2 ring-offset-1 ring-[#0F1D5E]" : "hover:shadow-md"}`}>
+              <span>{s.label}</span>
+              <span className="font-black">{s.count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Filters */}
@@ -252,7 +269,7 @@ export default function RenewalsPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-slate-400 text-sm">Loading…</div>
-        ) : filtered.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="p-10 text-center text-slate-400 text-sm">No deals found for selected filters.</div>
         ) : (
           <table className="w-full text-sm">
@@ -266,7 +283,7 @@ export default function RenewalsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(d => {
+              {shown.map(d => {
                 const expired = (d.days_left ?? 1) < 0;
                 return (
                   <tr
