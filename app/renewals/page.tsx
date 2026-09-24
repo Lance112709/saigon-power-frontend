@@ -93,7 +93,9 @@ export default function RenewalsPage() {
     ? deals.filter(d =>
         (d.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
         (d.provider || "").toLowerCase().includes(search.toLowerCase()) ||
-        (d.sales_agent || "").toLowerCase().includes(search.toLowerCase())
+        (d.sales_agent || "").toLowerCase().includes(search.toLowerCase()) ||
+        (d.business_name || "").toLowerCase().includes(search.toLowerCase()) ||
+        (d.service_address || "").toLowerCase().includes(search.toLowerCase())
       )
     : deals;
 
@@ -256,7 +258,7 @@ export default function RenewalsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {["Customer", "REP / Provider", "Rate", "Term", "Sales Agent", "End Date", "Days Left", "Source", ""].map((h, i) => (
+                {["Customer", "Business / Service Address", "REP / Provider", "Sales Agent", "End Date", "Days Left", "Source", ""].map((h, i) => (
                   <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -277,11 +279,11 @@ export default function RenewalsPage() {
                       <p className="font-semibold text-[#0F1D5E] inline-flex items-center gap-1 hover:underline">{d.full_name || "—"}<ExternalLink className="w-3 h-3 text-slate-400" /></p>
                       {d.phone && <p className="text-xs text-slate-400 mt-0.5">{d.phone}</p>}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{d.provider || "—"}</td>
-                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                      {d.rate != null ? `$${parseFloat(d.rate).toFixed(4)}/kWh` : "—"}
+                    <td className="px-4 py-3 max-w-[320px]">
+                      {d.business_name && <p className="font-semibold text-slate-700">{d.business_name}</p>}
+                      <p className={`text-xs ${d.business_name ? "text-slate-500 mt-0.5" : "text-slate-600"}`}>{d.service_address || "—"}</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.contract_term || "—"}</td>
+                    <td className="px-4 py-3 text-slate-600">{d.provider || "—"}</td>
                     <td className="px-4 py-3 text-slate-600">{d.sales_agent || "—"}</td>
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.end_date || "—"}</td>
                     <td className="px-4 py-3"><DaysChip days={d.days_left} /></td>
