@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { Search, ChevronDown, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import MeterTypeBadge from "@/components/MeterTypeBadge";
+import { dealLabel } from "@/lib/utils";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -242,7 +243,7 @@ export default function CrmDealsPage() {
                       className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 cursor-pointer"
                       onClick={() => router.push(`/crm/deals/${d.id}`)}>
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-[#0F1D5E] truncate max-w-[180px]">{d.deal_name || d.business_name || "—"}</div>
+                        <div className="font-semibold text-[#0F1D5E] truncate max-w-[260px]" title={dealLabel(d, "")}>{dealLabel(d, "—")}</div>
                         {d.crm_customers?.full_name && <div className="text-xs text-slate-400 mt-0.5">{d.crm_customers.full_name}</div>}
                       </td>
                       <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">{d.provider || "—"}</td>

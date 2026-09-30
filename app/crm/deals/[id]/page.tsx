@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit, AlertCircle, Pencil, RefreshCw } from "lucide-react";
 import RenewDealModal from "@/components/RenewDealModal";
 import MeterTypeBadge from "@/components/MeterTypeBadge";
+import { dealLabel } from "@/lib/utils";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 
@@ -62,7 +63,7 @@ function TerminateDealModal({ deal, onClose, onSaved }: { deal: any; onClose: ()
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
         </div>
         <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm">
-          <p className="font-semibold text-slate-700 truncate">{deal.deal_name || deal.business_name || "Unnamed Deal"}</p>
+          <p className="font-semibold text-slate-700 truncate">{dealLabel(deal)}</p>
           {deal.service_address && <p className="text-slate-400 text-xs mt-0.5 truncate">{deal.service_address}</p>}
         </div>
         <div>
@@ -503,7 +504,7 @@ export default function DealDetailPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-[#0F1D5E]">{deal.deal_name || deal.business_name || "Deal"}</h1>
+              <h1 className="text-xl font-bold text-[#0F1D5E]">{dealLabel(deal, "Deal")}</h1>
               {DEAL_FLAGS.map(flag => {
                 const key = DEAL_FLAG_KEYS[flag];
                 if (!(deal as any)[key]) return null;

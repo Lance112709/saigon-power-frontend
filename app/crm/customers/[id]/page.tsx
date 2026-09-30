@@ -14,6 +14,7 @@ import SendEmailModal from "@/components/SendEmailModal";
 import CommissionPayments from "@/components/CommissionPayments";
 import ActivityLog from "@/components/ActivityLog";
 import MeterTypeBadge from "@/components/MeterTypeBadge";
+import { dealLabel } from "@/lib/utils";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 const labelCls = "block text-sm text-slate-700 mb-1";
@@ -131,7 +132,7 @@ function TerminateDealModal({ deal, onClose, onSaved }: {
         </div>
 
         <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm">
-          <p className="font-semibold text-slate-700 truncate">{deal.deal_name || deal.business_name || "Unnamed Deal"}</p>
+          <p className="font-semibold text-slate-700 truncate">{dealLabel(deal)}</p>
           {deal.service_address && <p className="text-slate-400 text-xs mt-0.5 truncate">{deal.service_address}</p>}
         </div>
 
@@ -1262,7 +1263,7 @@ export default function CustomerProfilePage() {
                       {/* Row 1: name + provider + flags + actions */}
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          <span className="text-base font-bold text-[#0F1D5E]">{d.deal_name || d.business_name || "Unnamed Deal"}</span>
+                          <span className="text-base font-bold text-[#0F1D5E]">{dealLabel(d)}</span>
                           {d.provider && (
                             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{d.provider}</span>
                           )}
