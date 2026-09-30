@@ -56,12 +56,25 @@ function EsiFilter({ esiIds, value, onChange }: { esiIds: string[]; value: strin
 }
 
 
+/** Deal pages only show statements from the deal's own provider. Say what was left out so a
+ *  mislabeled deal (e.g. "Discount Power" meter still paid by Chariot) is easy to spot. */
+function OtherProviderNote({ data, what }: { data: any; what: string }) {
+  const hidden = data?.hidden_other_provider;
+  if (!hidden?.count) return null;
+  const list = (hidden.suppliers || []).map((s: any) => `${s.supplier} (${s.count})`).join(", ");
+  return (
+    <p className="px-5 py-2 text-xs text-amber-700 bg-amber-50 border-b border-amber-100">
+      {hidden.count} {what} on this ESI ID {hidden.count === 1 ? "comes" : "come"} from other providers and {hidden.count === 1 ? "is" : "are"} not shown for this {data?.provider || "provider"} deal: {list}. See the customer page for the full history.
+    </p>
+  );
+}
+
 function MonthlyUsageCard({ data, esi, onEsiChange, showFilter }: {
   data: any; esi: string; onEsiChange: (v: string) => void; showFilter: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
   const allRows = (data?.payments || []).filter((p: any) => p.kwh != null && p.service_end);
-  if (!allRows.length) return null;
+  if (!allRows.length && !data?.hidden_other_provider?.count) return null;
   const rows = byEsi(allRows, esi);
   const esiIds: string[] = data?.esi_ids?.length ? data.esi_ids : Array.from(new Set(allRows.map((p: any) => String(p.esi_id))));
   const scopedEsi = esi || (esiIds.length === 1 ? esiIds[0] : "");  // single-meter record (deal page) — name the meter
@@ -94,9 +107,10 @@ function MonthlyUsageCard({ data, esi, onEsiChange, showFilter }: {
           {scopedEsi ? "Metered on this ESI ID" : "Lifetime metered"} <span className="font-bold text-slate-700">{Math.round(totalKwh).toLocaleString()} kWh</span>
         </span>
       </div>
-      {showFilter && <EsiFilter esiIds={esiIds} value={esi} onChange={onEsiChange} />}
+      <OtherProviderNote data={data} what="usage rows" />
+      {showFilter && allRows.length > 0 && <EsiFilter esiIds={esiIds} value={esi} onChange={onEsiChange} />}
       {rows.length === 0 ? (
-        <p className="px-5 py-6 text-center text-slate-400 text-sm">No usage on file for this ESI ID.</p>
+        <p className="px-5 py-6 text-center text-slate-400 text-sm">No usage on file for this ESI ID{data?.provider ? ` from ${data.provider}` : ""}.</p>
       ) : (<>
 
       <div className="px-4 pt-4" style={{ height: 170 }}>
@@ -209,6 +223,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
         )}
       </div>
 
+      <OtherProviderNote data={data} what="payments" />
       {data && allPayments.length > 0 && <EsiFilter esiIds={esiIds} value={esi} onChange={setEsi} />}
 
       {!data ? (
@@ -217,7 +232,7 @@ export default function CommissionPayments({ customerId, dealId, leadId }: {
         <p className="px-5 py-6 text-center text-slate-400 text-sm">No commission payments found for ESI ID {esi}.</p>
       ) : payments.length === 0 ? (
         <p className="px-5 py-6 text-center text-slate-400 text-sm">
-          No commission payments found for {data.esi_ids?.length ? `ESI ID${data.esi_ids.length > 1 ? "s" : ""} ${data.esi_ids.join(", ")}` : "this record (no ESI ID on file)"}.
+          No {data.provider ? `${data.provider} ` : ""}commission payments found for {data.esi_ids?.length ? `ESI ID${data.esi_ids.length > 1 ? "s" : ""} ${data.esi_ids.join(", ")}` : "this record (no ESI ID on file)"}.
         </p>
       ) : (
         <>
