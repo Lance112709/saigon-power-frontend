@@ -514,8 +514,13 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
                 {SUPPLIERS.map(s => <option key={s} value={s}>{s}</option>)}
               </FormSelect>
 
-              <FormInput label="Plan Name" placeholder="e.g. Gexa Saver 12"
-                value={form.plan_name} onChange={v => setStr("plan_name", v)} />
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Deal Name <span className="font-normal text-slate-400">(auto: REP — service address)</span></label>
+                <input readOnly tabIndex={-1} aria-readonly="true"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
+                  value={form.supplier && form.service_address ? `${form.supplier.trim()} — ${form.service_address.trim().replace(/\s+/g, " ")}` : ""}
+                  placeholder="Pick a REP and enter the service address" />
+              </div>
 
               <FormSelect label="Product Type *" error={errors.rate_type} value={form.rate_type} onChange={v => setStr("rate_type", v)}>
                 <option value="">— Select —</option>
@@ -1067,6 +1072,23 @@ export default function LeadDetailPage() {
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl font-bold">{lead.full_name}</h2>
                 <LeadBadge status={lead.status} />
+                {lead.membership?.active && (
+                  <span title={`${lead.membership.plan_name || "Member"}${lead.membership.since ? " · since " + new Date(lead.membership.since).toLocaleDateString() : ""}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider bg-amber-400/25 text-amber-100 border border-amber-300/40 uppercase">
+                    ⭐ SmartCare Member
+                  </span>
+                )}
+                {isAdminOrManager && (
+                  <button
+                    onClick={async () => {
+                      try { await api.toggleLeadSmartcareBadge(id, !lead.membership?.active); await reload(); }
+                      catch (e: any) { alert(e?.message || "Could not update SmartCare badge"); }
+                    }}
+                    title={lead.membership?.active ? "Remove the manual SmartCare badge" : "Flag this account as a SmartCare member (badge only, no billing)"}
+                    className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/10 text-blue-100 border border-white/20 hover:bg-white/20 transition-colors">
+                    {lead.membership?.active ? "Remove SmartCare Badge" : "⭐ Add SmartCare Badge"}
+                  </button>
+                )}
               </div>
               {lead.status === "converted" && (
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -1317,14 +1339,14 @@ export default function LeadDetailPage() {
                 {/* Top row: supplier + status + actions */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <span className="font-bold text-[#0F1D5E] text-sm">{d.supplier || "—"}</span>
+                    <span className="font-bold text-[#0F1D5E] text-sm">{d.plan_name || d.supplier || "—"}</span>
+                    {d.supplier && <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{d.supplier}</span>}
                     {d.product_type && <MeterTypeBadge meterType={d.product_type} />}
                     {d.flag_delinked && (
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 border border-red-200">
                         Directly Renewed
                       </span>
                     )}
-                    {d.plan_name && <span className="text-xs text-slate-400">{d.plan_name}</span>}
                   </div>
                   <div className="flex items-center gap-2">
                     <DealStatusBtn status={d.status} dealId={d.id} leadId={id} onUpdate={handleDealStatusUpdate} />

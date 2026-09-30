@@ -171,6 +171,8 @@ export const api = {
     return request(`/api/v1/crm/customers/count${q}`);
   },
   getCrmCustomer: (id: string) => request(`/api/v1/crm/customers/${id}`),
+  toggleLeadSmartcareBadge: (id: string, enabled: boolean) =>
+    request(`/api/v1/leads/${id}/smartcare-badge`, { method: "POST", body: JSON.stringify({ enabled }) }),
   toggleSmartcareBadge: (id: string, enabled: boolean) =>
     request(`/api/v1/crm/customers/${id}/smartcare-badge`, { method: "POST", body: JSON.stringify({ enabled }) }),
   updateCrmCustomer: (id: string, data: object) =>

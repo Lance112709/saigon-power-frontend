@@ -142,7 +142,6 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
         // deal names are generated: "<REP> — <street address>"
         deal_name: form.supplier && form.service_address ? `${form.supplier.trim()} — ${form.service_address.trim().replace(/\s+/g, " ")}` : undefined,
         provider: form.supplier,
-        plan_name: form.plan_name,
         rate_type: form.rate_type,
         meter_type: form.meter_type,
         deal_type: form.deal_type,
@@ -211,8 +210,13 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
                 {supplierOptions.map(s => <option key={s} value={s}>{s}</option>)}
               </FormSelect>
 
-              <FormInput label="Plan Name" placeholder="e.g. Gexa Saver 12"
-                value={form.plan_name} onChange={v => setStr("plan_name", v)} />
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Deal Name <span className="font-normal text-slate-400">(auto: REP — service address)</span></label>
+                <input readOnly tabIndex={-1} aria-readonly="true"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
+                  value={form.supplier && form.service_address ? `${form.supplier.trim()} — ${form.service_address.trim().replace(/\s+/g, " ")}` : ""}
+                  placeholder="Pick a REP and enter the service address" />
+              </div>
 
               <FormSelect label="Product Type *" error={errors.rate_type} value={form.rate_type} onChange={v => setStr("rate_type", v)}>
                 <option value="">— Select —</option>
