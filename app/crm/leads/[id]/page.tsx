@@ -8,6 +8,7 @@ import SendSmsModal from "@/components/SendSmsModal";
 import SendEmailModal from "@/components/SendEmailModal";
 import CommissionPayments from "@/components/CommissionPayments";
 import ActivityLog from "@/components/ActivityLog";
+import MeterTypeBadge from "@/components/MeterTypeBadge";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -974,6 +975,15 @@ export default function LeadDetailPage() {
 
   const active = deals.filter(d => d.status === "Active");
   const other = deals.filter(d => d.status !== "Active");
+  const future = deals.filter(d => d.status === "Future");
+  const inactiveCount = deals.length - active.length - future.length;
+  // Meter type lives in product_type on lead deals (the form labels it "Meter Type").
+  const meterKind = (t?: string | null) => { const k = (t || "").trim().toLowerCase(); return k.startsWith("res") ? "Residential" : k.startsWith("com") ? "Commercial" : "Other"; };
+  const liveMeterMix = [
+    { label: "Residential", n: active.filter(d => meterKind(d.product_type) === "Residential").length, cls: "bg-yellow-50 border-yellow-300 text-yellow-800" },
+    { label: "Commercial",  n: active.filter(d => meterKind(d.product_type) === "Commercial").length,  cls: "bg-violet-50 border-violet-200 text-violet-700" },
+    { label: "Other type",  n: active.filter(d => meterKind(d.product_type) === "Other").length,       cls: "bg-slate-50 border-slate-200 text-slate-500" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F4F6FA] p-6 space-y-5">
@@ -1265,7 +1275,29 @@ export default function LeadDetailPage() {
       {/* ── Deals ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-[#0F1D5E]">Deals ({deals.length})</h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-bold text-[#0F1D5E]">Deals ({deals.length})</h3>
+            {deals.length > 0 && ([
+              { label: "Active",   n: active.length,  cls: "bg-emerald-100 text-emerald-700" },
+              { label: "Future",   n: future.length,  cls: "bg-amber-100 text-amber-700" },
+              { label: "Inactive", n: inactiveCount,  cls: "bg-slate-100 text-slate-500" },
+            ].filter(x => x.n > 0).map(x => (
+              <span key={x.label} className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${x.cls}`}>
+                {x.n} {x.label}
+              </span>
+            )))}
+            {liveMeterMix.some(x => x.n > 0) && (
+              <>
+                <span className="w-px h-4 bg-slate-200 mx-1" />
+                {liveMeterMix.filter(x => x.n > 0).map(x => (
+                  <span key={x.label} title={`${x.n} ${x.label.toLowerCase()} meter${x.n === 1 ? "" : "s"} on active deals`}
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${x.cls}`}>
+                    {x.n} {x.label}
+                  </span>
+                ))}
+              </>
+            )}
+          </div>
           <button onClick={() => setShowDeal(true)}
             className="flex items-center gap-2 px-3 py-2 bg-[#0F1D5E] text-white text-xs font-semibold rounded-xl hover:bg-[#0F1D5E]/90 transition-colors">
             <Plus className="w-3.5 h-3.5" /> Add Deal
@@ -1286,6 +1318,7 @@ export default function LeadDetailPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-[#0F1D5E] text-sm">{d.supplier || "—"}</span>
+                    {d.product_type && <MeterTypeBadge meterType={d.product_type} />}
                     {d.flag_delinked && (
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 border border-red-200">
                         Directly Renewed
@@ -1320,7 +1353,6 @@ export default function LeadDetailPage() {
                     ["Deal Type",       d.deal_type,      ""],
                     ["Rate Type",       d.rate_type,      ""],
                     ["Service Order",   d.service_order_type, ""],
-                    ["Product Type",    d.product_type,   ""],
                     ["Est. Usage",      d.est_kwh ? `${d.est_kwh} kWh/mo` : null, ""],
                     ["Expected Close",  fmtDate(d.expected_close_date), ""],
                     ["SGP Customer ID", d.sgp_customer_id, "font-mono"],
