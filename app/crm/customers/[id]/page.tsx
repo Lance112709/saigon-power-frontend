@@ -978,6 +978,13 @@ export default function CustomerProfilePage() {
   const renewed = deals.filter(d => d.deal_status === "RENEWED");
   const future = deals.filter(d => d.deal_status === "FUTURE");
   const inactive = deals.filter(d => d.deal_status !== "ACTIVE" && d.deal_status !== "RENEWED");
+  const liveDeals = [...active, ...renewed];
+  const meterKind = (t?: string | null) => { const k = (t || "").trim().toLowerCase(); return k.startsWith("res") ? "Residential" : k.startsWith("com") ? "Commercial" : "Other"; };
+  const liveMeterMix = [
+    { label: "Residential", n: liveDeals.filter(d => meterKind(d.meter_type) === "Residential").length, cls: "bg-yellow-50 border-yellow-300 text-yellow-800" },
+    { label: "Commercial",  n: liveDeals.filter(d => meterKind(d.meter_type) === "Commercial").length,  cls: "bg-violet-50 border-violet-200 text-violet-700" },
+    { label: "Other type",  n: liveDeals.filter(d => meterKind(d.meter_type) === "Other").length,       cls: "bg-slate-50 border-slate-200 text-slate-500" },
+  ];
   const anxhValues = [...new Set(deals.map((d: any) => d.anxh).filter(Boolean))];
   const isCsr = user?.role === "csr";
   const maskAnxh = (val: string) => user?.role === "csr" ? "****" + String(val).slice(-4) : val;
@@ -1239,6 +1246,18 @@ export default function CustomerProfilePage() {
                     {x.n} {x.label}
                   </span>
                 )))}
+                {/* Meter mix of the live book (ACTIVE + RENEWED): how many homes vs businesses */}
+                {liveMeterMix.some(x => x.n > 0) && (
+                  <>
+                    <span className="w-px h-4 bg-slate-200 mx-1" />
+                    {liveMeterMix.filter(x => x.n > 0).map(x => (
+                      <span key={x.label} title={`${x.n} ${x.label.toLowerCase()} meter${x.n === 1 ? "" : "s"} on active/renewed deals`}
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${x.cls}`}>
+                        {x.n} {x.label}
+                      </span>
+                    ))}
+                  </>
+                )}
               </div>
               <button onClick={() => setShowAddDeal(true)}
                 className="flex items-center gap-2 px-3 py-2 bg-[#0F1D5E] text-white text-xs font-semibold rounded-xl hover:bg-[#0F1D5E]/90 transition-colors">
