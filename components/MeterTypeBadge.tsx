@@ -1,8 +1,8 @@
 // Colored pill for a deal's meter type so Residential vs Commercial is visible at a glance.
-// Residential = green, Commercial = purple, anything else = neutral slate.
+// Residential = yellow, Commercial = purple, anything else = neutral slate.
 export function meterTypeClasses(meterType?: string | null): string {
   const t = (meterType || "").trim().toLowerCase();
-  if (t.startsWith("res")) return "bg-emerald-50 border-emerald-200 text-emerald-700";
+  if (t.startsWith("res")) return "bg-yellow-50 border-yellow-300 text-yellow-800";
   if (t.startsWith("com")) return "bg-violet-50 border-violet-200 text-violet-700";
   return "bg-slate-50 border-slate-100 text-slate-600";
 }
