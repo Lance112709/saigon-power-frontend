@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit, AlertCircle, Pencil, RefreshCw } from "lucide-react";
 import RenewDealModal from "@/components/RenewDealModal";
+import MeterTypeBadge from "@/components/MeterTypeBadge";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 
@@ -562,7 +563,9 @@ export default function DealDetailPage() {
           ].map(([label, value]) => (
             <div key={label}>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-              <p className={`text-sm text-slate-700 ${label === "ESIID" ? "font-mono" : ""}`}>{value}</p>
+              {label === "Type"
+                ? <MeterTypeBadge meterType={deal.meter_type} />
+                : <p className={`text-sm text-slate-700 ${label === "ESIID" ? "font-mono" : ""}`}>{value}</p>}
             </div>
           ))}
         </div>

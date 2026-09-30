@@ -13,6 +13,7 @@ import SendSmsModal from "@/components/SendSmsModal";
 import SendEmailModal from "@/components/SendEmailModal";
 import CommissionPayments from "@/components/CommissionPayments";
 import ActivityLog from "@/components/ActivityLog";
+import MeterTypeBadge from "@/components/MeterTypeBadge";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
 const labelCls = "block text-sm text-slate-700 mb-1";
@@ -1319,9 +1320,7 @@ export default function CustomerProfilePage() {
                             Adder <span className="font-bold text-slate-700">${parseFloat(d.adder).toFixed(4)}/kWh</span>
                           </span>
                         )}
-                        {d.meter_type && (
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs font-semibold text-slate-600">{d.meter_type}</span>
-                        )}
+                        {d.meter_type && <MeterTypeBadge meterType={d.meter_type} />}
                         {d.sales_agent && (
                           <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
                             Agent <span className="font-bold text-slate-700">{d.sales_agent}</span>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Search, ChevronDown, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import MeterTypeBadge from "@/components/MeterTypeBadge";
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -246,7 +247,7 @@ export default function CrmDealsPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">{d.provider || "—"}</td>
                       <td className="px-4 py-3 text-slate-400 font-mono text-xs whitespace-nowrap">{d.esiid || "—"}</td>
-                      <td className="px-4 py-3 text-slate-500 text-xs capitalize whitespace-nowrap">{d.meter_type || "—"}</td>
+                      <td className="px-4 py-3 whitespace-nowrap"><MeterTypeBadge meterType={d.meter_type} /></td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.energy_rate != null ? parseFloat(d.energy_rate).toFixed(4) : "—"}</td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">—</td>
