@@ -9,6 +9,7 @@ import SendEmailModal from "@/components/SendEmailModal";
 import CommissionPayments from "@/components/CommissionPayments";
 import ActivityLog from "@/components/ActivityLog";
 import MeterTypeBadge from "@/components/MeterTypeBadge";
+import { dealLabel } from "@/lib/utils";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -1339,7 +1340,7 @@ export default function LeadDetailPage() {
                 {/* Top row: supplier + status + actions */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <span className="font-bold text-[#0F1D5E] text-sm">{d.plan_name || d.supplier || "—"}</span>
+                    <span className="font-bold text-[#0F1D5E] text-sm">{dealLabel({ business_name: lead?.business_name, deal_name: d.plan_name }, d.supplier || "—")}</span>
                     {d.supplier && <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">{d.supplier}</span>}
                     {d.product_type && <MeterTypeBadge meterType={d.product_type} />}
                     {d.flag_delinked && (
