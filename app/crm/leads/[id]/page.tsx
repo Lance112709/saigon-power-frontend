@@ -772,7 +772,7 @@ export default function LeadDetailPage() {
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTask, setNewTask] = useState({ title: "", task_type: "call", due_date: "", priority: "medium", description: "", assigned_to: "" });
   const [users, setUsers] = useState<any[]>([]);
-  useEffect(() => { api.getUsers().then((u: any[]) => setUsers(u || [])).catch(() => setUsers([])); }, []);
+  useEffect(() => { api.getTaskAssignees().then((u: any[]) => setUsers(u || [])).catch(() => setUsers([])); }, []);
   const [savingTask, setSavingTask] = useState(false);
   const [notes, setNotes] = useState<any[]>([]);
   const [noteText, setNoteText] = useState("");

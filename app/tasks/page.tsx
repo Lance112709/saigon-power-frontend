@@ -11,7 +11,7 @@ type Task = {
   id: string; lead_id?: string; deal_id?: string; customer_id?: string;
   task_type: string; title: string; description?: string;
   due_date: string; status: string; priority: string;
-  assigned_to?: string; entity_name?: string; entity_link?: string | null; completed_at?: string;
+  assigned_to?: string; created_by?: string; entity_name?: string; entity_link?: string | null; completed_at?: string;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ function AddTaskModal({ onClose, onSaved, prefillLeadId }: {
   const [customerSearching, setCustomerSearching] = useState(false);
 
   useEffect(() => {
-    api.getUsers().then(setUsers).catch(() => {});
+    api.getTaskAssignees().then(setUsers).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -221,7 +221,12 @@ function TaskRow({ task, onComplete, onDelete }: {
           {task.status}
         </span>
       </td>
-      <td className="px-4 py-3 text-xs text-slate-500">{task.assigned_to || "—"}</td>
+      <td className="px-4 py-3 text-xs text-slate-500">
+        {task.assigned_to || "—"}
+        {task.created_by && task.created_by !== task.assigned_to && (
+          <p className="text-slate-400 mt-0.5">by {task.created_by}</p>
+        )}
+      </td>
       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           {task.status !== "completed" && (

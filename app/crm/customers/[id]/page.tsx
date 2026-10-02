@@ -903,9 +903,9 @@ export default function CustomerProfilePage() {
     setSavingEditNote(false);
   };
 
-  // Populate the "Assign To" dropdown. getUsers is admin-only, so managers/agents
-  // fall back to a free-text name field (users stays empty).
-  useEffect(() => { api.getUsers().then((u: any[]) => setUsers(u || [])).catch(() => setUsers([])); }, []);
+  // Populate the "Assign To" dropdown. The assignee gets emailed about the task,
+  // so pick from real users; the free-text field is only a fallback if the list fails.
+  useEffect(() => { api.getTaskAssignees().then((u: any[]) => setUsers(u || [])).catch(() => setUsers([])); }, []);
 
   const handleAddTask = async () => {
     if (!newTask.title.trim() || !newTask.due_date) return;

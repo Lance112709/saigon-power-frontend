@@ -366,7 +366,7 @@ export default function DealDetailPage() {
   const [taskError, setTaskError] = useState("");
   const [newTask, setNewTask] = useState({ title: "", task_type: "call", due_date: "", priority: "medium", description: "", assigned_to: "" });
   const [users, setUsers] = useState<any[]>([]);
-  useEffect(() => { api.getUsers().then((u: any[]) => setUsers(u || [])).catch(() => setUsers([])); }, []);
+  useEffect(() => { api.getTaskAssignees().then((u: any[]) => setUsers(u || [])).catch(() => setUsers([])); }, []);
 
   const loadDeal = useCallback(async () => {
     const data = await api.getCrmDeal(id);

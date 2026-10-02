@@ -428,6 +428,7 @@ export const api = {
   createTask: (data: object) => request("/api/v1/tasks", { method: "POST", body: JSON.stringify(data) }),
   updateTask: (id: string, data: object) => request(`/api/v1/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteTask: (id: string) => request(`/api/v1/tasks/${id}`, { method: "DELETE" }),
+  getTaskAssignees: () => request("/api/v1/tasks/assignees"),
 
   // Proposals
   createProposal: (data: object) =>
