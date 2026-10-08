@@ -759,7 +759,7 @@ export default function CustomerProfilePage() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: "", business_name: "", phone: "", email: "", dob: "",
-    mailing_address: "", city: "", state: "", postal_code: "", notes: "", anxh: "",
+    mailing_address: "", city: "", state: "", postal_code: "", notes: "", anxh: "", account_flag: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -805,6 +805,7 @@ export default function CustomerProfilePage() {
       postal_code: data.postal_code || "",
       notes: data.notes || "",
       anxh: firstAnxh,
+      account_flag: data.account_flag || "",
     });
   }, [id]);
 
@@ -843,6 +844,7 @@ export default function CustomerProfilePage() {
       postal_code: customer.postal_code || "",
       notes: customer.notes || "",
       anxh: firstAnxh,
+      account_flag: customer.account_flag || "",
     });
     setEditing(false);
   };
@@ -1102,6 +1104,15 @@ export default function CustomerProfilePage() {
                   </span>
                 )}
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider bg-emerald-400/20 text-emerald-200 border border-emerald-300/30 uppercase">Customer</span>
+                {customer.account_flag && (
+                  <span className={`text-xs px-2.5 py-1 rounded-lg font-semibold ${
+                    customer.account_flag === "VIP Client" ? "bg-amber-400/20 text-amber-200 border border-amber-300/30" :
+                    customer.account_flag === "Red Flag" ? "bg-red-400/20 text-red-200 border border-red-300/30" :
+                    customer.account_flag === "65+" ? "bg-purple-400/20 text-purple-200 border border-purple-300/30" :
+                    customer.account_flag === "GHOST" ? "bg-slate-200/20 text-slate-100 border border-slate-200/40" :
+                    "bg-blue-400/20 text-blue-100 border border-blue-300/30"
+                  }`}>{customer.account_flag}</span>
+                )}
                 {customer.membership?.active && (
                   <span title={`${customer.membership.plan_name || "Member"}${customer.membership.since ? " · since " + new Date(customer.membership.since).toLocaleDateString() : ""}`}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider bg-amber-400/25 text-amber-100 border border-amber-300/40 uppercase">
@@ -1181,6 +1192,17 @@ export default function CustomerProfilePage() {
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Email</label>
               <input className={inputCls} value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Account Flag</label>
+              <select className={inputCls} value={editForm.account_flag} onChange={e => setEditForm(f => ({ ...f, account_flag: e.target.value }))}>
+                <option value="">— None —</option>
+                <option value="VIP Client">VIP Client</option>
+                <option value="Red Flag">Red Flag</option>
+                <option value="65+">65+</option>
+                <option value="Payment Assistance Programs">Payment Assistance Programs</option>
+                <option value="GHOST">GHOST</option>
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-6 gap-3">
