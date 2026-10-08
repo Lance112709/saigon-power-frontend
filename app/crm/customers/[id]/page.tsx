@@ -1109,7 +1109,7 @@ export default function CustomerProfilePage() {
                     customer.account_flag === "VIP Client" ? "bg-amber-400/20 text-amber-200 border border-amber-300/30" :
                     customer.account_flag === "Red Flag" ? "bg-red-400/20 text-red-200 border border-red-300/30" :
                     customer.account_flag === "65+" ? "bg-purple-400/20 text-purple-200 border border-purple-300/30" :
-                    customer.account_flag === "GHOST" ? "bg-slate-200/20 text-slate-100 border border-slate-200/40" :
+                    customer.account_flag === "GHOST" ? "bg-red-600/40 text-red-100 border border-red-400/50" :
                     "bg-blue-400/20 text-blue-100 border border-blue-300/30"
                   }`}>{customer.account_flag}</span>
                 )}
