@@ -4,7 +4,7 @@ import CommissionPayments from "@/components/CommissionPayments";
 import ActivityLog from "@/components/ActivityLog";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useAuth, canSeeAdder } from "@/lib/auth";
 import { ArrowLeft, Bell, Plus, Check, Trash2, X, ChevronDown, Ban, FileEdit, AlertCircle, Pencil, RefreshCw } from "lucide-react";
 import RenewDealModal from "@/components/RenewDealModal";
 import MeterTypeBadge from "@/components/MeterTypeBadge";
@@ -94,6 +94,7 @@ function TerminateDealModal({ deal, onClose, onSaved }: { deal: any; onClose: ()
 }
 
 function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => void; onSaved: () => void }) {
+  const { user } = useAuth();
   const [form, setForm] = useState({
     deal_name:            deal.deal_name            || "",
     provider:             deal.provider             || "",
@@ -129,11 +130,15 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
   };
   const toggleFlag = (key: string) => setFlags(f => ({ ...f, [key]: !(f as any)[key] }));
 
-  // Everything is required except Deal Name and Business Name.
+  // Everything is required except Deal Name and Business Name. The adder is
+  // typed only for Commercial meters (others keep the REP default), and only
+  // by an admin or the deal's own sales agent.
+  const showAdder = form.meter_type === "Commercial" && canSeeAdder(user, form.sales_agent);
   const REQUIRED: (keyof typeof form)[] = [
-    "provider", "service_address", "meter_type", "energy_rate", "adder",
+    "provider", "service_address", "meter_type", "energy_rate",
     "contract_start_date", "contract_end_date", "contract_signed_date",
     "sales_agent", "contract_term", "esiid", "deal_status", "deal_type",
+    ...(showAdder ? ["adder" as keyof typeof form] : []),
   ];
   const inpCls = (field: string) => `${inputCls} ${errors[field] ? "border-red-400 ring-1 ring-red-400/30" : ""}`;
   const errMsg = (field: string) => errors[field]
@@ -157,10 +162,11 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
     setSaving(true);
     setApiError("");
     try {
+      const { adder, ...rest } = form;
       await api.updateCrmDeal(deal.id, {
-        ...form,
-        energy_rate: form.energy_rate ? parseFloat(form.energy_rate) : null,
-        adder:       form.adder       ? parseFloat(form.adder)       : null,
+        ...rest,
+        energy_rate: rest.energy_rate ? parseFloat(rest.energy_rate) : null,
+        ...(showAdder ? { adder: adder ? parseFloat(adder) : null } : {}),
         ...flags,
       });
       onSaved();
@@ -230,11 +236,13 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
               <p className="text-[11px] text-slate-400 mt-1">Enter in $/kWh, e.g. 0.085 for 8.5¢ (cents entries are converted on save)</p>
               {errMsg("energy_rate")}
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh) *</label>
-              <input type="number" step="0.0001" className={inpCls("adder")} value={form.adder} onChange={e => set("adder", e.target.value)} placeholder="0.0000" />
-              {errMsg("adder")}
-            </div>
+            {showAdder && (
+              <div>
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh) *</label>
+                <input type="number" step="0.0001" className={inpCls("adder")} value={form.adder} onChange={e => set("adder", e.target.value)} placeholder="0.0000" />
+                {errMsg("adder")}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-4">

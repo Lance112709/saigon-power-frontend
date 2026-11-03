@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import RenewDealModal from "@/components/RenewDealModal";
-import { useAuth } from "@/lib/auth";
+import { useAuth, canSeeAdder } from "@/lib/auth";
 import {
   ArrowLeft, User, MapPin, Phone, Mail, Calendar, Hash,
   Pencil, Check, X, ChevronDown, Bell, Plus, Trash2, Zap, MessageSquare, RefreshCw, Ban, FileEdit, AlertCircle,
@@ -165,6 +165,7 @@ function TerminateDealModal({ deal, onClose, onSaved }: {
 }
 
 function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => void; onSaved: () => void }) {
+  const { user } = useAuth();
   const [form, setForm] = useState({
     deal_name:           deal.deal_name           || "",
     provider:            deal.provider            || "",
@@ -201,12 +202,14 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
   const toggleFlag = (key: string) => setFlags(f => ({ ...f, [key]: !(f as any)[key] }));
 
   // Everything is required except Deal Name and Business Name.
-  // Adder is typed only for Commercial meters; other meters keep the REP's default.
+  // Adder is typed only for Commercial meters (others keep the REP's default),
+  // and only by an admin or the deal's own sales agent.
+  const showAdder = form.meter_type === "Commercial" && canSeeAdder(user, form.sales_agent);
   const REQUIRED: (keyof typeof form)[] = [
     "provider", "service_address", "meter_type", "energy_rate",
     "contract_term", "contract_start_date", "contract_end_date", "contract_signed_date",
     "sales_agent", "deal_status", "esiid",
-    ...(form.meter_type === "Commercial" ? ["adder" as keyof typeof form] : []),
+    ...(showAdder ? ["adder" as keyof typeof form] : []),
   ];
   const inpCls = (field: string) => `${inputCls} ${errors[field] ? "border-red-400 ring-1 ring-red-400/30" : ""}`;
   const errMsg = (field: string) => errors[field]
@@ -236,7 +239,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
         energy_rate: rest.energy_rate ? parseFloat(rest.energy_rate) : null,
         // Non-Commercial meters never send the adder: the server keeps the
         // stored value, or fills the REP default when it is still empty.
-        ...(form.meter_type === "Commercial" ? { adder: adder ? parseFloat(adder) : null } : {}),
+        ...(showAdder ? { adder: adder ? parseFloat(adder) : null } : {}),
         ...flags,
       });
       onSaved();
@@ -308,7 +311,7 @@ function EditDealModal({ deal, onClose, onSaved }: { deal: any; onClose: () => v
               <p className="text-[11px] text-slate-400 mt-1">Enter in $/kWh, e.g. 0.085 for 8.5¢ (cents entries are converted on save)</p>
               {errMsg("energy_rate")}
             </div>
-            {form.meter_type === "Commercial" && (
+            {showAdder && (
               <div>
                 <label className="text-xs font-semibold text-slate-500 mb-1 block">Adder ($/kWh) *</label>
                 <input type="number" step="0.0001" className={inpCls("adder")} value={form.adder} onChange={e => set("adder", e.target.value)} />
@@ -448,7 +451,10 @@ const EMPTY_DEAL = {
 };
 
 function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; onClose: () => void; onSaved: () => void }) {
+  const { user } = useAuth();
   const [form, setForm] = useState(EMPTY_DEAL);
+  // Adder is typed only for Commercial meters, by an admin or the deal's own sales agent.
+  const showAdder = form.meter_type === "Commercial" && canSeeAdder(user, form.sales_agent);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState("");
@@ -480,9 +486,8 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
       "contract_signed_date", "contract_start_date", "contract_end_date",
       "service_address", "service_city", "service_state", "service_zip", "esiid",
       "sales_agent",
-      // Adder is typed only for Commercial meters; other meters take the REP's
-      // default adder server-side (suppliers.default_adder).
-      ...(form.meter_type === "Commercial" ? ["adder" as keyof typeof EMPTY_DEAL] : []),
+      // Non-Commercial meters take the REP's default adder server-side.
+      ...(showAdder ? ["adder" as keyof typeof EMPTY_DEAL] : []),
     ];
     const e: Record<string, string> = {};
     for (const f of required) {
@@ -526,7 +531,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
         meter_type:           form.meter_type,
         deal_type:            form.deal_type,
         energy_rate:          form.energy_rate ? parseFloat(form.energy_rate) : null,
-        adder:                form.meter_type === "Commercial" && form.adder ? parseFloat(form.adder) : null,
+        adder:                showAdder && form.adder ? parseFloat(form.adder) : null,
         contract_term:        form.contract_term,
         contract_start_date:  form.contract_start_date,
         contract_end_date:    form.contract_end_date,
@@ -672,7 +677,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
                 <p className="text-[11px] text-slate-400 mt-1">Enter in $/kWh, e.g. 0.085 for 8.5¢ (cents entries are converted on save)</p>
               </div>
 
-              {form.meter_type === "Commercial" && (
+              {showAdder && (
                 <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
                   value={form.adder} onChange={v => setStr("adder", v)} />
               )}

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useAuth, canSeeAdder } from "@/lib/auth";
 import { X, AlertCircle } from "lucide-react";
 
 const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F1D5E]/20 placeholder:text-slate-400";
@@ -94,6 +95,9 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
   const [saving, setSaving] = useState(false);
   const [providers, setProviders] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
+  const { user } = useAuth();
+  // Adder is typed only for Commercial meters, by an admin or the deal's own sales agent.
+  const showAdder = form.meter_type === "Commercial" && canSeeAdder(user, form.sales_agent);
 
   useEffect(() => {
     api.getCrmProviders().then(setProviders).catch(() => {});
@@ -121,7 +125,7 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
       "contract_signed_date", "contract_start_date", "contract_end_date",
       "service_address", "service_city", "service_state", "service_zip", "esiid",
       "sales_agent",
-      ...(form.meter_type === "Commercial" ? ["adder" as keyof typeof EMPTY_RENEW] : []),
+      ...(showAdder ? ["adder" as keyof typeof EMPTY_RENEW] : []),
     ];
     for (const f of required) {
       if (!String((form as any)[f] ?? "").trim()) e[f] = "Required";
@@ -149,7 +153,7 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
         service_order_type: form.service_order_type,
         contract_term: form.contract_term,
         energy_rate: form.rate ? parseFloat(form.rate) : null,
-        adder: form.adder ? parseFloat(form.adder) : null,
+        adder: showAdder && form.adder ? parseFloat(form.adder) : null,
         est_kwh: form.est_kwh ? parseFloat(form.est_kwh) : null,
         contract_signed_date: form.contract_signed_date,
         contract_start_date: form.contract_start_date,
@@ -258,7 +262,7 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
                 <p className="text-[11px] text-slate-400 mt-1">Enter in $/kWh, e.g. 0.085 for 8.5¢ (cents entries are converted on save)</p>
               </div>
 
-              {form.meter_type === "Commercial" && (
+              {showAdder && (
                 <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
                   value={form.adder} onChange={v => setStr("adder", v)} />
               )}

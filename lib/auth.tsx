@@ -27,6 +27,17 @@ export interface AuthUser {
   sales_agent_name?: string;
 }
 
+/** The adder (broker margin, $/kWh) is visible to admins, and to a salesperson
+ *  only on deals where they are the sales agent. The API strips it for everyone
+ *  else; forms use this to hide the input as well. */
+export function canSeeAdder(user: AuthUser | null | undefined, salesAgent?: string | null): boolean {
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  const agent = (salesAgent || "").trim().toLowerCase();
+  if (!agent) return false;
+  return [user.sales_agent_name, user.name].some(n => (n || "").trim().toLowerCase() === agent);
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   token: string | null;

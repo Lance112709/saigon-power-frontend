@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useAuth, canSeeAdder } from "@/lib/auth";
 import { ArrowLeft, User, MapPin, Phone, Mail, Plus, X, AlertCircle, ChevronDown, Pencil, Trash2, Check, Bell, FileSignature, Copy, Ban, MessageSquare, Paperclip, Upload, Download, FileText, Loader2, Hash, Calendar } from "lucide-react";
 import SendSmsModal from "@/components/SendSmsModal";
 import SendEmailModal from "@/components/SendEmailModal";
@@ -322,6 +322,7 @@ const EMPTY_DEAL = {
 function AddDealModal({ leadId, onClose, onSaved, existing }: {
   leadId: string; onClose: () => void; onSaved: () => void; existing?: any;
 }) {
+  const { user } = useAuth();
   const [form, setForm] = useState(() => existing ? {
     flag_tos: existing.flag_tos ?? false,
     flag_toao: existing.flag_toao ?? false,
@@ -384,10 +385,12 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
 
   const toggleFlag = (key: string) =>
     setForm(f => ({ ...f, [key]: !(f as any)[key] }));
+  // Adder is typed only on Commercial deals, by an admin or the deal's own sales agent.
+  const showAdder = canSeeAdder(user, form.sales_agent || existing?.sales_agent);
 
   const validate = () => {
     const e: Record<string, string> = {};
-    const isCommercial = form.product_type === "Commercial";
+    const isCommercial = form.product_type === "Commercial" && showAdder;
     // When editing existing deals, deal_type/service_order_type/sales_agent may be empty (created before those fields existed)
     const required: (keyof typeof EMPTY_DEAL)[] = [
       "status", "supplier", "product_type", "rate_type",
@@ -417,6 +420,8 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
     for (const f of numericFields) {
       if (cleanedForm[f] === "") cleanedForm[f] = null;
     }
+    // Never send the adder from a form that hid it: the server keeps or defaults it.
+    if (!showAdder) delete cleanedForm.adder;
     try {
       if (existing) {
         await api.updateLeadDeal(leadId, existing.id, cleanedForm);
@@ -559,7 +564,7 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
                 <p className="text-[11px] text-slate-400 mt-1">Enter in $/kWh, e.g. 0.085 for 8.5¢ (cents entries are converted on save)</p>
               </div>
 
-              {form.product_type === "Commercial" && (
+              {form.product_type === "Commercial" && showAdder && (
                 <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
                   value={form.adder} onChange={v => setStr("adder", v)} />
               )}
