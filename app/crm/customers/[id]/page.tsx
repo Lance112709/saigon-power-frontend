@@ -469,10 +469,13 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
   const validate = () => {
     const required: (keyof typeof EMPTY_DEAL)[] = [
       "supplier", "product_type", "meter_type", "deal_type", "service_order_type",
-      "contract_term", "energy_rate", "adder",
+      "contract_term", "energy_rate",
       "contract_signed_date", "contract_start_date", "contract_end_date",
       "service_address", "service_city", "service_state", "service_zip", "esiid",
       "sales_agent",
+      // Adder is typed only for Commercial meters; other meters take the REP's
+      // default adder server-side (suppliers.default_adder).
+      ...(form.meter_type === "Commercial" ? ["adder" as keyof typeof EMPTY_DEAL] : []),
     ];
     const e: Record<string, string> = {};
     for (const f of required) {
@@ -516,7 +519,7 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
         meter_type:           form.meter_type,
         deal_type:            form.deal_type,
         energy_rate:          form.energy_rate ? parseFloat(form.energy_rate) : null,
-        adder:                form.adder ? parseFloat(form.adder) : null,
+        adder:                form.meter_type === "Commercial" && form.adder ? parseFloat(form.adder) : null,
         contract_term:        form.contract_term,
         contract_start_date:  form.contract_start_date,
         contract_end_date:    form.contract_end_date,
@@ -662,8 +665,10 @@ function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; on
                 <p className="text-[11px] text-slate-400 mt-1">Enter in $/kWh, e.g. 0.085 for 8.5¢ (cents entries are converted on save)</p>
               </div>
 
-              <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
-                value={form.adder} onChange={v => setStr("adder", v)} />
+              {form.meter_type === "Commercial" && (
+                <FormInput label="Adder ($/kWh) *" placeholder="0.0070" type="number" error={errors.adder}
+                  value={form.adder} onChange={v => setStr("adder", v)} />
+              )}
 
               <FormInput label="Contract Signed Date *" type="date" error={errors.contract_signed_date}
                 value={form.contract_signed_date} onChange={v => setStr("contract_signed_date", v)} />
