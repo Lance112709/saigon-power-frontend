@@ -17,7 +17,8 @@ export type PermAction =
   | "view_proposals"
   | "view_forecast"
   | "view_reconciliation"
-  | "view_uploads";
+  | "view_uploads"
+  | "enter_adder";
 
 export interface AuthUser {
   id: string;
@@ -54,7 +55,7 @@ const ADMIN_PERMS: Record<string, boolean> = {
   view_commissions: true, view_revenue: true, view_all_deals: true,
   view_all_leads: true, view_all_customers: true, export_data: true,
   manage_users: true, view_proposals: true, view_forecast: true,
-  view_reconciliation: true, view_uploads: true,
+  view_reconciliation: true, view_uploads: true, enter_adder: true,
 };
 
 function parseToken(token: string): AuthUser | null {

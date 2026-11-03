@@ -24,6 +24,7 @@ const PERMISSIONS: { key: string; label: string; group: string; adminLocked?: bo
   { key: "view_all_customers", label: "Imported Customers",    group: "CRM" },
   { key: "view_all_deals",     label: "All Deals",             group: "CRM" },
   { key: "view_proposals",     label: "Proposals",             group: "CRM" },
+  { key: "enter_adder",        label: "Enter Adder on new / renewed Commercial deals", group: "CRM" },
   { key: "view_commissions",   label: "Commission Reports",    group: "Finance" },
   { key: "view_revenue",       label: "Revenue / Accounting",  group: "Finance" },
   { key: "view_forecast",      label: "Revenue Forecast",      group: "Finance" },

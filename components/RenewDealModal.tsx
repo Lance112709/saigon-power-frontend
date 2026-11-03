@@ -95,9 +95,10 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
   const [saving, setSaving] = useState(false);
   const [providers, setProviders] = useState<string[]>([]);
   const [agents, setAgents] = useState<string[]>([]);
-  const { user } = useAuth();
-  // Adder is typed only for Commercial meters, by an admin or the deal's own sales agent.
-  const showAdder = form.meter_type === "Commercial" && canSeeAdder(user, form.sales_agent);
+  const { user, can } = useAuth();
+  // Adder is typed only for Commercial meters, by an admin, the deal's own sales
+  // agent, or a role granted the "enter_adder" permission (CSR / manager).
+  const showAdder = form.meter_type === "Commercial" && (canSeeAdder(user, form.sales_agent) || can("enter_adder"));
 
   useEffect(() => {
     api.getCrmProviders().then(setProviders).catch(() => {});

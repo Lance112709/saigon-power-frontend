@@ -322,7 +322,7 @@ const EMPTY_DEAL = {
 function AddDealModal({ leadId, onClose, onSaved, existing }: {
   leadId: string; onClose: () => void; onSaved: () => void; existing?: any;
 }) {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const [form, setForm] = useState(() => existing ? {
     flag_tos: existing.flag_tos ?? false,
     flag_toao: existing.flag_toao ?? false,
@@ -385,8 +385,9 @@ function AddDealModal({ leadId, onClose, onSaved, existing }: {
 
   const toggleFlag = (key: string) =>
     setForm(f => ({ ...f, [key]: !(f as any)[key] }));
-  // Adder is typed only on Commercial deals, by an admin or the deal's own sales agent.
-  const showAdder = canSeeAdder(user, form.sales_agent || existing?.sales_agent);
+  // Adder is typed only on Commercial deals, by an admin or the deal's own sales
+  // agent; on a NEW deal also by a role granted the "enter_adder" permission.
+  const showAdder = canSeeAdder(user, form.sales_agent || existing?.sales_agent) || (!existing && can("enter_adder"));
 
   const validate = () => {
     const e: Record<string, string> = {};

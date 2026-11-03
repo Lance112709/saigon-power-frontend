@@ -451,10 +451,11 @@ const EMPTY_DEAL = {
 };
 
 function AddDealModal({ customerId, onClose, onSaved }: { customerId: string; onClose: () => void; onSaved: () => void }) {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const [form, setForm] = useState(EMPTY_DEAL);
-  // Adder is typed only for Commercial meters, by an admin or the deal's own sales agent.
-  const showAdder = form.meter_type === "Commercial" && canSeeAdder(user, form.sales_agent);
+  // Adder is typed only for Commercial meters, by an admin, the deal's own sales
+  // agent, or a role granted the "enter_adder" permission (CSR / manager).
+  const showAdder = form.meter_type === "Commercial" && (canSeeAdder(user, form.sales_agent) || can("enter_adder"));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState("");
