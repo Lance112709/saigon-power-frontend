@@ -406,6 +406,7 @@ const SUPPLIERS = [
   "Budget Power", "Discount Power", "Heritage Power", "Iron Horse",
   "CleanSky Energy", "Reliant", "Chariot",
   "Direct Energy", "Cirro Energy", "True Power", "Hudson Energy", "NRG",
+  "BKV Energy",
 ];
 
 const CONTRACT_TERMS = [

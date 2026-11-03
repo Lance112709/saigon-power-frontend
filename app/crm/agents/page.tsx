@@ -15,7 +15,7 @@ const AGENT_TYPES = [
 const SUPPLIERS = [
   "Budget Power", "Discount Power", "Heritage Power", "Iron Horse",
   "CleanSky Energy", "Reliant", "Chariot", "Direct Energy",
-  "Cirro Energy", "True Power", "Hudson Energy", "NRG",
+  "Cirro Energy", "True Power", "Hudson Energy", "NRG", "BKV Energy",
 ];
 
 // A commission plan is a stack of components. Every dollar is computed from

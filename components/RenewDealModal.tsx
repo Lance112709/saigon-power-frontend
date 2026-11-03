@@ -11,6 +11,7 @@ const SUPPLIERS = [
   "Budget Power", "Discount Power", "Heritage Power", "Iron Horse",
   "CleanSky Energy", "Reliant", "Chariot",
   "Direct Energy", "Cirro Energy", "True Power", "Hudson Energy", "NRG",
+  "BKV Energy",
 ];
 const CONTRACT_TERMS = [
   "6 Months", "12 Months", "16 Months", "23 Months", "24 Months",
@@ -169,7 +170,11 @@ export default function RenewDealModal({ deal, customerId, onClose, onSaved }: {
     setSaving(false);
   };
 
-  const supplierOptions = providers.length ? providers : SUPPLIERS;
+  // Providers come from existing deals; a REP with no deals yet (e.g. BKV) is
+  // appended from the static list so it can be picked for a renewal.
+  const supplierOptions = providers.length
+    ? [...providers, ...SUPPLIERS.filter(s => !providers.some(p => p.toLowerCase() === s.toLowerCase()))]
+    : SUPPLIERS;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto">
