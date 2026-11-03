@@ -564,7 +564,7 @@ export default function DealDetailPage() {
             ["ESIID", deal.esiid || "—"],
             ["Type", deal.meter_type || "—"],
             ["Rate", deal.energy_rate != null ? `$${parseFloat(deal.energy_rate).toFixed(4)}/kWh` : "—"],
-            ["Adder", deal.adder != null ? `$${parseFloat(deal.adder).toFixed(4)}/kWh` : "—"],
+            ...(canSeeAdder(user, deal.sales_agent) ? [["Adder", deal.adder != null ? `$${parseFloat(deal.adder).toFixed(4)}/kWh` : "—"]] : []),
             ["Term", deal.contract_term || "—"],
             ["Agent", deal.sales_agent || "—"],
             ["Created By", deal.created_by || "—"],

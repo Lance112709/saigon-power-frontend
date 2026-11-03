@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Save } from "lucide-react";
 
-function SupplierCard({ supplier, onUpdated }: { supplier: any; onUpdated: () => void }) {
+function SupplierCard({ supplier, onUpdated, showAdder }: { supplier: any; onUpdated: () => void; showAdder: boolean }) {
   const [adder, setAdder] = useState(supplier.default_adder != null ? String(supplier.default_adder) : "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -34,8 +35,8 @@ function SupplierCard({ supplier, onUpdated }: { supplier: any; onUpdated: () =>
         {supplier.notes && <p className="text-sm text-gray-500 mt-3">{supplier.notes}</p>}
         {supplier.contact_email && <p className="text-xs text-gray-400 mt-2">{supplier.contact_email}</p>}
 
-        {/* Default Adder */}
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        {/* Default Adder — admins only (the API omits it for everyone else) */}
+        {showAdder && <div className="mt-4 pt-4 border-t border-gray-100">
           <label className="text-xs font-semibold text-gray-500 block mb-1.5">
             Default Residential Adder ($/kWh)
           </label>
@@ -57,13 +58,15 @@ function SupplierCard({ supplier, onUpdated }: { supplier: any; onUpdated: () =>
             </button>
           </div>
           <p className="text-[11px] text-gray-400 mt-1">Auto-applied to Residential deals for this REP</p>
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );
 }
 
 export default function SuppliersPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", contact_email: "", notes: "" });
@@ -133,7 +136,7 @@ export default function SuppliersPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {suppliers.map((s: any) => (
-          <SupplierCard key={s.id} supplier={s} onUpdated={load} />
+          <SupplierCard key={s.id} supplier={s} onUpdated={load} showAdder={isAdmin} />
         ))}
       </div>
     </div>

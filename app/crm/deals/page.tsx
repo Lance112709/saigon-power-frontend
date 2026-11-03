@@ -47,6 +47,8 @@ const selectClass = "border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-w
 export default function CrmDealsPage() {
   const router = useRouter();
   const { user } = useAuth();
+  // The API strips adders the viewer may not see; drop the column entirely for them.
+  const showAdderCol = user?.role === "admin" || !!user?.sales_agent_name;
   const isAdmin = user?.role === "admin";
   const [exporting, setExporting] = useState(false);
   const [tab, setTab] = useState<"crm" | "leads">("leads");
@@ -211,7 +213,7 @@ export default function CrmDealsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    {["Customer", "Supplier / Provider", "ESI ID", "Type", "Rate", "Adder", "Term", "Start", "End", "Agent", "Status"].map(h => (
+                    {["Customer", "Supplier / Provider", "ESI ID", "Type", "Rate", ...(showAdderCol ? ["Adder"] : []), "Term", "Start", "End", "Agent", "Status"].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -229,7 +231,7 @@ export default function CrmDealsPage() {
                       <td className="px-4 py-3 text-slate-400 font-mono text-xs whitespace-nowrap">{d.esiid || "—"}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs capitalize whitespace-nowrap">{d.product_type || "—"}</td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.rate != null ? `$${parseFloat(d.rate).toFixed(4)}` : "—"}</td>
-                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>
+                      {showAdderCol && <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>}
                       <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{d.contract_term || "—"}</td>
                       <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{fmtDate(d.start_date)}</td>
                       <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{fmtDate(d.end_date)}</td>
@@ -250,7 +252,7 @@ export default function CrmDealsPage() {
                       <td className="px-4 py-3 text-slate-400 font-mono text-xs whitespace-nowrap">{d.esiid || "—"}</td>
                       <td className="px-4 py-3 whitespace-nowrap"><MeterTypeBadge meterType={d.meter_type} /></td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.energy_rate != null ? parseFloat(d.energy_rate).toFixed(4) : "—"}</td>
-                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>
+                      {showAdderCol && <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.adder != null ? parseFloat(d.adder).toFixed(4) : "—"}</td>}
                       <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">—</td>
                       <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{fmtDate(d.contract_start_date)}</td>
                       <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{fmtDate(d.contract_end_date)}</td>
