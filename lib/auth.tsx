@@ -34,9 +34,11 @@ export interface AuthUser {
 export function canSeeAdder(user: AuthUser | null | undefined, salesAgent?: string | null): boolean {
   if (!user) return false;
   if (user.role === "admin") return true;
+  // Only a login linked to a sales agent record counts as that salesperson;
+  // a CSR whose display name is on the deal is not one.
   const agent = (salesAgent || "").trim().toLowerCase();
-  if (!agent) return false;
-  return [user.sales_agent_name, user.name].some(n => (n || "").trim().toLowerCase() === agent);
+  const own = (user.sales_agent_name || "").trim().toLowerCase();
+  return !!agent && !!own && agent === own;
 }
 
 interface AuthContextType {
