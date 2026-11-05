@@ -34,8 +34,10 @@ export interface AuthUser {
 export function canSeeAdder(user: AuthUser | null | undefined, salesAgent?: string | null): boolean {
   if (!user) return false;
   if (user.role === "admin") return true;
-  // Only a login linked to a sales agent record counts as that salesperson;
-  // a CSR whose display name is on the deal is not one.
+  // Only a sales_agent-role login linked to a sales agent record counts as
+  // that salesperson; managers and CSRs never see the adder, even on deals
+  // they sold (Lance, 2026-11-04).
+  if (user.role !== "sales_agent") return false;
   const agent = (salesAgent || "").trim().toLowerCase();
   const own = (user.sales_agent_name || "").trim().toLowerCase();
   return !!agent && !!own && agent === own;
